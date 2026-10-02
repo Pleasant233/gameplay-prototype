@@ -1,0 +1,24 @@
+{
+  "checks": [
+    "Desktop uses resolved depth and a quarter-resolution bloom buffer",
+    "Depth precision preserves thin surfaces without striping",
+    "Bloom measurably brightens the rendered highlights",
+    "Aperture blur changes the distant scene while preserving the sharp center",
+    "Picking still selects the rendered tile with atmosphere enabled",
+    "Focus follows a changed tile selection",
+    "Menu turns atmosphere off and stores the preference",
+    "Reload preserves the atmosphere preference",
+    "Resize updates the render targets without growing the texture count",
+    "Phone uses the cheaper pipeline without multisampling",
+    "Phone touch selects a tile with atmosphere enabled",
+    "Phone atmosphere control remains visible and usable",
+    "Simulated lack of depth textures keeps the bloom pipeline running",
+    "No browser, shader or framebuffer errors"
+  ],
+  "errors": [],
+  "url": "http://127.0.0.1:59729",
+  "surfacePrecisionDifference": 0.0,
+  "bloomBrightening": 3.633840277777722,
+  "sharpCenterDifference": 0.0,
+  "defocusedDifference": 1.825793918918919
+}

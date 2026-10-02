@@ -117,7 +117,8 @@ try:
                 page.evaluate('(kind)=>View.fx(kind,"3,3","water")', kind)
                 page.wait_for_timeout(300)
                 page.screenshot(path=str(OUT / f'fx-{kind}.png'))
-                page.wait_for_function('__viewTest.effects().transient===0 && __viewTest.effects().lights===0', timeout=15000)
+                # Software WebGL can need more wall time to draw the animation frames.
+                page.wait_for_function('__viewTest.effects().transient===0 && __viewTest.effects().lights===0', timeout=45000)
                 check(f'{kind} transient meshes and lights expire', page.evaluate('__viewTest.effects().transient===0 && __viewTest.effects().lights===0'))
 
             page.clock.install()

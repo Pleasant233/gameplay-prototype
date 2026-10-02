@@ -31,7 +31,8 @@
   const LAND_COLORS = { ruin:0xd7b981,pollute_water:0x98b978,pollute_earth:0xa6b95c,pollute_rock:0xaa97b7,barren:0xdfbd79,rock:0xc7b9a3,sand:0xf1d78c,bare:0xc9ae84,grass:0x91cf60,water:0xf0d390,lava:0x9d7061,waste:0xcfb678,peak:0xb8d3df,forest:0x70b450,wet:0x71c6a3,mine:0xc5a174,valley:0x95d069,rain:0x56ab60,fertile:0xaacb54,creek:0x8ed28b };
   Object.entries(LOOK).forEach(([key,look])=>{look.h=RELIEF[key]||0.12;look.top=LAND_COLORS[key];});
 
-  let scene, camera, renderer, clock, sun;
+  let scene, camera, renderer, clock, sun, post;
+  let atmosphereOn=true;
   let G, D, EL;
   let cb = {};
   let tileMap = {};
@@ -1344,7 +1345,12 @@
     }
     updateFX(dt, time);
     cloudBanks.forEach((bank,i)=>{bank.position.y=Math.sin(time*0.18+i)*0.035;bank.position.x=Math.sin(time*0.065)*0.08;});
-    renderer.render(scene, camera);
+    if(post){
+      const k=hoverK&&modeRef?hoverK:selectedK;
+      const p=k?wp(k,surfaceHeight(k,0,0)+.2):cam.target.clone();
+      if(k&&tileMap[k])p.y+=tileMap[k].group.position.y;
+      post.render(scene,camera,p,dt);
+    }else renderer.render(scene,camera);
   }
 
   function resize() {
@@ -1356,6 +1362,7 @@
     camera.setViewOffset(w,h,0,h*(w<640?0.14:0.065),w,h);
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    if(post)post.resize(w,h);
     if(pObj)pObj.material.uniforms.pointScale.value=h*0.8*renderer.getPixelRatio();
   }
 
@@ -1485,6 +1492,7 @@
     }
 
     clock = new THREE.Clock();
+    if(root.ScenePostFX){post=root.ScenePostFX.create(renderer,{low:LOW});post.enabled=atmosphereOn;}
     initCam();
     bindInput(renderer.domElement);
     window.addEventListener('resize', resize);
@@ -1510,5 +1518,6 @@
     cam.gx = p.x; cam.gz = p.z;
   }
 
-  root.View = { init, sync, resize, fx, focus, supported, project, burstAt };
+  function setAtmosphere(enabled){atmosphereOn=!!enabled;if(post)post.enabled=atmosphereOn;}
+  root.View = { init, sync, resize, fx, focus, supported, project, burstAt, setAtmosphere };
 })(this);

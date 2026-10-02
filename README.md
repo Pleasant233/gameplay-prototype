@@ -4,7 +4,7 @@
 
 [打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md)
 
-![连续地表与圆润卡通云海](docs/screenshots/desktop-midgame.png)
+![柔和泛光与微缩景观景深](docs/screenshots/atmosphere-desktop.png)
 
 每轮有 3 点行动，至少放置 1 块地块。放置地形、施放魔法、移动元素灵和动物、合成元素兽、使用结晶及制造物品，直到铺满 85 格地图。灵力由地块属性、元素灵、元素兽和元素动物共同计分。
 
@@ -45,6 +45,15 @@ python scripts/crystal_check.py
 python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --report crystal-check-production.json
 ```
 
+泛光与景深的图像和交互检查需要 Pillow，用固定画面对比分别开启 Bloom 和景深后的结果：
+
+```sh
+python -m pip install Pillow
+python scripts/atmosphere_check.py
+```
+
+比较截图、聚焦与缩放验证见 [氛围效果说明](docs/ATMOSPHERE-2026-10-03.md)。
+
 ## 实现
 
 | 文件 | 职责 |
@@ -52,6 +61,7 @@ python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --re
 | `data.js` | 地块、元素、生物、配方及规则参数 |
 | `game.js` | 状态、行动、轮末产出、计分及表现事件 |
 | `view.js` | 连续地表、装饰、拾取、虚线框及分类型特效 |
+| `postfx.js` | 高光泛光、深度景深、焦点跟随、轻暗角及画质分档 |
 | `tokens.js` | 收益飞行、40 个 Token 上限、HUD 延迟计数、结晶落地 |
 | `index.html` | 界面、交互、合成音效 |
 
@@ -60,6 +70,8 @@ python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --re
 地图外围参考《海岛奇兵》的云层遮盖方式，以及 [Toon Clouds Set](https://sketchfab.com/3d-models/toon-clouds-set-simple-lowpoly-81faaba6a78046d5a3e88597565079ab) 的圆润轮廓。云模型由程序生成：多个隆起平滑融合成完整云团，使用平滑法线、暖白顶面和浅蓝阴影，避免硬切面及球体穿插接缝。四种云型通过实例化网格组成云海，避开整个可操作地图，不再绘制外围绿地、山丘和树林。
 
 模型使用明亮的卡通配色：草地与植被增强色彩，山体由主峰、侧峰、山脚和雪帽组成，树冠增加体积层次，岩石使用更多切面，水塘带不规则浅色岸线与细小波纹。
+
+参考 [《林间小世界》](https://store.steampowered.com/app/2198150/Tiny_Glade/) 的微缩景观画面，增加柔和的高光 Bloom 和按真实场景深度计算的光圈景深。默认聚焦地图中心，选中地块或进入目标操作时焦点跟随；焦点附近保持清晰，近处和远处逐渐虚化。轻暗角收束画面，DOM 界面、文字与收益 Token 不经过模糊处理。菜单中的“氛围开 / 关”可切换并保存偏好。
 
 特效使用尘雾、水滴、碎片和火星的不同形状，随生命周期透明消散；桌面使用固定临时灯池和短拖尾，手机模拟质量禁用这两项、粒子数量减半。减少大面积光环和强闪白。视觉效果仍需要在预览中人工确认。
 

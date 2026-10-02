@@ -327,10 +327,11 @@
 <dialog id="dlgMenu"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
   <h2>菜单</h2>
-  <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">
     <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
     <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
     <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
+    <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
   </div>
   <div class="sec">日志</div><ul id="log"></ul>
 </div></dialog>
@@ -349,6 +350,7 @@
 <script src="lib/three.min.js"></script>
 <script src="data.js"></script>
 <script src="game.js"></script>
+<script src="postfx.js"></script>
 <script src="view.js"></script>
 <script src="tokens.js"></script>
 <script>
@@ -710,6 +712,15 @@ $('btnAgain').onclick = () => { $('over').close(); start(); };
 const soundLabel = () => { $('btnSound').querySelector('.t').textContent = Sfx.on ? '🔊 音效开' : '🔇 音效关'; };
 $('btnSound').onclick = () => { Sfx.toggle(); soundLabel(); Sfx.tap(); };
 soundLabel();
+let atmosphereOn=true;
+try{atmosphereOn=localStorage.getItem('atmosphere')!=='0';}catch(_){}
+const atmosphereLabel=()=>{
+  View.setAtmosphere(atmosphereOn);
+  $('btnAtmosphere').querySelector('.t').textContent=atmosphereOn?'✨ 氛围开':'✨ 氛围关';
+  $('btnAtmosphere').setAttribute('aria-pressed',String(atmosphereOn));
+};
+$('btnAtmosphere').onclick=()=>{atmosphereOn=!atmosphereOn;try{localStorage.setItem('atmosphere',atmosphereOn?'1':'0');}catch(_){}atmosphereLabel();Sfx.tap();};
+atmosphereLabel();
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
 document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d && d.id !== 'over') d.close(); }));
 document.addEventListener('keydown', e => {

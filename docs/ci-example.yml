@@ -19,6 +19,7 @@ jobs:
           node --check data.js
           node --check game.js
           node --check view.js
+          node --check postfx.js
           node --check tokens.js
       - name: Check game rules and receipt accounting
         run: node test.js
