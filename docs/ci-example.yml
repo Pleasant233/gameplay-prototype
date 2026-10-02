@@ -1,0 +1,26 @@
+name: Check prototype
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rules-and-terrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check JavaScript syntax
+        run: |
+          node --check data.js
+          node --check game.js
+          node --check view.js
+          node --check tokens.js
+      - name: Check game rules and receipt accounting
+        run: node test.js
+      - name: Check continuous terrain geometry
+        run: node test-view.js

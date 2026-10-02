@@ -67,7 +67,7 @@
       placed: 0, magicUsed: {}, offers: [], cells: {}, nextId: 1,
       inv: { crystal: emptyEl(), bigCrystal: emptyEl(), ore: Object.fromEntries(Object.keys(ORES).map(k => [k, 0])),
              wood: 0, bucket: 0, bucketFull: 0, charm: 0 },
-      log: [], over: false,
+      log: [], events: [], over: false,
     };
     // 开局：中心十字 5 块，属性和 = 9
     const start = [key(3, 3), key(2, 3), key(4, 3), key(3, 2), key(3, 4)];
@@ -308,8 +308,17 @@
     if (!h) return fail('未知行动');
     const err = canSpend(s, action.type === 'place');
     if (err) return fail(err);
+    const beforeScore = score(s).total;
+    const beforeBag = bagCount(s);
     const r = h(s, action);
     if (!r.ok) return r;
+    const cell = action.cell || action.to || action.from;
+    const delta = score(s).total - beforeScore;
+    if (delta && cell) emit(s, { cell, kind: 'attr', n: delta, score: delta });
+    // Crafting consumes inventory too; only emit an extra receipt when no
+    // specific wood/ore receipt was already produced by the handler.
+    const bagDelta = bagCount(s) - beforeBag;
+    if (bagDelta > 0 && cell && !s.events.some(e => e.kind === 'wood' || e.kind === 'ore')) emit(s, { cell, kind: 'item', n: bagDelta });
     s.ap--;
     log(s, r.msg);
     if (emptyKeys(s).length === 0) finish(s);
@@ -332,7 +341,7 @@
       if (pos.length && t.spirits.length < spiritCap(t)) {
         const el = pickWeighted(s, pos);
         t.spirits.push({ id: id(s), el, age: 0 });
-        emit(s, { cell: k, kind: 'spirit', el });
+        emit(s, { cell: k, kind: 'spirit', el, score: SCORE.spirit });
       }
     }
     // 2) 元素灵 / 元素兽 / 元素动物 产结晶
@@ -385,6 +394,11 @@
   function summarize(list) {
     const c = {}; list.forEach(x => c[x] = (c[x] || 0) + 1);
     return Object.entries(c).map(([k, n]) => `${k}×${n}`).join('、');
+  }
+
+  function bagCount(s) {
+    return sum(Object.values(s.inv.crystal)) + sum(Object.values(s.inv.bigCrystal)) +
+      sum(Object.values(s.inv.ore)) + s.inv.wood + s.inv.bucket + s.inv.charm;
   }
 
   function finish(s) {

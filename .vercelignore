@@ -1,2 +1,8 @@
-test.js
+test*.js
 _*
+artifacts/
+scripts/
+docs/
+.github/
+README.md
+THIRD_PARTY_NOTICES.md

@@ -1,0 +1,33 @@
+{
+  "browser": "Headless Microsoft Edge / SwiftShader",
+  "checks": [
+    "Terrain retains its per-cell transform",
+    "Ray picks the projected cell",
+    "Real pointer click selects the tile",
+    "Shader selection band is visible",
+    "Pointer places the offered tile",
+    "Space count waits for the flight",
+    "Space count settles correctly",
+    "Score waits for arriving production tokens",
+    "Production tokens visibly fly with a 40-token cap",
+    "All delayed counters settle to the game state",
+    "No flight nodes remain after settlement",
+    "purify transient meshes and lights expire",
+    "mine transient meshes and lights expire",
+    "spring transient meshes and lights expire",
+    "rich transient meshes and lights expire",
+    "burn transient meshes and lights expire",
+    "merge transient meshes and lights expire",
+    "crystal transient meshes and lights expire",
+    "Crystal consumption flies from the HUD to the tile",
+    "Overflow receipts merge into at most 40 nodes",
+    "Merged receipts show their quantity",
+    "Restart clears flights and transient effects",
+    "Reduced motion settles counters without flight nodes",
+    "Phone touch selects the tile",
+    "Phone HUD and bottom controls fit within viewport",
+    "Mobile quality omits transient point lights",
+    "No browser or WebGL errors"
+  ],
+  "errors": []
+}

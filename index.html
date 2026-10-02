@@ -200,7 +200,7 @@
   #banner.go { display: block; animation: ban 1.6s cubic-bezier(.3,1.4,.5,1) forwards; }
   @keyframes ban { 0% { transform: scale(.2) rotate(-8deg); opacity: 0; } 18% { transform: scale(1.1); opacity: 1; } 28% { transform: scale(1); }
     80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
-  #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(circle, rgba(255,240,180,.55), transparent 70%); opacity: 0; }
+  #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(circle, rgba(255,240,180,.15), transparent 65%); opacity: 0; }
   #flash.go { animation: fl .7s ease-out; }
   @keyframes fl { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -261,10 +261,23 @@
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
 </style>
+<style>
+  #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
+  .token { position:absolute; left:0; top:0; color:var(--token-color); font-size:25px; will-change:transform;
+    filter:drop-shadow(0 0 7px var(--token-color)); white-space:nowrap; }
+  .token i { font-style:normal; }
+  .token small { font-size:12px; color:#fff; margin-left:2px; }
+  #bagCount { position:absolute; right:-8px; top:-8px; min-width:21px; padding:2px 4px; border-radius:12px;
+    background:#ec5845; color:#fff; font-size:11px; border:2px solid #fff; line-height:14px; }
+  #btnBag { overflow:visible !important; }
+  #btnBag .ripple { display:none; }
+  .pill.bump, #btnBag.bump { filter:drop-shadow(0 0 8px #ffe14a); }
+</style>
 </head>
 <body>
 <div id="world" aria-label="三维地图：点击地块选择，拖拽旋转，双指或滚轮缩放"></div>
 <div id="flash"></div>
+<div id="tokens" aria-hidden="true"></div>
 
 <div id="cornerL">
   <button class="btn round" id="btnHelp" title="玩法说明" aria-label="玩法说明"><span class="t">?</span></button>
@@ -276,7 +289,7 @@
   <div class="pill" id="pillLeft" title="剩余空位"><span class="ico">⬢</span><span><small>空位</small><b id="left"></b></span></div>
 </header>
 <div id="corner">
-  <button class="btn round gold" id="btnBag" title="背包与制造" aria-label="背包与制造"><span class="t">🎒</span></button>
+  <button class="btn round gold" id="btnBag" title="背包与制造" aria-label="背包与制造"><span class="t">🎒</span><b id="bagCount">0</b></button>
   <button class="btn round" id="btnMenu" title="菜单" aria-label="菜单"><span class="t">☰</span></button>
 </div>
 
@@ -337,6 +350,7 @@
 <script src="data.js"></script>
 <script src="game.js"></script>
 <script src="view.js"></script>
+<script src="tokens.js"></script>
 <script>
 const D = GameData, G = Game;
 const EL = D.ELEMENTS;
@@ -382,13 +396,16 @@ const Sfx = (() => {
     err: () => { tone(220, 0.12, 'square', 0.06); setTimeout(() => tone(160, 0.16, 'square', 0.06), 90); },
     round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
     win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
+    ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
     get on() { return on; },
     toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
   };
 })();
 const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) { /* 不支持 */ } };
+const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.burstAt(k),ding:Sfx.ding,bump,state:()=>S,score:s=>G.score(s).total,left:s=>G.emptyKeys(s).length});
 
 function start(seed) {
+  Tokens.reset();
   S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff));
   mode = null; selected = null; hint('');
   lastScore = G.score(S).total; lastRound = 1; offersKey = '';
@@ -449,8 +466,12 @@ function doAct(action) {
   mode = null; hint('');
   const f = fxOf(action);
   if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
+  Tokens.enqueue(S.events);
   render();
-  if (f) View.fx(f[0], f[1], f[2]);
+  if (f) {
+    if(action.type==='useCrystal') { const session=S;Tokens.down(action.cell,action.el,()=>{if(S===session)View.fx(...f);}); }
+    else View.fx(f[0], f[1], f[2]);
+  }
   const gain = (S.round === round ? G.score(S).total : before) - before;
   const cell = action.cell || action.to;
   if (gain && cell) floatAtCell(cell, (gain > 0 ? '+' : '') + gain, gain > 0 ? '#ffe14a' : '#ff6a5a');
@@ -553,10 +574,9 @@ function render() {
   $('ap').innerHTML = Array.from({ length: D.RULES.apPerRound }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
   $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
   const sc = G.score(S);
-  $('score').textContent = sc.total;
-  if (sc.total !== lastScore) { bump($('pillScore')); lastScore = sc.total; }
+  Tokens.numbers(S);
+  lastScore = sc.total;
   $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素灵 ${sc.spirits} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 元素动物 ${sc.elemAnimals}×${D.SCORE.elemAnimal}`;
-  $('left').textContent = G.emptyKeys(S).length;
   const be = $('btnEnd');
   be.disabled = S.over || S.placed === 0;
   be.classList.toggle('ready', !be.disabled && S.ap > 0);
@@ -680,7 +700,7 @@ $('detail').addEventListener('click', e => {
     case 'useCharm': doAct({ type: 'useCharm', cell: k }); break;
   }
 });
-$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) hint(''); else hint(r.msg, true); render(); };
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render(); };
 $('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
 $('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
 $('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
@@ -703,6 +723,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());   // iOS 禁
 if (!View.supported || View.supported()) {
   View.init($('world'), {
     onCell, onHover,
+    onFlash() { flash(); },
     onMiss() { if (!mode && selected) { selected = null; render(); } },
   });
   start();

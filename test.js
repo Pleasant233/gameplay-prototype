@@ -112,4 +112,36 @@ t('事件流：结晶事件数 = 结晶增量', () => {
   }
 });
 
+t('事件流：失败行动清空，自动轮末保留行动事件', () => {
+  const s = G.newGame(40);
+  assert.deepStrictEqual(s.events, []);
+  s.ap = 1;
+  const cell = G.legalPlacements(s)[0];
+  assert.ok(G.act(s, { type: 'place', offer: 0, cell }).ok);
+  assert.strictEqual(s.round, 2);
+  assert.ok(s.events.some(e => e.kind === 'place' && e.cell === cell));
+  assert.ok(s.events.some(e => e.kind === 'spirit'));
+  assert.strictEqual(G.act(s, { type: 'place', offer: 0, cell }).ok, false);
+  assert.deepStrictEqual(s.events, []);
+  assert.strictEqual(G.endRound(s).ok, false);
+  assert.deepStrictEqual(s.events, []);
+});
+
+t('事件流：行动和轮末灵力事件总和等于实际分数变化', () => {
+  const s = G.newGame(41);
+  for (let r = 0; r < 15; r++) {
+    for (const action of [
+      { type: 'place', offer: 0, cell: G.legalPlacements(s)[0] },
+      { type: 'cast', magic: 'mine', cell: '3,3' },
+    ]) {
+      const before = G.score(s).total;
+      assert.ok(G.act(s, action).ok);
+      assert.strictEqual(s.events.reduce((n,e)=>n+(e.score||0),0), G.score(s).total-before);
+    }
+    const before = G.score(s).total;
+    assert.ok(G.endRound(s).ok);
+    assert.strictEqual(s.events.reduce((n,e)=>n+(e.score||0),0), G.score(s).total-before);
+  }
+});
+
 console.log(`\n${pass} passed`);
