@@ -1,0 +1,11 @@
+{
+  "url": "https://gameplay-prototype.vercel.app",
+  "checks": [
+    "Public production page loads the new post-processing module",
+    "Actual production menu disables atmosphere and saves the preference",
+    "Re-enabling atmosphere survives reload",
+    "A real production placement and delayed counter still settle",
+    "No production browser, shader or framebuffer errors"
+  ],
+  "errors": []
+}

@@ -25,3 +25,11 @@
 16 项规则检查与地表、云团几何检查通过。手机检查为浏览器视口和触摸模拟，不代表真实手机 GPU 性能；画面仍可根据人工体验继续调整。
 
 开启氛围效果后，28 项整体浏览器回归通过，覆盖放置、选框、收益飞行、结晶免费使用、所有特效回收、重开与手机交互。见 [整体回归报告](atmosphere-browser-report.json)。软件渲染速度较慢，因此特效回收检查允许更长的绘制时间。
+
+## 正式发布
+
+已发布至 [gameplay-prototype.vercel.app](https://gameplay-prototype.vercel.app)，部署 `dpl_GLpNEnbtyFbtkwcX54G4bhWdar8w` 状态为 `READY`，目标为 `production`，上线源码提交 `5863726`。
+
+正式地址的页面、后期处理、视图、收益飞行、规则、数据和 Three.js 文件均逐字节匹配本地源码，见 [线上文件报告](atmosphere-production-files.json)。
+
+在线上未注入测试代码的应用中验证模块加载、真实菜单开关、偏好恢复、实际放置与 HUD 结算，无脚本、Shader 或帧缓冲错误。见 [线上运行报告](atmosphere-production-smoke.json)。
