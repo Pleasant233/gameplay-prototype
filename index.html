@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2b6fd6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="灵地复苏：五行地块策略小游戏">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>灵地复苏</title>
+<style>
+  :root {
+    --ink: #fff; --ink2: #5a4220; --muted: #8a7a62;
+    --paper: #fff7e6; --paper2: #f3e3c2; --edge: #c9a56a;
+    --blue: #3b8cf0; --blue-d: #1f5fb8; --green: #5ccf3a; --green-d: #33912a;
+    --gold: #ffcc33; --gold-d: #d48a12; --red: #ff5a4a; --red-d: #b8302a;
+    --purple: #a46cf0; --purple-d: #6a3ab8;
+    --metal: #f2c230; --wood: #5ccf3a; --water: #3fa6ff; --fire: #ff6a3a; --earth: #d09a5a;
+    --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6fb6ff; color: var(--ink2);
+    font: 600 13px/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+  #world { position: fixed; inset: 0; }
+  #world canvas { touch-action: none; }
+
+  /* 卡通描边字 */
+  .toon { color: #fff; -webkit-text-stroke: 0; paint-order: stroke fill;
+    text-shadow: 0 2px 0 rgba(0,0,0,.45), 1px 0 0 rgba(0,0,0,.35), -1px 0 0 rgba(0,0,0,.35), 0 -1px 0 rgba(0,0,0,.35); }
+
+  /* 纸面面板 */
+  .panel { background: linear-gradient(180deg, var(--paper), var(--paper2)); border: 3px solid #fff;
+    border-radius: 18px; box-shadow: 0 0 0 2px var(--edge), 0 6px 0 2px #a8844a, 0 12px 24px rgba(0,0,0,.25); }
+  .tag { position: absolute; z-index: 3; top: -13px; left: 14px; padding: 2px 12px; border-radius: 10px; font-size: 12px;
+    background: linear-gradient(180deg, #6aa8ff, var(--blue)); border: 2px solid #fff; box-shadow: 0 2px 0 var(--blue-d); }
+
+  /* 立体按钮 */
+  .btn { --c: var(--blue); --d: var(--blue-d); position: relative; font: inherit; font-weight: 800; color: #fff; cursor: pointer;
+    border: 2px solid rgba(0,0,0,.25); border-radius: 12px; padding: 8px 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.28) 0 45%, transparent 55%), var(--c);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 4px 0 var(--d), 0 6px 8px rgba(0,0,0,.25);
+    transition: transform .08s, box-shadow .08s, filter .15s; }
+  .btn:not(:disabled):hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:not(:disabled):active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 1px 0 var(--d), 0 2px 4px rgba(0,0,0,.2); }
+  .btn:disabled { --c: #a9a9a9; --d: #777; cursor: not-allowed; filter: saturate(.3); }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .btn.green { --c: var(--green); --d: var(--green-d); }
+  .btn.gold { --c: var(--gold); --d: var(--gold-d); color: #6a3a00; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+  .btn.red { --c: var(--red); --d: var(--red-d); }
+  .btn.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+  .btn.sm { padding: 4px 10px; font-size: 12px; border-radius: 9px; box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 var(--d); }
+  .btn.sm:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--d); }
+  .btn .t { position: relative; }
+  .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.55); transform: scale(0); pointer-events: none;
+    animation: rip .5s ease-out forwards; }
+  @keyframes rip { to { transform: scale(2.6); opacity: 0; } }
+
+  /* 顶栏 */
+  #top { position: fixed; top: calc(10px + var(--safe-t)); left: 0; right: 0; display: flex; justify-content: center; gap: 10px;
+    padding: 0 12px; z-index: 5; pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  .pill { position: relative; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px;
+    background: rgba(20, 30, 50, .55); border: 2px solid rgba(255,255,255,.35); border-radius: 22px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-size: 18px; font-weight: 900; }
+  .pill .ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
+    border: 2px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+  .pill small { display: block; font-size: 10px; line-height: 1; opacity: .85; font-weight: 700; }
+  .pill b { display: block; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  #pillScore .ico { background: radial-gradient(circle at 35% 30%, #fff6b0, var(--gold) 50%, var(--gold-d)); }
+  #pillRound .ico { background: radial-gradient(circle at 35% 30%, #c8e4ff, var(--blue) 55%, var(--blue-d)); }
+  #pillLeft .ico { background: radial-gradient(circle at 35% 30%, #d8ffc8, var(--green) 55%, var(--green-d)); }
+  .bump { animation: bump .5s cubic-bezier(.3,1.8,.5,1); }
+  @keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .ap { display: flex; gap: 4px; }
+  .ap i { width: 20px; height: 26px; display: block; clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+    background: radial-gradient(circle at 40% 30%, #fff 0 8%, #9fe8ff 20%, #26a8ff 60%, #1660c8);
+    transition: transform .3s cubic-bezier(.3,1.8,.5,1), filter .3s; filter: drop-shadow(0 0 4px #4ac8ff); }
+  .ap i.used { filter: grayscale(1) brightness(.5); transform: scale(.78); }
+  #pillAp { padding-left: 12px; }
+
+  #corner { position: fixed; top: calc(10px + var(--safe-t)); right: 12px; display: flex; gap: 8px; z-index: 6; }
+  #cornerL { position: fixed; top: calc(10px + var(--safe-t)); left: 12px; display: flex; gap: 8px; z-index: 6; }
+
+  /* 底部操作区 */
+  #dock { position: fixed; left: 0; right: 0; bottom: calc(10px + var(--safe-b)); display: flex; justify-content: center;
+    align-items: flex-end; gap: 14px; padding: 0 12px; z-index: 5; pointer-events: none; }
+  #dock > * { pointer-events: auto; }
+  .tray { position: relative; padding: 18px 12px 12px; }
+  #offers { display: flex; gap: 10px; }
+  .card { position: relative; width: 96px; height: 120px; border-radius: 14px; border: 3px solid #fff; cursor: pointer; padding: 0;
+    font: inherit; color: #fff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 5px 0 rgba(0,0,0,.25);
+    transition: transform .25s cubic-bezier(.3,1.6,.5,1), box-shadow .2s; animation: deal .5s cubic-bezier(.3,1.5,.5,1) backwards; }
+  .card:hover { transform: translateY(-6px) rotate(-1.5deg); }
+  .card:active { transform: translateY(-2px) scale(.96); }
+  .card.on { transform: translateY(-14px) scale(1.05); box-shadow: 0 0 0 3px var(--gold), 0 0 22px 4px rgba(255,204,51,.8), 0 8px 0 rgba(0,0,0,.25); }
+  .card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  @keyframes deal { from { transform: translateY(80px) rotate(12deg) scale(.6); opacity: 0; } }
+  .card .art { position: absolute; inset: 0; }
+  .card .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%, rgba(0,0,0,.35)); }
+  .card .emb { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); }
+  .card .nm { position: relative; font-size: 14px; font-weight: 900; text-align: center; padding: 2px 0; }
+  .card .gems { position: relative; display: flex; justify-content: center; gap: 2px; padding: 3px 4px 6px; background: rgba(0,0,0,.3); }
+  .gem { min-width: 15px; height: 17px; border-radius: 5px; font-size: 11px; line-height: 15px; text-align: center; font-weight: 900;
+    border: 1.5px solid rgba(255,255,255,.8); }
+  .gem.z { opacity: .3; }
+  .gem.neg { background: var(--red) !important; }
+
+  #magics { display: flex; gap: 8px; }
+  .mg { --c: var(--purple); --d: var(--purple-d); width: 58px; height: 66px; padding: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; border-radius: 16px; }
+  .mg .gl { font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.35)); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
+  .mg:not(:disabled):hover .gl { transform: scale(1.2) rotate(-8deg); }
+  .mg small { font-size: 11px; }
+  .mg.on { animation: wob 1s ease-in-out infinite; box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(255,204,51,.9), 0 4px 0 var(--d); }
+  @keyframes wob { 50% { transform: translateY(-4px) scale(1.06); } }
+  .mg.used::after { content: "✓"; position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--green); border: 2px solid #fff; font-size: 11px; line-height: 16px; }
+  .mg[data-magic=purify] { --c: #8fd8ff; --d: #3a8ab8; }
+  .mg[data-magic=mine] { --c: #ffcc33; --d: #c08010; }
+  .mg[data-magic=spring] { --c: #3fa6ff; --d: #1f5fb8; }
+  .mg[data-magic=rich] { --c: #d09a5a; --d: #8a5a2a; }
+  .mg[data-magic=burn] { --c: #ff6a3a; --d: #b8302a; }
+
+  #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
+  #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-3deg) scale(1.05); } 90% { transform: rotate(3deg) scale(1.05); } }
+
+  /* 背包抽屉 */
+  #bag { position: fixed; right: 12px; top: calc(64px + var(--safe-t)); width: 260px; padding: 18px 12px 12px; z-index: 6;
+    transform: translateX(calc(100% + 30px)); transition: transform .35s cubic-bezier(.3,1.3,.5,1); }
+  #bag.open { transform: none; }
+  .sec { font-size: 11px; color: var(--muted); margin: 6px 0 4px; }
+  #crystals { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .cr { --c: #888; --d: #555; padding: 4px 8px 4px 6px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .cr i { width: 12px; height: 14px; display: inline-block; clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); background: #fff; }
+  .mats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .mats span { background: rgba(0,0,0,.06); border-radius: 8px; padding: 3px 6px; font-size: 12px; color: var(--ink2); }
+  .mats b { float: right; }
+  #recipes { display: flex; flex-direction: column; gap: 6px; }
+  #recipes .btn { text-align: left; display: flex; justify-content: space-between; }
+  #recipes .btn small { opacity: .85; font-weight: 700; }
+
+  /* 地块详情 */
+  #detail { position: fixed; left: 12px; top: calc(64px + var(--safe-t)); width: 280px; max-height: calc(100vh - 260px);
+    overflow: auto; padding: 0 0 10px; z-index: 6; transform: translateX(calc(-100% - 30px)) rotate(-4deg);
+    transition: transform .4s cubic-bezier(.3,1.4,.5,1); }
+  #detail.open { transform: none; }
+  .dh { padding: 12px 14px 10px; border-radius: 14px 14px 0 0; color: #fff; position: relative; }
+  .dh h3 { margin: 0; font-size: 20px; font-weight: 900; }
+  .dh .sub { font-size: 12px; opacity: .95; }
+  .dh .x { position: absolute; right: 8px; top: 8px; }
+  .bars5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 10px 14px 4px; }
+  .bar5 { text-align: center; font-size: 11px; color: var(--muted); }
+  .bar5 .tube { height: 46px; border-radius: 8px; background: rgba(0,0,0,.08); position: relative; overflow: hidden; margin-bottom: 2px;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,.15); }
+  .bar5 .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; transition: height .5s cubic-bezier(.3,1.5,.5,1);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5); }
+  .bar5 b { display: block; font-size: 14px; color: var(--ink2); }
+  .bar5 .neg { background: var(--red) !important; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin: 6px 10px 0;
+    padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.6); box-shadow: 0 2px 0 rgba(0,0,0,.06);
+    animation: pop .35s cubic-bezier(.3,1.6,.5,1) backwards; }
+  .row > span:first-child { display: flex; align-items: center; gap: 6px; }
+  .row > span:last-child { display: flex; gap: 4px; flex-wrap: wrap; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+  .muted { color: var(--muted); font-size: 12px; }
+  #detail::-webkit-scrollbar { width: 6px; } #detail::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 3px; }
+
+  /* 提示条 */
+  #hint { position: fixed; left: 50%; top: calc(64px + var(--safe-t)); transform: translate(-50%, -20px) scale(.8); opacity: 0; z-index: 7;
+    padding: 8px 20px; border-radius: 20px; font-size: 14px; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 24px);
+    overflow: hidden; text-overflow: ellipsis; background: linear-gradient(180deg, #4a9cff, #2b6fd6); border: 2px solid #fff;
+    box-shadow: 0 4px 0 #1a4a9a, 0 8px 16px rgba(0,0,0,.25); transition: all .3s cubic-bezier(.3,1.6,.5,1); }
+  #hint.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  #hint.err { background: linear-gradient(180deg, #ff7a6a, #e0402f); box-shadow: 0 4px 0 #9a2a1a, 0 8px 16px rgba(0,0,0,.25); }
+  #hint.err.show { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { margin-left: -8px; } 40%, 80% { margin-left: 8px; } }
+
+  #tip { position: fixed; z-index: 8; pointer-events: none; padding: 6px 10px; font-size: 12px; display: none; border-radius: 10px;
+    white-space: nowrap; background: rgba(20,30,50,.85); color: #fff; border: 2px solid rgba(255,255,255,.4); }
+  #tip .g { display: inline-block; min-width: 14px; text-align: center; margin-right: 3px; }
+
+  /* 飘字 / 横幅 */
+  .float { position: fixed; z-index: 9; pointer-events: none; font-size: 22px; font-weight: 900; animation: rise 1.1s ease-out forwards; }
+  @keyframes rise { 0% { transform: translate(-50%, 0) scale(.4); opacity: 0; } 20% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; }
+    100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+  #banner { position: fixed; left: 0; right: 0; top: 22%; z-index: 9; pointer-events: none; text-align: center; display: none; }
+  #banner .rib { display: inline-block; padding: 12px 64px; font-size: 30px; font-weight: 900; letter-spacing: 6px;
+    background: linear-gradient(180deg, #ffd54a, #f0a010); border: 3px solid #fff; border-radius: 8px;
+    box-shadow: 0 6px 0 #b06a00, 0 14px 30px rgba(0,0,0,.35); clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%); }
+  #banner .sub { margin: 6px auto 0; font-size: 14px; max-width: min(520px, calc(100vw - 32px)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #banner.go { display: block; animation: ban 1.6s cubic-bezier(.3,1.4,.5,1) forwards; }
+  @keyframes ban { 0% { transform: scale(.2) rotate(-8deg); opacity: 0; } 18% { transform: scale(1.1); opacity: 1; } 28% { transform: scale(1); }
+    80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+  #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(circle, rgba(255,240,180,.55), transparent 70%); opacity: 0; }
+  #flash.go { animation: fl .7s ease-out; }
+  @keyframes fl { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 帮助 / 日志 / 结算弹窗 */
+  dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, calc(100vw - 32px)); overflow: visible; }
+  dialog::backdrop { background: rgba(10, 30, 60, .5); }
+  dialog[open] .panel { animation: dlg .45s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes dlg { from { transform: scale(.5) translateY(40px); opacity: 0; } }
+  .dlg { position: relative; padding: 26px 22px 20px; color: var(--ink2); }
+  .dlg h2 { margin: 0 0 10px; text-align: center; font-size: 22px; }
+  .dlg .close { position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; font-size: 16px; }
+  .dlg kbd { background: #fff; border: 1px solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; font: 700 11px monospace; }
+  .dlg p { margin: 6px 0; font-weight: 600; }
+  #log { max-height: 50vh; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+  #log li { padding: 4px 8px; border-radius: 6px; } #log li:nth-child(odd) { background: rgba(0,0,0,.05); }
+  .big { font-size: 64px; font-weight: 900; text-align: center; line-height: 1; margin: 8px 0; }
+  .stars { text-align: center; font-size: 40px; letter-spacing: 4px; }
+  .stars span { display: inline-block; animation: star .5s cubic-bezier(.3,1.8,.5,1) backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+  .stars span.off { filter: grayscale(1) opacity(.35); }
+  @keyframes star { from { transform: scale(0) rotate(-90deg); } }
+  .sum5 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; text-align: center; }
+  .sum5 div { background: rgba(255,255,255,.7); border-radius: 10px; padding: 6px 2px; font-size: 11px; color: var(--muted); }
+  .sum5 b { display: block; font-size: 18px; color: var(--ink2); }
+
+  #nogl { position: fixed; inset: 0; display: none; place-items: center; z-index: 20; background: #6fb6ff; padding: 24px; text-align: center; }
+
+  /* 手机竖屏 */
+  @media (max-width: 760px) {
+    #cornerL { display: none; }
+    #corner { right: 8px; gap: 6px; } #corner .btn.round { width: 38px; height: 38px; font-size: 15px; }
+    #top { justify-content: flex-start; padding: 0 92px 0 8px; gap: 4px; }
+    .pill { height: 34px; font-size: 14px; padding: 0 8px 0 4px; gap: 4px; } .pill .ico { width: 24px; height: 24px; font-size: 11px; border-width: 1.5px; }
+    #pillAp { padding: 0 8px; } .pill small { display: none; } .ap { gap: 2px; } .ap i { width: 14px; height: 19px; }
+    #btnMenuHelp { display: inline-block !important; }
+    #dock { padding: 0 8px; }
+    .card { min-width: 0; } .gem { min-width: 0; flex: 1; max-width: 16px; font-size: 10px; } .card .nm { font-size: 13px; }
+    .mg { min-width: 0; } #magicTray { min-width: 0; }
+    #btnEnd .t { font-size: 13px; } #btnEnd { width: 64px; height: 64px; padding: 0; border-radius: 16px; line-height: 1.2; }
+    #dock { flex-direction: column; align-items: stretch; gap: 10px; }
+    #dock .row2 { display: flex; gap: 10px; align-items: flex-end; justify-content: space-between; }
+    .tray { padding: 16px 8px 8px; }
+    #offers { gap: 6px; justify-content: center; }
+    .card { flex: 1; width: auto; max-width: 110px; height: 96px; } .card .emb { font-size: 26px; top: 8px; }
+    #magics { gap: 5px; } .mg { width: auto; flex: 1; height: 56px; } .mg .gl { font-size: 20px; }
+    #magicTray { flex: 1; }
+
+    #detail { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(250px + var(--safe-b)); max-height: 30vh;
+      transform: translateY(calc(100% + 280px)); }
+    #detail.open { transform: none; }
+    #bag { left: 8px; right: 8px; width: auto; }
+    #hint { top: auto; bottom: calc(256px + var(--safe-b)); }
+  }
+  @media (min-width: 761px) { #dock .row2 { display: contents; } }
+  @media (max-height: 520px) and (orientation: landscape) {
+    .card { height: 84px; width: 80px; } .card .emb { font-size: 22px; top: 6px; }
+    .mg { height: 52px; width: 50px; }
+    #detail { max-height: calc(100vh - 80px); }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
+</style>
+</head>
+<body>
+<div id="world" aria-label="三维地图：点击地块选择，拖拽旋转，双指或滚轮缩放"></div>
+<div id="flash"></div>
+
+<div id="cornerL">
+  <button class="btn round" id="btnHelp" title="玩法说明" aria-label="玩法说明"><span class="t">?</span></button>
+</div>
+<header id="top" class="toon">
+  <div class="pill" id="pillRound"><span class="ico">⏳</span><span><small>轮次</small><b id="round">1</b></span></div>
+  <div class="pill" id="pillAp" title="行动点"><div class="ap" id="ap"></div></div>
+  <div class="pill" id="pillScore" title="灵力值"><span class="ico">✦</span><span><small>灵力</small><b id="score">0</b></span></div>
+  <div class="pill" id="pillLeft" title="剩余空位"><span class="ico">⬢</span><span><small>空位</small><b id="left"></b></span></div>
+</header>
+<div id="corner">
+  <button class="btn round gold" id="btnBag" title="背包与制造" aria-label="背包与制造"><span class="t">🎒</span></button>
+  <button class="btn round" id="btnMenu" title="菜单" aria-label="菜单"><span class="t">☰</span></button>
+</div>
+
+<aside id="detail" class="panel" aria-live="polite"></aside>
+<aside id="bag" class="panel"><span class="tag toon">背包</span>
+  <div class="sec">元素结晶 · 点击后选地块使用</div><div id="crystals"></div>
+  <div class="sec">材料</div><div class="mats" id="mats"></div>
+  <div class="sec">制造</div><div id="recipes"></div>
+</aside>
+
+<div id="hint" class="toon" role="status" aria-live="polite"></div>
+<div id="tip"></div>
+<div id="banner" class="toon"><div class="rib" id="banTxt"></div><div class="sub" id="banSub"></div></div>
+
+<footer id="dock">
+  <div class="tray panel"><span class="tag toon">待选地块</span><div id="offers"></div></div>
+  <div class="row2">
+    <div class="tray panel" id="magicTray"><span class="tag toon" style="background:linear-gradient(180deg,#c49aff,var(--purple));box-shadow:0 2px 0 var(--purple-d)">魔法</span><div id="magics"></div></div>
+    <div id="endWrap"><button class="btn green toon" id="btnEnd"><span class="t">结束本轮 ▶</span></button></div>
+  </div>
+</footer>
+
+<dialog id="dlgHelp"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>怎么玩</h2>
+  <p>① 选一张<b>待选地块</b>，点亮起的空位放下。每轮至少放 1 块。</p>
+  <p>② 每个行动消耗 1 颗💎，用完自动进入下一轮。</p>
+  <p>③ 点地块看详情：移动元素灵、合成元素兽、砍树、采矿、喂养动物…</p>
+  <p>④ 选中地块后点魔法可直接施放。铺满地图即结束，灵力越高越好。</p>
+  <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
+  手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
+  <p class="muted" id="scoreDetail"></p>
+</div></dialog>
+
+<dialog id="dlgMenu"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>菜单</h2>
+  <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">
+    <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
+    <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
+    <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
+  </div>
+  <div class="sec">日志</div><ul id="log"></ul>
+</div></dialog>
+
+<dialog id="over"><div class="panel dlg">
+  <h2 class="toon" style="font-size:28px;color:#fff;margin-top:-4px">灵地复苏！</h2>
+  <div class="stars" id="stars"></div>
+  <div class="big toon" id="overScore" style="color:var(--gold)"></div>
+  <div class="sum5" id="overSum"></div>
+  <p class="muted" id="overText" style="text-align:center"></p>
+  <div style="text-align:center;margin-top:10px"><button class="btn green toon" id="btnAgain" style="font-size:18px;padding:12px 28px"><span class="t">再来一局</span></button></div>
+</div></dialog>
+
+<div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
+
+<script src="lib/three.min.js"></script>
+<script src="data.js"></script>
+<script src="game.js"></script>
+<script src="view.js"></script>
+<script>
+const D = GameData, G = Game;
+const EL = D.ELEMENTS;
+let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, offersKey = '';   // mode: {kind:'place'|'cast'|'crystal'|'moveSpirit'|'moveAnimal'|'shelter', ...}
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const elName = k => EL.find(e => e.key === k).name;
+const ELC = { metal: '#f2c230', wood: '#5ccf3a', water: '#3fa6ff', fire: '#ff6a3a', earth: '#d09a5a' };
+const ELD = { metal: '#b88a10', wood: '#33912a', water: '#1f5fb8', fire: '#b8302a', earth: '#8a5a2a' };
+
+// 地块卡面配色与图标（按 look）
+const CARD = {
+  ruin: ['#b0a08a', '#7a6a58', '🏚'], pollute_water: ['#5a7a5a', '#34503a', '☠'], pollute_earth: ['#a0a048', '#6a6a28', '☣'],
+  pollute_rock: ['#7a6a8a', '#4a3a5a', '⛰'], barren: ['#d8b07a', '#a07a48', '🏜'], rock: ['#a8a090', '#706a5e', '🪨'],
+  sand: ['#f2d088', '#c8a050', '🌵'], bare: ['#b8a890', '#80705a', '⛰'], grass: ['#7ad050', '#3e9a2a', '🌱'],
+  water: ['#4ab0ff', '#1f6ad0', '💧'], lava: ['#ff7a3a', '#a8301a', '🌋'], waste: ['#c8b070', '#8a7440', '🍂'],
+  peak: ['#b8c8d8', '#6a7a8a', '🏔'], forest: ['#4aa848', '#246a2a', '🌲'], wet: ['#5aa888', '#2a6a58', '🪷'],
+  mine: ['#a88860', '#6a5038', '⛏'], valley: ['#6ac868', '#2a8a4a', '🏞'], rain: ['#3a9a5a', '#1a5a34', '🌴'],
+  fertile: ['#8ac048', '#4a7a20', '🌾'], creek: ['#6ad0a0', '#2a8a6a', '🏕'],
+};
+
+// ---------- 音效（WebAudio 合成，无外部文件） ----------
+const Sfx = (() => {
+  let ctx = null, on = true;
+  try { on = localStorage.getItem('sfx') !== '0'; } catch (_) { /* 隐私模式 */ }
+  function tone(f, d, type, vol, slide) {
+    if (!on) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+      g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + d);
+    } catch (_) { /* 无音频设备 */ }
+  }
+  return {
+    tap: () => tone(660, 0.07, 'triangle', 0.08),
+    pick: () => { tone(520, 0.08, 'triangle', 0.1); setTimeout(() => tone(780, 0.1, 'triangle', 0.1), 50); },
+    place: () => { tone(180, 0.18, 'sine', 0.22, 90); setTimeout(() => tone(880, 0.12, 'triangle', 0.08), 60); },
+    magic: () => { tone(400, 0.35, 'sine', 0.12, 1200); setTimeout(() => tone(1200, 0.25, 'triangle', 0.06), 120); },
+    err: () => { tone(220, 0.12, 'square', 0.06); setTimeout(() => tone(160, 0.16, 'square', 0.06), 90); },
+    round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
+    win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
+    get on() { return on; },
+    toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
+  };
+})();
+const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) { /* 不支持 */ } };
+
+function start(seed) {
+  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff));
+  mode = null; selected = null; hint('');
+  lastScore = G.score(S).total; lastRound = 1; offersKey = '';
+  render();
+  banner('第 1 轮', '放下地块，唤醒灵地');
+}
+
+function hint(msg, err) {
+  const h = $('hint');
+  clearTimeout(hintTimer);
+  if (!msg) { h.classList.remove('show'); return; }
+  h.textContent = msg; h.className = 'toon' + (err ? ' err' : '');
+  void h.offsetWidth; h.classList.add('show');
+  if (err) { hintTimer = setTimeout(() => h.classList.remove('show'), 2000); Sfx.err(); buzz(40); }
+}
+function setMode(m, msg) { mode = m; if (m) Sfx.pick(); hint(m ? msg : ''); render(); }
+
+function banner(txt, sub) {
+  const b = $('banner');
+  $('banTxt').textContent = txt; $('banSub').textContent = sub || '';
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+}
+function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+// 在地块或元素上方飘字
+function floatText(txt, color, x, y) {
+  const d = document.createElement('div');
+  d.className = 'float toon'; d.textContent = txt; d.style.color = color || '#fff';
+  d.style.left = x + 'px'; d.style.top = y + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1150);
+}
+function floatAtCell(k, txt, color) {
+  const p = View.project ? View.project(k) : null;
+  if (p) floatText(txt, color, p.x, p.y - 20);
+  else { const r = $('score').getBoundingClientRect(); floatText(txt, color, r.left + r.width / 2, r.bottom + 10); }
+}
+function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+
+// 行动成功后的特效类型
+function fxOf(a) {
+  switch (a.type) {
+    case 'place': return ['place', a.cell];
+    case 'cast': return [a.magic, a.cell];
+    case 'merge': return ['merge', a.cell, a.el];
+    case 'useCrystal': return ['crystal', a.cell, a.el];
+    case 'useCharm': return ['charm', a.cell];
+    case 'craft': return a.cell ? ['shelter', a.cell] : null;
+    case 'moveSpirit': case 'moveAnimal': return ['place', a.to];
+    default: return a.cell ? ['place', a.cell] : null;
+  }
+}
+
+function doAct(action) {
+  const before = G.score(S).total, round = S.round;
+  const r = G.act(S, action);
+  if (!r.ok) { hint(r.msg, true); render(); return false; }
+  mode = null; hint('');
+  const f = fxOf(action);
+  if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
+  render();
+  if (f) View.fx(f[0], f[1], f[2]);
+  const gain = (S.round === round ? G.score(S).total : before) - before;
+  const cell = action.cell || action.to;
+  if (gain && cell) floatAtCell(cell, (gain > 0 ? '+' : '') + gain, gain > 0 ? '#ffe14a' : '#ff6a5a');
+  else if (cell) floatAtCell(cell, r.msg.length > 10 ? '✓' : r.msg, '#fff');
+  if (S.over) setTimeout(showOver, 900);
+  return true;
+}
+
+function gemRow(a) {
+  return a.map((v, i) => `<span class="gem ${v === 0 ? 'z' : ''} ${v < 0 ? 'neg' : ''}" style="background:${ELC[EL[i].key]}" title="${EL[i].name}">${v}</span>`).join('');
+}
+
+function renderOffers() {
+  const key = S.round + ':' + S.offers.join(',');
+  const fresh = key !== offersKey && S.offers.length >= D.RULES.offersPerRound;
+  offersKey = key;
+  $('offers').innerHTML = S.offers.map((id, i) => {
+    const t = G.TYPE[id], c = CARD[t.look] || CARD.grass;
+    const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
+    return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
+      <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
+      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+  }).join('') || '<span class="muted" style="padding:20px 8px">本轮已用完</span>';
+}
+
+function renderMagics() {
+  $('magics').innerHTML = D.MAGICS.map(m => {
+    const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
+    const used = S.magicUsed[m.id];
+    return `<button class="btn mg toon ${on} ${used ? 'used' : ''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+  }).join('');
+}
+
+function renderDetail() {
+  const t = selected && S.cells[selected];
+  const box = $('detail');
+  if (!t) { box.classList.remove('open'); return; }
+  box.classList.add('open');
+  const ty = G.TYPE[t.type], c = CARD[ty.look] || CARD.grass;
+  const cap = G.spiritCap(t);
+  let h = `<div class="dh toon" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})">
+    <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
+    <h3>${c[2]} ${esc(ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : ''}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}</div></div>`;
+  h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / 6 * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
+  let n = 0;
+  const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
+  for (const e of EL) {
+    const list = t.spirits.filter(s => s.el === e.key);
+    if (!list.length) continue;
+    h += row(`<i class="dot" style="background:${ELC[e.key]}"></i>${e.name}元素灵 ×${list.length}`,
+      `<button class="btn sm" data-a="moveSpirit" data-id="${list[0].id}">移动</button>
+       <button class="btn sm gold" data-a="merge" data-el="${e.key}" ${list.length < D.RULES.mergeCount ? 'disabled' : ''}>合成兽</button>`);
+  }
+  for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, '<span class="muted">每 2 轮产大结晶</span>');
+  for (const p of t.plants) {
+    const choppable = p.kind === 'tree' || p.kind === 'shrub';
+    h += row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,
+      `${choppable ? `<button class="btn sm green" data-a="chop" data-id="${p.id}">砍伐</button>` : ''}<button class="btn sm" data-a="compostPlant" data-id="${p.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>`);
+  }
+  const hasCrystal = EL.filter(e => S.inv.crystal[e.key] > 0);
+  for (const a of t.animals) {
+    const nm = (a.el ? elName(a.el) + '元素' : '') + D.ANIMALS[a.kind].name;
+    h += row(`${D.ANIMALS[a.kind].icon} ${nm}${a.cd ? ` <span class="muted">冷却${a.cd}</span>` : ''}`,
+      `<button class="btn sm" data-a="moveAnimal" data-id="${a.id}">移动</button>
+       <button class="btn sm" data-a="pair" data-id="${a.id}" style="--c:#ff7ab0;--d:#b83a70">配对</button>
+       <button class="btn sm" data-a="compostAnimal" data-id="${a.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>
+       ${!a.el ? hasCrystal.map(e => `<button class="btn sm" data-a="feed" data-id="${a.id}" data-el="${e.key}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}">喂${e.name}</button>`).join('') : ''}`);
+  }
+  t.ores.forEach((o, i) => { h += row(`⛏ ${D.ORES[o].name}`, `<button class="btn sm gold" data-a="mineOre" data-i="${i}">采集</button>`); });
+  if (S.inv.bucket) h += row(`🪣 桶 空${S.inv.bucket - S.inv.bucketFull}/满${S.inv.bucketFull}`, '<button class="btn sm" data-a="scoop">舀水</button><button class="btn sm" data-a="pour">倒水</button>');
+  if (S.inv.charm) h += row(`📜 净化符 ×${S.inv.charm}`, '<button class="btn sm" data-a="useCharm" style="--c:#8fd8ff;--d:#3a8ab8">使用</button>');
+  if (!n) h += '<div class="muted" style="padding:6px 14px">这块地还很安静。结束本轮后会孕育元素灵和生灵。</div>';
+  box.innerHTML = h;
+}
+
+function renderInv() {
+  const inv = S.inv;
+  let h = '', total = 0;
+  for (const e of EL) for (const big of [false, true]) {
+    const n = (big ? inv.bigCrystal : inv.crystal)[e.key];
+    if (!n) continue;
+    total += n;
+    const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big ? 'on' : '';
+    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${big ? '大型结晶 +2' : '结晶 +1'}"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${big ? '大' : ''}${e.name}×${n}</button>`;
+  }
+  $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
+  $('btnBag').dataset.n = total;
+  $('mats').innerHTML = `<span>🪵 木<b>${inv.wood}</b></span>` + Object.entries(D.ORES).map(([k, v]) => `<span>${v.name}<b>${inv.ore[k]}</b></span>`).join('') +
+    `<span>🪣 桶<b>${inv.bucket}</b></span><span>📜 符<b>${inv.charm}</b></span>`;
+  $('recipes').innerHTML = D.RECIPES.map(r => {
+    const cost = Object.entries(r.cost).map(([k, n]) => (k === 'wood' ? '木' : D.ORES[k].name.slice(0, 1)) + n).join(' ');
+    const can = Object.entries(r.cost).every(([k, n]) => (k === 'wood' ? inv.wood : inv.ore[k]) >= n);
+    const on = mode && mode.kind === 'shelter' && r.id === 'shelter' ? 'on' : '';
+    return `<button class="btn sm ${can ? 'green' : ''} toon ${on}" data-recipe="${r.id}" title="${esc(r.desc)}" ${can ? '' : 'disabled'}>${r.name}<small>${cost}</small></button>`;
+  }).join('');
+}
+
+function render() {
+  $('round').textContent = S.round;
+  $('ap').innerHTML = Array.from({ length: D.RULES.apPerRound }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
+  $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
+  const sc = G.score(S);
+  $('score').textContent = sc.total;
+  if (sc.total !== lastScore) { bump($('pillScore')); lastScore = sc.total; }
+  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素灵 ${sc.spirits} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 元素动物 ${sc.elemAnimals}×${D.SCORE.elemAnimal}`;
+  $('left').textContent = G.emptyKeys(S).length;
+  const be = $('btnEnd');
+  be.disabled = S.over || S.placed === 0;
+  be.classList.toggle('ready', !be.disabled && S.ap > 0);
+  renderOffers(); renderMagics(); renderDetail(); renderInv();
+  $('log').innerHTML = S.log.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join('');
+  View.sync(S, { mode, selected });
+  if (S.round !== lastRound) {
+    lastRound = S.round;
+    bump($('pillRound'));
+    Sfx.round(); flash();
+    const got = S.log.find(l => l.startsWith(`[${S.round - 1}] 获得`));
+    banner(`第 ${S.round} 轮`, got ? got.replace(/^\[\d+\] /, '') : '灵地在生长');
+  }
+}
+
+function showOver() {
+  const sc = G.score(S);
+  const stars = sc.total >= 220 ? 3 : sc.total >= 150 ? 2 : 1;
+  $('stars').innerHTML = [1, 2, 3].map(i => `<span class="${i > stars ? 'off' : ''}" style="animation-delay:${300 + i * 200}ms">⭐</span>`).join('');
+  $('overSum').innerHTML = [['属性', sc.attrs], ['元素灵', sc.spirits], ['元素兽', sc.beasts], ['元素动物', sc.elemAnimals]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
+  $('overText').textContent = `${S.round} 轮铺满了整片灵地`;
+  $('over').showModal();
+  Sfx.win();
+  // 分数滚动
+  const el = $('overScore'), t0 = performance.now();
+  (function tick(t) { const u = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(sc.total * (1 - Math.pow(1 - u, 3))); if (u < 1) requestAnimationFrame(tick); })(t0);
+}
+
+// ---------- 事件 ----------
+function onCell(k) {
+  const t = S.cells[k];
+  if (mode) {
+    const m = mode;
+    if (m.kind === 'place') { if (!t) doAct({ type: 'place', offer: m.offer, cell: k }); return; }
+    if (!t) return;
+    if (m.kind === 'cast') doAct({ type: 'cast', magic: m.magic, cell: k });
+    else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big });
+    else if (m.kind === 'shelter') doAct({ type: 'craft', recipe: 'shelter', cell: k });
+    else if (m.kind === 'moveSpirit') { if (doAct({ type: 'moveSpirit', from: m.from, spiritId: m.id, to: k })) { selected = k; render(); } }
+    else if (m.kind === 'moveAnimal') { if (doAct({ type: 'moveAnimal', from: m.from, animalId: m.id, to: k })) { selected = k; render(); } }
+    return;
+  }
+  selected = t && selected !== k ? k : null;
+  if (selected) Sfx.tap();
+  render();
+}
+
+function onHover(k, x, y) {
+  const tip = $('tip');
+  const t = k && S.cells[k];
+  if (!k || (!t && !(mode && mode.kind === 'place'))) { tip.style.display = 'none'; return; }
+  if (t) {
+    const s = t.attrs.reduce((a, b) => a + b, 0);
+    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('');
+  } else {
+    const ok = G.legalPlacements(S).includes(k);
+    tip.innerHTML = ok ? `放置 <b>${esc(G.TYPE[S.offers[mode.offer]].name)}</b>` : '需与已有地块相邻';
+  }
+  tip.style.display = 'block';
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, x + 14) + 'px';
+  tip.style.top = (y + 16) + 'px';
+}
+
+// 按钮点击水波纹
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn, .card');
+  if (!b || b.disabled) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height);
+  const w = document.createElement('span');
+  w.className = 'ripple';
+  w.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+  b.style.overflow = 'hidden';
+  b.appendChild(w);
+  setTimeout(() => w.remove(), 520);
+});
+
+$('offers').addEventListener('click', e => {
+  const b = e.target.closest('[data-offer]'); if (!b) return;
+  const i = +b.dataset.offer;
+  setMode(mode && mode.kind === 'place' && mode.offer === i ? null : { kind: 'place', offer: i }, `放置 ${G.TYPE[S.offers[i]].name}：点亮起的空位`);
+});
+$('magics').addEventListener('click', e => {
+  const b = e.target.closest('[data-magic]'); if (!b) return;
+  const id = b.dataset.magic, m = D.MAGICS.find(x => x.id === id);
+  if (!mode && selected) { doAct({ type: 'cast', magic: id, cell: selected }); return; }   // 已选中地块时直接施放
+  setMode(mode && mode.kind === 'cast' && mode.magic === id ? null : { kind: 'cast', magic: id }, `${m.name}：${m.desc}`);
+});
+$('bag').addEventListener('click', e => {
+  const c = e.target.closest('[data-crystal]');
+  if (c) {
+    const el = c.dataset.crystal, big = !!c.dataset.big;
+    if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big }); return; }
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big ? null : { kind: 'crystal', el, big }, '使用结晶：点击目标地块');
+    return;
+  }
+  const r = e.target.closest('[data-recipe]');
+  if (r) {
+    if (r.dataset.recipe === 'shelter') {
+      if (!mode && selected) { doAct({ type: 'craft', recipe: 'shelter', cell: selected }); return; }
+      setMode(mode && mode.kind === 'shelter' ? null : { kind: 'shelter' }, '搭建庇护所：点击目标地块');
+    } else doAct({ type: 'craft', recipe: r.dataset.recipe });
+  }
+});
+$('detail').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const k = selected, id = +b.dataset.id;
+  switch (b.dataset.a) {
+    case 'close': selected = null; render(); break;
+    case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
+    case 'moveAnimal': setMode({ kind: 'moveAnimal', from: k, id }, '移动动物：点击相邻地块'); break;
+    case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
+    case 'chop': doAct({ type: 'chop', cell: k, plantId: id }); break;
+    case 'compostPlant': doAct({ type: 'compost', cell: k, what: 'plant', targetId: id }); break;
+    case 'compostAnimal': doAct({ type: 'compost', cell: k, what: 'animal', targetId: id }); break;
+    case 'pair': doAct({ type: 'pair', cell: k, animalId: id }); break;
+    case 'feed': doAct({ type: 'feed', cell: k, animalId: id, el: b.dataset.el }); break;
+    case 'mineOre': doAct({ type: 'mineOre', cell: k, index: +b.dataset.i }); break;
+    case 'scoop': doAct({ type: 'scoop', cell: k }); break;
+    case 'pour': doAct({ type: 'pour', cell: k }); break;
+    case 'useCharm': doAct({ type: 'useCharm', cell: k }); break;
+  }
+});
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) hint(''); else hint(r.msg, true); render(); };
+$('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
+$('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
+$('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
+$('btnMenuHelp').onclick = () => { $('dlgMenu').close(); $('dlgHelp').showModal(); };
+$('btnNew').onclick = () => { $('dlgMenu').close(); start(); };
+$('btnAgain').onclick = () => { $('over').close(); start(); };
+const soundLabel = () => { $('btnSound').querySelector('.t').textContent = Sfx.on ? '🔊 音效开' : '🔇 音效关'; };
+$('btnSound').onclick = () => { Sfx.toggle(); soundLabel(); Sfx.tap(); };
+soundLabel();
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d && d.id !== 'over') d.close(); }));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.querySelector('dialog[open]')) return;
+  if (mode) setMode(null);
+  else if (selected) { selected = null; render(); }
+});
+document.addEventListener('gesturestart', e => e.preventDefault());   // iOS 禁止页面缩放
+
+if (!View.supported || View.supported()) {
+  View.init($('world'), {
+    onCell, onHover,
+    onMiss() { if (!mode && selected) { selected = null; render(); } },
+  });
+  start();
+} else {
+  $('nogl').style.display = 'grid';
+}
+</script>
+</body>
+</html>
