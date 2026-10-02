@@ -2,11 +2,13 @@
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
-[打开本次预览](https://gameplay-prototype-d9qbub3eh-wangshuq20041122-4927s-projects.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md)
+[打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md)
 
 ![连续地表与圆润卡通云海](docs/screenshots/desktop-midgame.png)
 
 每轮有 3 点行动，至少放置 1 块地块。放置地形、施放魔法、移动元素灵和动物、合成元素兽、使用结晶及制造物品，直到铺满 85 格地图。灵力由地块属性、元素灵、元素兽和元素动物共同计分。
+
+使用普通和大型元素结晶不消耗行动点：分别使目标元素属性增加 1 和 2，仍消耗对应结晶库存。使用结晶不会自动换轮，最后 1 点行动仍可用于放置。
 
 ## 本地运行
 
@@ -36,6 +38,13 @@ python scripts/browser_check.py
 
 桌面与手机检查顺序运行，每组完成后关闭视口，避免多个软件渲染上下文竞争资源。
 
+结晶免费使用的专项检查（覆盖普通及大型结晶、库存、属性、行动点、回合和 HUD）：
+
+```sh
+python scripts/crystal_check.py
+python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --report crystal-check-production.json
+```
+
 ## 实现
 
 | 文件 | 职责 |
@@ -54,7 +63,7 @@ python scripts/browser_check.py
 
 特效使用尘雾、水滴、碎片和火星的不同形状，随生命周期透明消散；桌面使用固定临时灯池和短拖尾，手机模拟质量禁用这两项、粒子数量减半。减少大面积光环和强闪白。视觉效果仍需要在预览中人工确认。
 
-## 预览部署
+## 部署
 
 已关联 Vercel 项目时运行：
 
@@ -62,6 +71,8 @@ python scripts/browser_check.py
 vercel deploy --target preview --yes
 ```
 
-只创建预览部署。正式地址的发布与域名切换单独处理。[GitHub Actions 示例](docs/ci-example.yml) 可做规则与地形检查，不触发部署；当前 GitHub 登录令牌缺少 `workflow` 权限，因此暂未启用自动检查。获得该权限后可把示例移到 `.github/workflows/check.yml`。
+上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。当前正式版包含连续地形、卡通云海与结晶免费使用规则。
+
+[GitHub Actions 示例](docs/ci-example.yml) 可做规则与地形检查，不触发部署；当前 GitHub 登录令牌缺少 `workflow` 权限，因此暂未启用自动检查。获得该权限后可把示例移到 `.github/workflows/check.yml`。
 
 此原型没有账号系统或对局存档。刷新页面会开始新对局；音效偏好使用浏览器本地存储。Three.js 授权见 [第三方声明](THIRD_PARTY_NOTICES.md)。

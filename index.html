@@ -295,7 +295,7 @@
 
 <aside id="detail" class="panel" aria-live="polite"></aside>
 <aside id="bag" class="panel"><span class="tag toon">背包</span>
-  <div class="sec">元素结晶 · 点击后选地块使用</div><div id="crystals"></div>
+  <div class="sec">元素结晶 · 不消耗行动点 · 点击后选地块使用</div><div id="crystals"></div>
   <div class="sec">材料</div><div class="mats" id="mats"></div>
   <div class="sec">制造</div><div id="recipes"></div>
 </aside>
@@ -316,7 +316,7 @@
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
   <h2>怎么玩</h2>
   <p>① 选一张<b>待选地块</b>，点亮起的空位放下。每轮至少放 1 块。</p>
-  <p>② 每个行动消耗 1 颗💎，用完自动进入下一轮。</p>
+  <p>② 使用普通或大型元素结晶不消耗行动点。其他行动消耗 1 颗💎，用完自动进入下一轮。</p>
   <p>③ 点地块看详情：移动元素灵、合成元素兽、砍树、采矿、喂养动物…</p>
   <p>④ 选中地块后点魔法可直接施放。铺满地图即结束，灵力越高越好。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
@@ -555,7 +555,7 @@ function renderInv() {
     if (!n) continue;
     total += n;
     const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big ? 'on' : '';
-    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${big ? '大型结晶 +2' : '结晶 +1'}"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${big ? '大' : ''}${e.name}×${n}</button>`;
+    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${big ? '大型结晶 +2' : '结晶 +1'}，不消耗行动点"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${big ? '大' : ''}${e.name}×${n}</button>`;
   }
   $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
   $('btnBag').dataset.n = total;
@@ -668,9 +668,9 @@ $('magics').addEventListener('click', e => {
 $('bag').addEventListener('click', e => {
   const c = e.target.closest('[data-crystal]');
   if (c) {
-    const el = c.dataset.crystal, big = !!c.dataset.big;
+    const el = c.dataset.crystal, big = c.dataset.big === '1';
     if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big }); return; }
-    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big ? null : { kind: 'crystal', el, big }, '使用结晶：点击目标地块');
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big ? null : { kind: 'crystal', el, big }, '使用结晶（不消耗行动点）：点击目标地块');
     return;
   }
   const r = e.target.closest('[data-recipe]');

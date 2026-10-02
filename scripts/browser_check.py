@@ -128,6 +128,7 @@ try:
             }''')
             page.clock.run_for(220)
             check('Crystal consumption flies from the HUD to the tile', page.locator('.token').count() > 0)
+            check('Crystal use preserves action points', page.evaluate('S.ap===3'))
             page.screenshot(path=str(OUT / 'crystal-down.png'))
             page.clock.resume()
             page.wait_for_timeout(2100)

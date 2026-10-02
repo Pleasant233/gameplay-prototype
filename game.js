@@ -111,11 +111,11 @@
   }
 
   // ---------- 行动 ----------
-  // 每个行动 1 点；必须给「本轮至少放置 1 块」留 1 点
-  function canSpend(s, isPlace) {
+  // 使用结晶免费；其他行动必须给「本轮至少放置 1 块」留 1 点。
+  function canSpend(s, isPlace, cost) {
     if (s.over) return '游戏已结束';
-    if (s.ap <= 0) return '行动点不足';
-    if (!isPlace && s.placed === 0 && s.ap <= 1) return '最后 1 点必须用于放置地块';
+    if (s.ap < cost) return '行动点不足';
+    if (cost > 0 && !isPlace && s.placed === 0 && s.ap <= cost) return '最后 1 点必须用于放置地块';
     return null;
   }
   const fail = msg => ({ ok: false, msg });
@@ -306,7 +306,8 @@
     s.events = [];
     const h = handlers[action.type];
     if (!h) return fail('未知行动');
-    const err = canSpend(s, action.type === 'place');
+    const cost = action.type === 'useCrystal' ? 0 : 1;
+    const err = canSpend(s, action.type === 'place', cost);
     if (err) return fail(err);
     const beforeScore = score(s).total;
     const beforeBag = bagCount(s);
@@ -319,10 +320,10 @@
     // specific wood/ore receipt was already produced by the handler.
     const bagDelta = bagCount(s) - beforeBag;
     if (bagDelta > 0 && cell && !s.events.some(e => e.kind === 'wood' || e.kind === 'ore')) emit(s, { cell, kind: 'item', n: bagDelta });
-    s.ap--;
+    s.ap -= cost;
     log(s, r.msg);
     if (emptyKeys(s).length === 0) finish(s);
-    else if (s.ap === 0) endRound(s);
+    else if (cost > 0 && s.ap === 0) endRound(s);
     return r;
   }
 

@@ -34,6 +34,46 @@ t('最后 1 点必须放置', () => {
   assert.strictEqual(G.act(s, { type: 'cast', magic: 'spring', cell: k }).ok, false);
 });
 
+t('普通和大型结晶免费，零行动点也不自动换轮', () => {
+  for (const el of D.ELEMENTS.map(e => e.key)) for (const big of [false, true]) for (const ap of [0, 1, 3]) {
+    const s = G.newGame(43), cell = '3,3', index = D.ELEMENTS.findIndex(e => e.key === el);
+    s.ap = ap; s.placed = ap === 0 ? 1 : 0; s.cells[cell].attrs = [0, 0, 0, 0, 0];
+    const bag = big ? s.inv.bigCrystal : s.inv.crystal;
+    bag[el] = 1;
+    const before = G.score(s).total;
+    assert.ok(G.act(s, { type: 'useCrystal', cell, el, big }).ok);
+    assert.strictEqual(s.ap, ap);
+    assert.strictEqual(s.round, 1);
+    assert.strictEqual(s.placed, ap === 0 ? 1 : 0);
+    assert.strictEqual(bag[el], 0);
+    assert.strictEqual(s.cells[cell].attrs[index], big ? 2 : 1);
+    assert.strictEqual(s.events.reduce((n, e) => n + (e.score || 0), 0), G.score(s).total - before);
+  }
+});
+
+t('免费结晶保留最后 1 点，付费行动与放置规则照常生效', () => {
+  const s = G.newGame(44);
+  s.ap = 1; s.inv.crystal.water = 1;
+  assert.ok(G.act(s, { type: 'useCrystal', cell: '3,3', el: 'water', big: false }).ok);
+  assert.strictEqual(s.ap, 1);
+  assert.strictEqual(G.act(s, { type: 'cast', magic: 'mine', cell: '3,3' }).ok, false);
+  assert.strictEqual(G.endRound(s).ok, false);
+  assert.ok(G.act(s, { type: 'place', offer: 0, cell: G.legalPlacements(s)[0] }).ok);
+  assert.strictEqual(s.round, 2);
+  assert.strictEqual(s.ap, D.RULES.apPerRound);
+});
+
+t('结晶库存不足、目标无效或对局结束时不改变规则状态', () => {
+  for (const reason of ['empty', 'target', 'over']) {
+    const s = G.newGame(45);
+    s.inv.crystal.water = reason === 'empty' ? 0 : 1;
+    s.over = reason === 'over';
+    const before = JSON.stringify(s);
+    assert.strictEqual(G.act(s, { type: 'useCrystal', cell: reason === 'target' ? '0,0' : '3,3', el: 'water', big: false }).ok, false);
+    assert.strictEqual(JSON.stringify(s), before);
+  }
+});
+
 t('跳过前必须已放置', () => {
   const s = G.newGame(4);
   assert.strictEqual(G.endRound(s).ok, false);

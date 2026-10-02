@@ -1,0 +1,15 @@
+{
+  "url": "http://127.0.0.1:59760",
+  "checks": [
+    "desktop: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+    "desktop: large crystal consumes large stock and adds 2 without AP or round change",
+    "desktop: score, inventory counter and flights settle",
+    "desktop: help states ordinary and large crystals are free",
+    "phone: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+    "phone: large crystal consumes large stock and adds 2 without AP or round change",
+    "phone: score, inventory counter and flights settle",
+    "phone: help states ordinary and large crystals are free",
+    "No browser or WebGL errors"
+  ],
+  "errors": []
+}
