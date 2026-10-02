@@ -73,6 +73,8 @@ vercel deploy --target preview --yes
 
 上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。当前正式版包含连续地形、卡通云海与结晶免费使用规则。
 
+Vercel 会验证提交作者，请使用部署账号关联的邮箱署名提交。此次正式上线与专项复测见 [发布记录](docs/RELEASE-2026-10-02.md)。
+
 [GitHub Actions 示例](docs/ci-example.yml) 可做规则与地形检查，不触发部署；当前 GitHub 登录令牌缺少 `workflow` 权限，因此暂未启用自动检查。获得该权限后可把示例移到 `.github/workflows/check.yml`。
 
 此原型没有账号系统或对局存档。刷新页面会开始新对局；音效偏好使用浏览器本地存储。Three.js 授权见 [第三方声明](THIRD_PARTY_NOTICES.md)。

@@ -1,0 +1,48 @@
+{
+  "url": "https://gameplay-prototype.vercel.app",
+  "deployment": "dpl_8o58kdsFtiK5DXYcJCXhFQwLZePc",
+  "files": [
+    {
+      "file": "index.html",
+      "status": 200,
+      "sha256": "3c4bf440c58bb1554469e9044cf3b8206cd016c30e4b259ea17245fe81da2a94",
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "file": "game.js",
+      "status": 200,
+      "sha256": "670f72c61363698b2b7f067ef659f60f6b6608a1d23edd3a12064db775598acf",
+      "type": "application/javascript; charset=utf-8"
+    },
+    {
+      "file": "view.js",
+      "status": 200,
+      "sha256": "f4fd6e607ee83bec317234e71debf963efa978c879752555fc308903e074740d",
+      "type": "application/javascript; charset=utf-8"
+    },
+    {
+      "file": "tokens.js",
+      "status": 200,
+      "sha256": "b656e2ce681549a83382d959a0324b947edd9ae7319f9b41badf722cd728de8a",
+      "type": "application/javascript; charset=utf-8"
+    },
+    {
+      "file": "data.js",
+      "status": 200,
+      "sha256": "613dfc71ad68ad50ec6e9ef92ed482c241afafa9b8efb296b63db11e212f526a",
+      "type": "application/javascript; charset=utf-8"
+    },
+    {
+      "file": "lib/three.min.js",
+      "status": 200,
+      "sha256": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
+      "type": "application/javascript; charset=utf-8"
+    },
+    {
+      "file": "manifest.webmanifest",
+      "status": 200,
+      "sha256": "2d1833d06202fafc0cb0d991b1d9a18f31ce8c49f8ab2cce47095ed58b9da5cb",
+      "type": "application/manifest+json; charset=utf-8"
+    }
+  ]
+}
