@@ -2,7 +2,9 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http');
 const { chromium } = require('playwright');
-const root = path.resolve(__dirname, '..'), out = path.join(root, 'artifacts');
+const root = path.resolve(__dirname, '..'), out = process.env.V1_ARTIFACT_DIR ? path.resolve(process.env.V1_ARTIFACT_DIR) : path.join(root, 'artifacts');
+const remoteURL = process.env.V1_TEST_URL;
+if (remoteURL && !['http:', 'https:'].includes(new URL(remoteURL).protocol)) throw new Error('V1_TEST_URL must use HTTP or HTTPS');
 fs.mkdirSync(out, { recursive: true });
 let view = fs.readFileSync(path.join(root, 'view.js'), 'utf8');
 view = view.replace('  root.View = {', `
@@ -31,6 +33,9 @@ async function pointClick(page, cell, mobile) {
 }
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const targetURL = remoteURL || `http://127.0.0.1:${server.address().port}`;
+  report.url = targetURL;
+  report.testProbes = 'Local view.js with test-only picking and effect probes; game/UI/assets loaded from target URL';
   const options = { headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] };
   if (process.env.PLAYWRIGHT_BROWSER_PATH) options.executablePath = process.env.PLAYWRIGHT_BROWSER_PATH;
   else if (process.env.PLAYWRIGHT_BROWSER_CHANNEL) options.channel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
@@ -44,7 +49,7 @@ async function pointClick(page, cell, mobile) {
       page.on('pageerror', e => report.errors.push(label + ': ' + e.message));
       page.on('console', msg => { if (msg.type() === 'error') report.errors.push(label + ': ' + msg.text()); });
       await page.route('**/view.js', route => route.fulfill({ body: view, contentType: 'application/javascript' }));
-      await page.goto(`http://127.0.0.1:${server.address().port}`);
+      await page.goto(targetURL);
       await page.waitForFunction('typeof S!=="undefined" && S && document.querySelector("#world canvas")');
       await page.evaluate('start(37)'); await page.waitForTimeout(1100);
       check(label + ' initial magics locked and 3 offers', await page.evaluate(`document.querySelector('[data-magic="mine"]').disabled && document.querySelectorAll('[data-offer]').length===3`));
