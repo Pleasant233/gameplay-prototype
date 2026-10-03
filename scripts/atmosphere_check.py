@@ -8,6 +8,7 @@ from pathlib import Path
 import threading
 from PIL import Image, ImageChops, ImageStat
 from playwright.sync_api import sync_playwright
+from browser_support import launch_browser
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts'
@@ -64,7 +65,7 @@ def difference(a,b,box=None):
 
 try:
     with sync_playwright() as p:
-        browser=p.chromium.launch(channel='msedge',headless=True,args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
+        browser=launch_browser(p)
         page=browser.new_page(viewport={'width':1440,'height':900})
         def prepare(page,effect_source=post_source):
             page.route('**/postfx.js',lambda route:route.fulfill(body=effect_source,content_type='application/javascript'))
@@ -112,7 +113,9 @@ try:
         first=page.evaluate('__atmosphere.status().focus')
         # Select a farther tile; the focal plane must follow it rather than the screen center.
         page.evaluate('selected="3,1";render()')
-        page.wait_for_timeout(1200)
+        # Wait for actual focus movement instead of assuming a software GPU
+        # can draw enough interpolation frames in 1.2 seconds.
+        page.wait_for_function('(before)=>Math.abs(__atmosphere.status().focus-before)>.1', arg=first, timeout=30000)
         second=page.evaluate('__atmosphere.status().focus')
         check('Focus follows a changed tile selection',abs(first-second)>.1)
         page.locator('#btnMenu').click()

@@ -1,0 +1,3 @@
+# Browser verification tools only; the shipped game has no Python dependency.
+playwright==1.63.0
+Pillow==12.3.0

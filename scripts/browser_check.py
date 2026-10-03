@@ -1,4 +1,4 @@
-"""Headless Edge integration checks. Requires Python playwright (no browser install for Edge)."""
+"""Headless Chromium/Edge integration checks; see docs/CODEX-CLOUD.md."""
 import functools
 import http.server
 import json
@@ -9,6 +9,7 @@ import sys
 from datetime import datetime, timezone, timedelta
 
 from playwright.sync_api import sync_playwright
+from browser_support import launch_browser
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'artifacts'
@@ -44,7 +45,7 @@ SETUP = '''() => {
 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
 threading.Thread(target=server.serve_forever, daemon=True).start()
 url = f'http://127.0.0.1:{server.server_port}'
-report = {'browser': 'Headless Microsoft Edge / SwiftShader', 'checks': [], 'errors': []}
+report = {'browser': 'Headless Chromium / SwiftShader', 'checks': [], 'errors': []}
 phone_only='--phone-only' in sys.argv
 if phone_only and (OUT/'browser-report.json').exists():
     report=json.loads((OUT/'browser-report.json').read_text(encoding='utf-8'))
@@ -58,14 +59,24 @@ def check(name, passed):
     print('ok - '+name, flush=True)
 
 
+def pause_animation(page):
+    # Use the browser's current clock, including earlier run_for advances.
+    now = datetime.fromtimestamp(page.evaluate('Date.now()') / 1000, timezone.utc)
+    # pause_at skips due timers once, so this margin does not run a minute of
+    # frames. It allows slow software-renderer protocol round trips to finish.
+    page.clock.pause_at(now + timedelta(minutes=1))
+
+
 try:
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel='msedge', headless=True, args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+        browser = launch_browser(p)
+        report['browser'] = f'Chromium {browser.version} / SwiftShader'
         if not phone_only:
             page = browser.new_page(viewport={'width': 1440, 'height': 900})
             page.route('**/view.js', lambda route: route.fulfill(body=source, content_type='application/javascript'))
             page.on('pageerror', lambda e: report['errors'].append(str(e)))
             page.on('console', lambda m: report['errors'].append(m.text) if m.type == 'error' else None)
+            page.clock.install()
             page.goto(url)
             page.wait_for_timeout(2500)
             page.evaluate(SETUP)
@@ -90,10 +101,12 @@ try:
             page.wait_for_timeout(120)
             page.screenshot(path=str(OUT / 'placement-hover.png'))
             before_left = page.locator('#left').inner_text()
+            pause_animation(page)
             page.mouse.click(point['x'], point['y'])
             check('Pointer places the offered tile', page.evaluate('(k)=>!!S.cells[k]', cell))
             check('Space count waits for the flight', page.locator('#left').inner_text() == before_left)
-            page.wait_for_timeout(1700)
+            page.clock.resume()
+            page.wait_for_function("Number(document.getElementById('left').textContent)===G.emptyKeys(S).length", timeout=30000)
             check('Space count settles correctly', page.evaluate("Number(document.getElementById('left').textContent)===G.emptyKeys(S).length"))
 
             # Capture actual settlement flights, including crystals and spirits.
@@ -103,13 +116,17 @@ try:
               Tokens.reset();render();
             }''')
             before = page.evaluate("Number(document.getElementById('score').textContent)")
-            page.locator('#btnEnd').click()
+            pause_animation(page)
+            # The frozen clock cannot advance the actionability animation check.
+            # force still sends a real button click; the visible button is fixed.
+            page.locator('#btnEnd').click(force=True)
             check('Score waits for arriving production tokens', page.evaluate("Number(document.getElementById('score').textContent)") == before)
-            page.wait_for_timeout(420)
+            page.clock.run_for(420)
             count = page.locator('.token').count()
             check('Production tokens visibly fly with a 40-token cap', 0 < count <= 40)
             page.screenshot(path=str(OUT / 'round-tokens.png'))
-            page.wait_for_timeout(2500)
+            page.clock.resume()
+            page.wait_for_function("Number(document.getElementById('score').textContent)===G.score(S).total && !document.querySelector('.token')", timeout=30000)
             check('All delayed counters settle to the game state', page.evaluate("Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===Object.values(S.inv.crystal).reduce((a,b)=>a+b,0)+Object.values(S.inv.bigCrystal).reduce((a,b)=>a+b,0)+Object.values(S.inv.ore).reduce((a,b)=>a+b,0)+S.inv.wood+S.inv.bucket+S.inv.charm"))
             check('No flight nodes remain after settlement', page.locator('.token').count() == 0)
 
@@ -121,8 +138,7 @@ try:
                 page.wait_for_function('__viewTest.effects().transient===0 && __viewTest.effects().lights===0', timeout=45000)
                 check(f'{kind} transient meshes and lights expire', page.evaluate('__viewTest.effects().transient===0 && __viewTest.effects().lights===0'))
 
-            page.clock.install()
-            page.clock.pause_at(datetime.now(timezone.utc)+timedelta(milliseconds=100))
+            pause_animation(page)
             page.evaluate('''() => {
               S.inv.crystal.water=1;S.ap=3;S.placed=1;render();
               doAct({type:'useCrystal',cell:'3,3',el:'water',big:false});
@@ -135,11 +151,15 @@ try:
             page.wait_for_timeout(2100)
 
             # Overflow grouping, rapid actions, and restart must never leave stale numbers.
+            # Freeze the inspected frame: software rendering may finish the flight
+            # between two protocol reads when the clock is left running.
+            pause_animation(page)
             page.evaluate('Tokens.enqueue(Array.from({length:250},()=>({cell:"3,3",kind:"plant"})))')
-            page.wait_for_timeout(350)
-            check('Overflow receipts merge into at most 40 nodes', page.locator('.token').count() <= 40)
+            page.clock.run_for(350)
+            check('Overflow receipts merge into at most 40 nodes', 0 < page.locator('.token').count() <= 40)
             check('Merged receipts show their quantity', page.locator('.token small').filter(has_text='×').count() > 0)
             page.evaluate('start(99)')
+            page.clock.resume()
             page.wait_for_timeout(1500)
             check('Restart clears flights and transient effects', page.locator('.token').count() == 0 and page.evaluate('__viewTest.effects().transient===0'))
 

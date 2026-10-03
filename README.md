@@ -2,7 +2,7 @@
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
-[打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md)
+[打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
 
 ![柔和泛光与微缩景观景深](docs/screenshots/atmosphere-desktop.png)
 
@@ -15,26 +15,29 @@
 在项目根目录执行：
 
 ```sh
-python -m http.server 8080
+npm run dev
 ```
+
+需要 Node.js 22+（推荐 24）与 Python 3.10+。也可直接运行 `python -m http.server 8080`。游戏不需要构建，npm 仅统一开发和测试命令。
 
 打开 `http://localhost:8080`。桌面支持点击选择、拖拽旋转、滚轮缩放、右键平移；手机支持点击、双指缩放和平移。选中卡片后点击相邻空位放置；`Esc` 取消操作。
 
 ## 验证
 
 ```sh
-node test.js
-node test-view.js
+npm ci
+npm test
 ```
 
-无头 Edge 验证实际点击、触摸模拟、选框、收益飞行、计数结算、特效回收和手机布局：
+无头 Chromium 验证实际点击、触摸模拟、选框、收益飞行、计数结算、特效回收和手机布局：
 
 ```sh
-python -m pip install playwright
+python -m pip install -r requirements.txt
+python -m playwright install chromium
 python scripts/browser_check.py
 ```
 
-该脚本使用本机 Microsoft Edge，自动启动本地服务器，并把截图和报告写入被 Git 忽略的 `artifacts/`。结晶飞行截图使用 Playwright 虚拟时钟固定中途帧，避免渲染速度影响捕获。无头浏览器使用软件 WebGL，不能代表真实手机或 GPU 性能。
+默认使用 Playwright 自带 Chromium，设置 `PLAYWRIGHT_BROWSER_CHANNEL=msedge` 可使用本机 Edge。Linux/Codex 运行 `bash .codex/setup.sh` 一次完成系统库、Python 虚拟环境和浏览器安装；Windows 虚拟环境步骤见 [云端配置说明](docs/CODEX-CLOUD.md)。脚本自动启动本地服务器，并把截图和报告写入被 Git 忽略的 `artifacts/`。放置、收益和结晶飞行的中途帧检查使用 Playwright 虚拟时钟，避免慢速软件渲染错过动画；结算检查仍验证最终计数及节点清理。无头浏览器使用软件 WebGL，不能代表真实手机或 GPU 性能。
 
 桌面与手机检查顺序运行，每组完成后关闭视口，避免多个软件渲染上下文竞争资源。
 
@@ -48,9 +51,10 @@ python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --re
 泛光与景深的图像和交互检查需要 Pillow，用固定画面对比分别开启 Bloom 和景深后的结果：
 
 ```sh
-python -m pip install Pillow
 python scripts/atmosphere_check.py
 ```
+
+统一运行三组浏览器检查：`npm run test:browser`；规则与浏览器全部检查：`npm run test:all`。虚拟环境安装后 npm 命令会自动选择 `.venv`，无需激活。项目交接背景见 [接续开发说明](docs/PROJECT-CONTEXT.md)，云端 Codex 的工作约定见 [AGENTS.md](AGENTS.md)。
 
 比较截图、聚焦与缩放验证见 [氛围效果说明](docs/ATMOSPHERE-2026-10-03.md)。
 

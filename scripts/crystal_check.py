@@ -7,6 +7,7 @@ from pathlib import Path
 import threading
 
 from playwright.sync_api import sync_playwright
+from browser_support import launch_browser
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
@@ -36,7 +37,7 @@ def check(name, passed):
 
 try:
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel='msedge', headless=True, args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+        browser = launch_browser(p)
         for mobile in [False, True]:
             label = 'phone' if mobile else 'desktop'
             options = {'viewport': {'width': 390, 'height': 844}, 'is_mobile': True, 'has_touch': True,

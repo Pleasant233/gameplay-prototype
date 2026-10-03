@@ -6,3 +6,11 @@ docs/
 .github/
 README.md
 THIRD_PARTY_NOTICES.md
+AGENTS.md
+.codex/
+.venv/
+requirements.txt
+.nvmrc
+.gitattributes
+package.json
+package-lock.json

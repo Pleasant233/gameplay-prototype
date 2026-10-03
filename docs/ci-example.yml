@@ -14,14 +14,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Check JavaScript syntax
-        run: |
-          node --check data.js
-          node --check game.js
-          node --check view.js
-          node --check postfx.js
-          node --check tokens.js
-      - name: Check game rules and receipt accounting
-        run: node test.js
-      - name: Check continuous terrain geometry
-        run: node test-view.js
+      - run: npm ci --no-audit --no-fund
+      - name: Check syntax, game rules and terrain geometry
+        run: npm test
