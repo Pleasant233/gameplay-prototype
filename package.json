@@ -1,6 +1,6 @@
 {
   "name": "element-habitat",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Offline Three.js tile placement game prototype",
   "engines": {
@@ -15,8 +15,9 @@
     "test:crystal": "node scripts/python.cjs scripts/crystal_check.py",
     "test:atmosphere": "node scripts/python.cjs scripts/atmosphere_check.py",
     "test:browser": "node scripts/python.cjs --suite",
-    "test:all": "npm test && npm run test:v1-ui && npm run test:browser",
-    "test:v1-ui": "node scripts/v1_browser_check.cjs"
+    "test:all": "npm test && npm run test:v1-ui && npm run test:feedback && npm run test:browser",
+    "test:v1-ui": "node scripts/v1_browser_check.cjs",
+    "test:feedback": "node scripts/feedback_check.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

@@ -279,8 +279,33 @@
   #achievementToast { position:fixed;top:calc(92px + var(--safe-t));left:50%;transform:translate(-50%,-16px);z-index:18;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 24px); }
   #achievementToast.show { opacity:1;transform:translate(-50%,0); }
   #dlgAchievements,#dlgShield { width:min(440px,calc(100vw - 32px)); }
-  #shieldInputs label { display:flex;justify-content:space-between;align-items:center;margin:8px 0; }
-  #shieldInputs input { width:80px;padding:7px;border-radius:8px;border:2px solid var(--edge);font:inherit; }
+  #dlgShield .dlg { max-height:84dvh;overflow:hidden;padding:22px 16px 16px;display:flex;flex-direction:column; }
+  #shieldBody { overflow:auto;min-height:0;overscroll-behavior:contain; }
+  #dlgShield .close { right:6px;top:6px; }
+  #dlgShield h2 { padding-right:16px;flex-shrink:0; }
+  #dlgShield .intro { font-size:12px;color:var(--muted);text-align:center; }
+  .shield-presets { display:flex;flex-wrap:wrap;gap:5px;margin:12px 0; }
+  .shield-presets .btn { flex:1;white-space:nowrap;min-height:38px;font-size:12px;padding:5px 8px; }
+  .shield-row { display:grid;grid-template-columns:1fr 40px 38px 40px;gap:6px;align-items:center;margin:8px 0;padding:7px 9px;border:1px solid #d6c8ac;border-radius:12px;background:#fff8e9; }
+  .shield-row .element-pick { border:0;background:none;text-align:left;font:inherit;font-weight:900;padding:0;cursor:pointer; }
+  .shield-row .element-pick:disabled { opacity:.5;cursor:default; }
+  .shield-row small { display:block;font-size:10px;color:var(--muted);font-weight:600; }
+  .shield-row output { text-align:center;font-size:19px;font-weight:900; }
+  .shield-row .btn { width:40px;min-height:40px;padding:2px;font-size:20px; }
+  .shield-row input[type=range] { grid-column:1/-1;width:100%;height:18px;margin:0;cursor:pointer;accent-color:var(--el-color); }
+  .shield-row input[type=range] { appearance:none;-webkit-appearance:none;background:transparent;height:22px; }
+  .shield-row input[type=range]::-webkit-slider-runnable-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-webkit-slider-thumb { appearance:none;-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--el-color);border:3px solid #fff;box-shadow:0 1px 3px #ae9774; }
+  .shield-row input[type=range]::-moz-range-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-moz-range-thumb { width:14px;height:14px;border-radius:50%;background:var(--el-color);border:3px solid #fff; }
+  .shield-row input[type=range]:disabled { opacity:.4;cursor:default; }
+  #shieldPreview { border-radius:12px;padding:10px;background:#e5f0dc;border:1px solid #c2d5b1;text-align:center; }
+  #shieldPreview b { display:block;font-size:18px; }
+  #shieldPreview small { display:block;font-size:11px;margin-top:4px; }
+  .shield-bar { display:flex;height:10px;overflow:hidden;border-radius:8px;background:#cfc7b6;margin:8px 0; }
+  #shieldPreview.incomplete { background:#fff0d9;border-color:#e4c08c; }
+  #shieldComplete { min-height:34px;margin-top:6px; }
+  #btnCraftShield { width:100%;min-height:44px;margin-top:10px;flex-shrink:0; }
   #scenario { width:100%;padding:8px;background:var(--paper);border:2px solid var(--edge);border-radius:10px;font:inherit; }
   .sum5 { grid-template-columns:repeat(3,1fr); }
   @media(max-width:760px) {
@@ -391,8 +416,10 @@
 </div></dialog>
 <dialog id="dlgShield"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
-  <h2>🛡 调配元素盾</h2><p>选择 5 颗或 5 的倍数普通结晶。每 5 颗覆盖 1 格，所用各元素的数量就是该元素的共享防护总量。</p>
-  <div id="shieldInputs"></div><p id="shieldPreview"></p>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗覆盖 1 格 · 点元素名称可集中防御该元素</p>
+  <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
+  <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
+  <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
   <button class="btn green" id="btnCraftShield">制造元素盾</button>
 </div></dialog>
 <div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
@@ -453,6 +480,10 @@ const Sfx = (() => {
     round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
     win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
     ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
+    link: n => [660,880,1100].slice(0,Math.min(3,n)).forEach((f,i)=>setTimeout(()=>tone(f,.18,'triangle',.055),i*65)),
+    guard: () => { tone(420,.22,'sine',.09,1000);setTimeout(()=>tone(1320,.3,'triangle',.04),120); },
+    meteor: () => tone(320,.65,'sine',.065,75),
+    impact: blocked => { tone(blocked?980:95,blocked?.18:.22,blocked?'triangle':'sine',blocked?.045:.065,blocked?1500:45); },
     get on() { return on; },
     toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
   };
@@ -462,6 +493,7 @@ const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.b
 
 function start(seed) {
   Tokens.reset();
+  document.querySelectorAll('.float').forEach(el=>el.remove());
   S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{scenario:$('scenario').value});
   gameSession++;clearTimeout(overTimer);clearTimeout(achievementTimer);achievementTimer=0;achievementQueue=[];$('achievementToast').classList.remove('show');
   mode = null; selected = null; hint('');
@@ -509,12 +541,12 @@ function fxOf(a) {
     case 'cast': return [a.magic, a.cell];
     case 'merge': return ['merge', a.cell, a.el];
     case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
-    case 'upgrade': return ['rich',a.cell];
+    case 'upgrade': return ['upgrade',a.cell];
     case 'pour': return ['spring',a.cell];
-    case 'deployShield': return ['shield',a.cell];
+    case 'deployShield': return null; // Region-wide deployment is shown after state sync.
     case 'useCharm': return ['charm', a.cell];
     case 'craft': return a.cell ? ['shelter', a.cell] : null;
-    case 'moveSpirit': case 'moveAnimal': case 'moveBeast': case 'movePlant': return ['place', a.to];
+    case 'moveSpirit': case 'moveAnimal': case 'moveBeast': case 'movePlant': return ['crystal', a.to, a.el];
     default: return a.cell ? ['place', a.cell] : null;
   }
 }
@@ -529,6 +561,7 @@ function doAct(action) {
   Tokens.enqueue(S.events);
   render();
   eventEffects(S.events);
+  if(action.type==='deployShield') { const sh=S.shields.find(sh=>sh.id===action.shieldId);if(sh)View.shieldDeploy(sh);Sfx.guard();buzz([15,35,20]); }
   if (f) {
     if(action.type==='useCrystal') { const session=S;Tokens.down(action.cell,action.el,()=>{if(S===session)View.fx(...f);}); }
     else if(!(action.type==='cast'&&action.magic==='purify')&&action.type!=='useCharm')View.fx(f[0], f[1], f[2]);
@@ -718,10 +751,11 @@ function onHover(k, x, y) {
   if (!k || (!t && !(mode && mode.kind === 'place'))) { tip.style.display = 'none'; return; }
   if (t) {
     const s = t.attrs.reduce((a, b) => a + b, 0);
-    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('');
+    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('')+`<br>连片 ×${G.cluster(S,k).length} · 上限 ${G.attrCap(S,k)}`;
+    if(mode&&mode.kind==='deployShield'){const sh=S.inv.shields.find(sh=>sh.id===mode.id);if(sh)tip.innerHTML+=`<br>🛡 覆盖 ${G.region(S,k,sh.coverage).length} 格 · 点击部署`;}
   } else {
     const ok = G.legalPlacements(S).includes(k);
-    tip.innerHTML = ok ? `放置 <b>${esc(G.TYPE[S.offers[mode.offer]].name)}</b>` : '需与已有地块相邻';
+    if(ok){const type=S.offers[mode.offer],preview={...S,cells:{...S.cells,[k]:G.makeTile(type)}},n=G.cluster(preview,k).length;tip.innerHTML=`放置 <b>${esc(G.TYPE[type].name)}</b>${n>1?`<br>连成 ${n} 格 · 上限 ${G.attrCap(preview,k)}`:''}`;}else tip.innerHTML='需与已有地块相邻';
   }
   tip.style.display = 'block';
   tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, x + 14) + 'px';
@@ -791,7 +825,11 @@ $('detail').addEventListener('click', e => {
     case 'useCharm': doAct({ type: 'useCharm', cell: k }); break;
   }
 });
-function eventEffects(events){events.filter(e=>['purify','infection','meteor','shield'].includes(e.kind)).forEach(e=>View.fx(e.kind,e.cell,e.el));}
+function eventEffects(events){
+  const meteors=events.filter(e=>e.kind==='meteor');
+  if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.damage<3).length} 格获护盾拦截`);}
+  events.filter(e=>['purify','infection'].includes(e.kind)||(!meteors.length&&e.kind==='shield')).forEach(e=>View.fx(e.kind,e.cell,e.el));
+}
 function renderProgress() {
   const values=G.metrics(S), fresh=achievementBook.observe(S,values), archive=achievementBook.snapshot();
   for(const id of fresh)achievementQueue.push(D.ACHIEVEMENTS.find(a=>a.id===id));
@@ -807,13 +845,36 @@ function nextAchievement() {
 }
 $('btnAchievements').onclick=()=>{$('dlgMenu').close();renderProgress();$('dlgAchievements').showModal();};
 $('btnReroll').onclick=()=>doAct({type:'reroll'});
-$('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;if(selected&&!mode){doAct({type:'deployShield',cell:selected,shieldId:+b.dataset.shield});return;}setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：点击覆盖区的中心地块');};
-function shieldValues(){return Object.fromEntries(EL.map(e=>[e.key,Number($('shieldInputs').querySelector(`[data-element="${e.key}"]`).value)]));}
-function shieldPreview(){const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0);$('shieldPreview').textContent=`已选 ${n} 颗 · 覆盖 ${Math.floor(n/5)} 格`;$('btnCraftShield').disabled=!!S.interactionUsed['craft:shield']||n<5||n%5!==0||EL.some(e=>!Number.isInteger(values[e.key])||values[e.key]<0||values[e.key]>S.inv.crystal[e.key]);}
-$('btnShield').onclick=()=>{$('shieldInputs').innerHTML=EL.map(e=>`<label style="color:${ELC[e.key]}">${e.name}结晶 · 库存 ${S.inv.crystal[e.key]}<input type="number" min="0" max="${S.inv.crystal[e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}结晶数量"></label>`).join('');shieldPreview();$('dlgShield').showModal();};
-$('shieldInputs').oninput=shieldPreview;
+$('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;$('bag').classList.remove('open');setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：预览覆盖区，点击地块确认');};
+let shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+function shieldValues(){return {...shieldMix};}
+function shieldFill(count,primary){
+  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+  let remaining=Math.min(count,Object.values(S.inv.crystal).reduce((a,b)=>a+b,0));
+  if(primary){const n=Math.min(remaining,S.inv.crystal[primary]);shieldMix[primary]=n;remaining-=n;}
+  while(remaining>0){let filled=false;for(const e of EL)if(remaining&&shieldMix[e.key]<S.inv.crystal[e.key]){shieldMix[e.key]++;remaining--;filled=true;}if(!filled)break;}
+  shieldPreview();
+}
+function shieldPreview(){
+  const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0),stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;
+  const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
+  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);if(!row)continue;row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv.crystal[e.key];row.querySelector('[data-shield-focus]').disabled=!S.inv.crystal[e.key];row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv.crystal[e.key];}
+  $('shieldPreview').classList.toggle('incomplete',!valid);
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${stock<5?'库存不足 5 颗，先积攒结晶':missing?`还差 ${missing} 颗，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗覆盖 1 格'}</small>`;
+  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 颗 → ${Math.ceil(Math.max(5,n)/5)} 格`;
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗结晶`:stock<5?'库存不足，需 5 颗结晶':'先凑齐 5 颗的倍数';
+  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&stock<(p==='max'?5:Number(p));});
+}
+$('btnShield').onclick=()=>{
+  $('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>库存 ${S.inv.crystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}结晶">−</button><output aria-label="已选${e.name}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}结晶">+</button><input type="range" min="0" max="${S.inv.crystal[e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}结晶配比"></div>`).join('');
+  const stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(stock>=5?5:0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();
+};
+$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],Math.round(Number(e.target.value))));shieldPreview();};
+$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],shieldMix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,shieldMix[el]));}else if(focus){const n=Object.values(shieldMix).reduce((a,b)=>a+b,0);shieldFill(n>=5?n:5,focus.dataset.shieldFocus);Sfx.pick();}};
+$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset,stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(p==='clear'?0:p==='max'?Math.floor(stock/5)*5:Math.min(Number(p),Math.floor(stock/5)*5));Sfx.pick();};
+$('shieldComplete').onclick=()=>{let n=Object.values(shieldMix).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;for(const e of EL){const add=Math.min(missing,S.inv.crystal[e.key]-shieldMix[e.key]);shieldMix[e.key]+=add;missing-=add;}shieldPreview();Sfx.pick();};
 $('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',crystals:shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
-$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events);eventEffects(S.events); } else hint(r.msg, true); render(); };
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render();if(r.ok)eventEffects(S.events); };
 $('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
 $('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
 $('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
@@ -846,6 +907,8 @@ if (!View.supported || View.supported()) {
   View.init($('world'), {
     onCell, onHover,
     onFlash() { flash(); },
+    onLink(count,cell) { Sfx.link(count);floatAtCell(cell,`连片 ×${count} · 上限 ${G.attrCap(S,cell)}`,'#e9ffaf');buzz(15); },
+    onImpact(blocked) { Sfx.impact(blocked); },
     onMiss() { if (!mode && selected) { selected = null; render(); } },
   });
   start();

@@ -2,11 +2,11 @@
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
-[打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
+[打开正式版](https://element-habitat.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
 
 ![柔和泛光与微缩景观景深](docs/screenshots/atmosphere-desktop.png)
 
-当前本地版本 **0.2.0 元素生境**按新版策划实现，包含地形连片/升级、魔法解锁、癌元与逆结晶、阶段行动、陨石雨与元素盾、剧本、愿景和成就系统。正式站点链接对应历史发布，未因本次本地修改而更新。
+当前本地版本 **0.2.1 元素生境**包含新版策划、成就与愿景，以及陨星雨分批命中、连片波纹、蜂窝能量盾和造盾按钮/滑条/快捷配比。[特效与交互更新](docs/FEEDBACK-2026-10-04.md)。正式站点在新账号 `pleasant234` 下，当前部署版本为 0.2.0。
 
 每轮先放置且只放置1块，施法耗1行动，生物与物品交互免费但受每轮限制；基础灵力每达到500的倍数，行动上限从3提高到5/7/9。基础分是属性和 + 元素动物×1 + 元素兽×3 + 植物×1，愿景奖励另列。地图铺满85格结束。
 
@@ -58,6 +58,8 @@ python scripts/atmosphere_check.py
 
 新增UI回归：`npm run test:v1-ui`（`npm ci`安装开发依赖后，运行`npx playwright install chromium`）。
 
+特效与造盾专项回归：`npm run test:feedback`，固定时钟检查各阶段画面、资源回收、混合配比和窄屏。两个 Node 浏览器套件顺序执行。正式地址可通过 `V1_TEST_URL` 传给新版 UI 套件，使用 `V1_ARTIFACT_DIR` 分开保存结果；测试探针仅注入测试请求。
+
 统一运行三组历史浏览器检查：`npm run test:browser`；规则与浏览器全部检查：`npm run test:all`。虚拟环境安装后 npm 命令会自动选择 `.venv`，无需激活。项目交接背景见 [接续开发说明](docs/PROJECT-CONTEXT.md)，云端 Codex 的工作约定见 [AGENTS.md](AGENTS.md)。
 
 比较截图、聚焦与缩放验证见 [氛围效果说明](docs/ATMOSPHERE-2026-10-03.md)。
@@ -91,7 +93,7 @@ python scripts/atmosphere_check.py
 vercel deploy --target preview --yes
 ```
 
-上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。当前正式版包含连续地形、卡通云海与结晶免费使用规则。
+上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。当前本地目录关联 `pleasant234/element-habitat`，正式域名为 `element-habitat.vercel.app`；旧账号的历史站点与报告保持原样。
 
 Vercel 会验证提交作者，请使用部署账号关联的邮箱署名提交。此次正式上线与专项复测见 [发布记录](docs/RELEASE-2026-10-02.md)。
 

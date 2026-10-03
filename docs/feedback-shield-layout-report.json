@@ -1,0 +1,26 @@
+{
+  "checks": [
+    "desktop balanced preset respects each stock",
+    "desktop elemental focus creates pure water recipe",
+    "desktop maximum leaves unusable remainder without overspending",
+    "desktop shield controls fit and scroll within viewport",
+    "desktop scrolled mixer keeps close and craft controls accessible",
+    "desktop shortage gives clear disabled state",
+    "phone balanced preset respects each stock",
+    "phone elemental focus creates pure water recipe",
+    "phone maximum leaves unusable remainder without overspending",
+    "phone shield controls fit and scroll within viewport",
+    "phone scrolled mixer keeps close and craft controls accessible",
+    "phone shortage gives clear disabled state",
+    "No JavaScript, console or shader errors"
+  ],
+  "errors": [],
+  "screenshots": [
+    "feedback-desktop-mixed-shield.png",
+    "feedback-desktop-shield-scrolled.png",
+    "feedback-phone-mixed-shield.png",
+    "feedback-phone-shield-scrolled.png"
+  ],
+  "mode": "shield-ui",
+  "browser": "154.0.8037.93"
+}

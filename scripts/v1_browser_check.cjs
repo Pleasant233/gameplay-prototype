@@ -10,7 +10,8 @@ let view = fs.readFileSync(path.join(root, 'view.js'), 'utf8');
 view = view.replace('  root.View = {', `
   root.__viewTest={
     point(k,x=0,z=0){const n=tileMap[k],p=wp(k,surfaceHeight(k,x,z)+0.005);p.x+=x;p.z+=z;if(n)p.applyMatrix4(new THREE.Matrix4().makeTranslation(0,n.group.position.y,0));p.project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:(p.x/2+0.5)*r.width+r.left,y:(-p.y/2+0.5)*r.height+r.top};},
-    effects(){return {transient:spellFX.length,lights:lights.filter(f=>f.t<0.4).length,particles:particles.length,falling:Object.values(tileMap).some(n=>n.rise>0)};},
+    effects(){return {transient:spellFX.length,queued:queuedFX.length,lights:lights.filter(f=>f.t<0.4).length,particles:particles.length,falling:Object.values(tileMap).some(n=>n.rise>0)};},
+    region(){return regionPreview?regionPreview.userData.cells:[];},preview(k){hoverK=k;regionPreviewKey='';},cluster:clusterPulse,
     terrain(k){return {look:tileMap[k].look.kind,scenery:tileMap[k].sceneryKey};},memory(){return {...renderer.info.memory};},low:()=>LOW
   };
   root.View = {`);
@@ -25,7 +26,7 @@ const server = http.createServer((req, res) => {
 function check(name, value) { assert.ok(value, name); report.checks.push(name); console.log('ok - ' + name); }
 async function shot(page, name) { await page.screenshot({ path: path.join(out, name), animations: 'disabled' }); report.screenshots.push(name); }
 async function settle(page) {
-  await page.waitForFunction(`Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===G.bagCount(S) && !document.querySelector('.token')`, { timeout: 30000 });
+  await page.waitForFunction(`Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===G.bagCount(S) && !document.querySelector('.token')`, null, { timeout: 30000 });
 }
 async function pointClick(page, cell, mobile) {
   const p = await page.evaluate(k => __viewTest.point(k, 0.08, 0.06), cell);
@@ -73,24 +74,47 @@ async function pointClick(page, cell, mobile) {
       await page.locator('[data-magic="purify"]').click();
       check(label + ' purify five cells and cancer removal via UI', await page.evaluate(`['3,3',...G.neighbors('3,3')].every(k=>S.cells[k].attrs[1]===4&&S.cells[k].cancers.length===0)&&S.ap===1`));
       await shot(page, `v1-${label}-purify.png`); await settle(page);
-      await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().lights===0', { timeout: 45000 });
+      await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().lights===0', null, { timeout: 45000 });
       // Upgrade and stage display, highest AP on narrow screen.
       await page.evaluate(`S.cells['3,3']=G.makeTile('ruin_town');S.cells['3,3'].attrs=[0,2,1,0,1];selected='3,3';render();`);
       await page.locator('[data-a="upgrade"][data-type="forest"]').click(); check(label + ' upgraded forest redraws scenery',await page.evaluate(`__viewTest.terrain('3,3').look==='forest'&&__viewTest.terrain('3,3').scenery.startsWith('forest:')`));check(label + ' upgrade keeps attrs and AP', await page.evaluate(`S.cells['3,3'].type==='forest'&&S.ap===1&&S.cells['3,3'].attrs[1]===2`));
       await page.evaluate('S.peakScore=1500;S.roundAP=9;S.ap=9;render()');
       check(label + ' 9 AP HUD and dock remain inside viewport', await page.evaluate(`['top','dock','stageHud'].every(id=>{const r=document.getElementById(id).getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;})`));
       // Shield recipe and placement via real DOM.
-      await page.evaluate(`S.interactionUsed={};S.inv.crystal.water=10;selected='3,3';render();`);
+      await page.evaluate(`S.interactionUsed={};S.inv.crystal=Object.fromEntries(D.ELEMENTS.map(e=>[e.key,0]));S.inv.crystal.water=10;selected='3,3';render();`);
       await page.locator('#btnBag').click(); await page.locator('#btnShield').click();
-      await page.locator('[data-element="water"]').fill('6'); check(label + ' shield invalid amount cannot craft', await page.locator('#btnCraftShield').isDisabled());
-      await page.locator('[data-element="water"]').fill('10'); await page.locator('#btnCraftShield').click();
+      check(label+' shield opens with useful one-cell recipe',await page.evaluate(`shieldMix.water===5&&document.querySelectorAll('#shieldInputs input[type=number]').length===0&&!document.querySelector('#btnCraftShield').disabled`));
+      await page.locator('[data-shield-adjust="water"][data-delta="1"]').click();check(label + ' shield invalid amount cannot craft', await page.locator('#btnCraftShield').isDisabled());
+      await page.locator('#shieldComplete').click();check(label+' one-click completion fills exact inventory',await page.evaluate(`shieldMix.water===10&&!document.querySelector('#btnCraftShield').disabled&&document.querySelector('[data-shield-adjust="water"][data-delta="1"]').disabled&&document.querySelector('[data-shield-preset="15"]').disabled`));
+      await page.locator('[data-shield-preset="clear"]').click();await page.locator('[data-shield-focus="water"]').click();
+      await page.locator('[data-shield-adjust="water"][data-delta="1"]').click();await page.locator('[data-shield-adjust="water"][data-delta="-1"]').click();
+      check(label+' plus/minus and elemental focus never spend inventory',await page.evaluate('shieldMix.water===5&&S.inv.crystal.water===10'));
+      await page.locator('[data-element="water"]').press('End');check(label+' shield slider supports keyboard',await page.evaluate('shieldMix.water===10'));
+      await page.locator('[data-shield-preset="max"]').click();await shot(page,`v1-${label}-shield-mixer.png`);
+      check(label+' shield mixer fits viewport',await page.evaluate(`(()=>{const r=document.querySelector('#dlgShield .dlg').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;})()`));
+      await page.locator('#btnCraftShield').click();
       check(label + ' shield craft costs 10, covers 2', await page.evaluate('S.inv.shields.length===1&&S.inv.shields[0].coverage===2&&S.inv.crystal.water===0'));
-      await page.locator('[data-shield]').click(); check(label + ' deploy shield from inventory', await page.evaluate('S.shields.length===1&&S.shields[0].cells.length===2&&S.inv.shields.length===0')); await page.locator('#btnBag').click();
+      await page.locator('[data-shield]').click();await page.evaluate(`__viewTest.preview('3,3')`);await page.waitForFunction('__viewTest.region().length===2');
+      check(label+' shield placement previews actual two-cell coverage',await page.evaluate('mode.kind==="deployShield"&&S.inv.shields.length===1&&__viewTest.region().length===2'));
+      await pointClick(page,'3,3',mobile);check(label + ' deploy shield from inventory', await page.evaluate('S.shields.length===1&&S.shields[0].cells.length===2&&S.inv.shields.length===0'));
+      await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().queued===0');await shot(page,`v1-${label}-shield-dome.png`);
       // Actual ten-round settlement trigger and effect lifecycle.
       await page.evaluate(`S.round=10;S.placed=1;S.events=[];Tokens.reset();render();`); await page.locator('#btnEnd').click();
       check(label + ' meteor triggered from end button', await page.evaluate('S.round===11&&S.lastMeteor.round===10&&S.lastMeteor.cells.length===Math.floor(Object.keys(S.cells).length/3)'));
       await shot(page, `v1-${label}-meteor.png`); await settle(page);
-      await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().lights===0', { timeout: 45000 });
+      await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().lights===0', null, { timeout: 45000 });
+      // Connected terrain effect, outer contour and bounded cleanup using real placement.
+      await page.evaluate(`start(23);for(const k of Object.keys(S.cells))S.cells[k]=G.makeTile('ruin_town');S.offers=['ruin_town','polluted_lake','polluted_waste'];selected=null;render();`);
+      await page.waitForTimeout(1100);
+      await page.locator('[data-offer="0"]').click();const linked=await page.evaluate('G.legalPlacements(S)[0]');await page.evaluate(k=>__viewTest.preview(k),linked);
+      await page.waitForFunction('__viewTest.region().length===6');check(label+' placement previews six-cell connected terrain',true);
+      await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+100));
+      await pointClick(page,linked,mobile);check(label+' linked placement succeeds through real input',await page.evaluate(k=>!!S.cells[k]&&S.placed===1,linked));
+      for(let i=0;i<14;i++)await page.clock.fastForward(50);
+      check(label+' landing starts connected terrain wave',await page.evaluate('__viewTest.effects().transient>0&&!!document.querySelector(".float")'));
+      await shot(page,`v1-${label}-cluster.png`);for(let i=0;i<12;i++)await page.clock.fastForward(250);
+      check(label+' linked terrain wave and queue expire',await page.evaluate('__viewTest.effects().transient===0&&__viewTest.effects().queued===0'));await page.clock.resume();
+      await settle(page);
       // Seed a representative habitat so vegetation and new models are visible.
       await page.evaluate(`for(let i=0;i<12;i++){G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});G.endRound(S);}S.cells['3,3'].vein=true;S.cells['3,3'].farm=true;S.cells['3,3'].pond=true;S.cells['3,3'].shelter=true;S.cells['3,3'].plants=[{id:700,kind:'tree'},{id:701,kind:'crop'}];S.cells['2,3'].cancers=[{id:702,el:'wood',age:0}];mode=null;selected=null;Tokens.reset();render();`);
       await page.waitForTimeout(1300); await shot(page, `v1-${label}-habitat.png`);
@@ -109,10 +133,10 @@ async function pointClick(page, cell, mobile) {
       check(label + ' reduced motion counts settle without tokens', await page.evaluate(`!document.querySelector('.token')&&Number(document.getElementById('score').textContent)===G.score(S).total`));
       if(!mobile){
         await page.emulateMedia({reducedMotion:'no-preference'});
-        await page.evaluate(`['mine','spring','rich','burn','merge','crystal','meteor','shield','infection'].forEach(k=>View.fx(k,'3,3','water'));`);
-        await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().lights===0',{timeout:45000});
+        await page.evaluate(`['mine','spring','rich','burn','merge','crystal','meteor','shield','infection','upgrade'].forEach(k=>View.fx(k,'3,3','water'));View.shieldDeploy({cells:['3,3','2,3'],defense:{water:10}});`);
+        await page.waitForFunction('__viewTest.effects().transient===0&&__viewTest.effects().queued===0&&__viewTest.effects().lights===0',null,{timeout:45000});
         check('All spell and added effects release transient meshes and lights',true);
-        await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+60000));
+        await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+60000));
         await page.evaluate(`Tokens.enqueue(Array.from({length:250},()=>({cell:'3,3',kind:'plant'})))`);await page.clock.runFor(420);
         check('Overflow production retains 40-token cap and grouped quantities',await page.evaluate(`document.querySelectorAll('.token').length>0&&document.querySelectorAll('.token').length<=40&&Array.from(document.querySelectorAll('.token small')).some(el=>el.textContent.includes('×'))`));
         await shot(page,'v1-production-flights.png');await page.evaluate('start(81)');await page.clock.resume();

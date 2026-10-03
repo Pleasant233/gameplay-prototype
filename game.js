@@ -484,7 +484,7 @@
   }
   function finish(s) { s.over = true; log(s, `地图已铺满，最终灵力值 ${score(s).total}`); }
   function endRoundPublic(s) { s.events = []; return endRound(s); }
-  const Game = { newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
+  const Game = { newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
   if (typeof module !== 'undefined' && module.exports) module.exports = Game;
   else root.Game = Game;
 })(this);
