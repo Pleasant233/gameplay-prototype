@@ -59,15 +59,22 @@ async function pointClick(page, cell, mobile) {
       await pointClick(page, cell, mobile); check(label + ' real pointer/touch placement, once per round', await page.evaluate(k => !!S.cells[k] && S.placed === 1 && S.ap === 2 && S.offers.length === 0, cell));
       await settle(page); await page.waitForFunction('!__viewTest.effects().falling');
       await pointClick(page, '3,3', mobile); check(label + ' real pointer/touch opens detail', await page.evaluate(`selected==='3,3'&&document.getElementById('detail').classList.contains('open')`));
-      // Crystal UI covers old regression plus inverse and repetition limits.
-      await page.evaluate(`S.ap=1;S.cells['3,3'].attrs=[0,0,0,0,0];S.inv.crystal.water=2;S.inv.bigCrystal.water=1;S.inv.inverseCrystal.fire=1;render();`);
+      // All crystal categories can be repeated in the same round, including at zero AP.
+      await page.evaluate(`S.ap=0;S.cells['3,3'].attrs=[0,0,0,0,0];S.inv.crystal.water=2;S.inv.bigCrystal.water=2;S.inv.inverseCrystal.fire=2;render();`);
       await page.locator('#btnBag').click();
       await page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').click();
-      check(label + ' ordinary crystal +1 free', await page.evaluate(`S.cells['3,3'].attrs[2]===1&&S.ap===1&&S.inv.crystal.water===1`));
-      check(label + ' repeated crystal button disabled', await page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').isDisabled());
+      check(label + ' ordinary crystal +1 free', await page.evaluate(`S.cells['3,3'].attrs[2]===1&&S.ap===0&&S.inv.crystal.water===1`));
+      check(label + ' repeated crystal button stays enabled', await page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').isEnabled());
+      await page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').click();
+      check(label + ' same-round ordinary repetition spends stock at zero AP',await page.evaluate(`S.cells['3,3'].attrs[2]===2&&S.inv.crystal.water===0&&S.round===1&&S.ap===0`));
       await page.locator('[data-crystal="water"][data-big="1"]').click();
       await page.locator('[data-crystal="fire"][data-inverse="1"]').click();
-      check(label + ' large +2 and inverse -1 free', await page.evaluate(`S.cells['3,3'].attrs[2]===3&&S.cells['3,3'].attrs[3]===-1&&S.ap===1&&S.round===1`)); await settle(page);
+      check(label + ' large +2 and inverse -1 free', await page.evaluate(`S.cells['3,3'].attrs[2]===4&&S.cells['3,3'].attrs[3]===-1&&S.ap===0&&S.round===1`));
+      await page.locator('[data-crystal="water"][data-big="1"]').click();
+      await page.locator('[data-crystal="fire"][data-inverse="1"]').click();
+      check(label + ' repeated large and inverse crystals spend stock without round or placement change', await page.evaluate(`S.cells['3,3'].attrs[2]===6&&S.cells['3,3'].attrs[3]===-2&&S.inv.bigCrystal.water===0&&S.inv.inverseCrystal.fire===0&&S.ap===0&&S.round===1&&S.placed===1`));
+      check(label + ' depleted crystal buttons disappear and crystal interaction locks are absent',await page.evaluate(`!document.querySelector('[data-crystal="water"]')&&!document.querySelector('[data-crystal="fire"][data-inverse="1"]')&&!Object.keys(S.interactionUsed).some(k=>/^(crystal|big|inverse):/.test(k))`));
+      await settle(page); await shot(page,`v1-${label}-repeat-crystals.png`);
       await page.locator('#btnBag').click();
       // Area purify actual button dispatch, locks and corresponding effect cleanup.
       await page.evaluate(`S.ap=2;S.roundAP=3;S.placed=1;S.magicUsed={};for(const k of ['3,3',...G.neighbors('3,3')]){S.cells[k].attrs=[0,-1,0,0,0];S.cells[k].cancers=[{id:200,el:'wood',age:0}];}selected='3,3';render();`);

@@ -163,7 +163,6 @@
     if (a.type === 'chop' || a.type === 'movePlant') return ['plant:' + a.plantId];
     if (a.type === 'compost') return [a.what + ':' + a.targetId];
     if (a.type === 'merge' && t) return t.spirits.filter(sp => sp.el === a.el && !s.interactionUsed['spirit:' + sp.id]).slice(0, 3).map(sp => 'spirit:' + sp.id);
-    if (a.type === 'useCrystal') return [(a.inverse ? 'inverse:' : a.big ? 'big:' : 'crystal:') + a.el];
     if (a.type === 'mineOre' && t) return ['ore:' + (t.ores[a.index] || '')];
     if (a.type === 'scoop' || a.type === 'pour') return ['bucket'];
     if (a.type === 'deployShield') return ['shield:' + a.shieldId];

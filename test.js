@@ -26,14 +26,30 @@ test('先放置、每轮一次、放置耗1、跳过必须放过', () => {
   rejected(s, { type: 'place', offer: 0, cell: '0,0' }); place(s); assert.equal(s.ap, 2);
   rejected(s, { type: 'place', offer: 0, cell: G.emptyKeys(s)[0] }); assert.ok(G.endRound(s).ok); assert.equal(s.round, 2); assert.equal(s.ap, 3);
 });
-test('普通大型逆结晶免费、0AP不换轮、各类型每轮一次', () => {
+test('普通大型逆结晶每轮可连续免费使用、0AP不换轮、库存耗尽拒绝', () => {
   for (const options of [{}, { big: true }, { inverse: true }]) for (const ap of [0, 1, 3]) for (const { key: el } of D.ELEMENTS) {
     const s = game(); s.ap = ap; s.cells['3,3'].attrs = [0, 0, 0, 0, 0];
     const bag = options.inverse ? s.inv.inverseCrystal : options.big ? s.inv.bigCrystal : s.inv.crystal; bag[el] = 2;
     receipt(s, () => assert.ok(crystal(s, '3,3', el, options).ok)); assert.equal(s.ap, ap); assert.equal(s.round, 1); assert.equal(bag[el], 1);
     assert.equal(s.cells['3,3'].attrs[D.ELEMENTS.findIndex(e => e.key === el)], options.inverse ? -1 : options.big ? 2 : 1);
+    receipt(s, () => assert.ok(crystal(s, '3,3', el, options).ok));
+    assert.equal(s.cells['3,3'].attrs[D.ELEMENTS.findIndex(e => e.key === el)], options.inverse ? -2 : options.big ? 4 : 2);
+    assert.equal(bag[el], 0); assert.equal(s.ap, ap); assert.equal(s.round, 1); assert.equal(s.placed, 0);
+    assert.deepEqual(s.interactionUsed, {});
     rejected(s, { type: 'useCrystal', cell: '3,3', el, ...options });
   }
+});
+test('同轮跨地块连续结晶、补库存继续用、到上限拒绝不扣库存', () => {
+  const s = game(); s.ap = 0; s.inv.crystal.water = G.attrCap(s, '3,3') + G.attrCap(s, '2,3') + 2;
+  for (const k of ['3,3', '2,3']) {
+    s.cells[k].attrs = [0, 0, 0, 0, 0];
+    const cap = G.attrCap(s, k);
+    for (let i = 0; i < cap; i++) receipt(s, () => assert.ok(crystal(s, k, 'water').ok));
+    assert.equal(s.cells[k].attrs[2], cap);
+    rejected(s, { type: 'useCrystal', cell: k, el: 'water' });
+  }
+  s.inv.crystal.water++; s.cells['3,3'].attrs[2]--;
+  assert.ok(crystal(s, '3,3', 'water').ok); assert.equal(s.ap, 0); assert.equal(s.round, 1);
 });
 test('无库存/无效元素/结束/封顶拒绝且不扣资源', () => {
   const s = game(); rejected(s, { type: 'useCrystal', cell: '3,3', el: 'bogus' }); rejected(s, { type: 'useCrystal', cell: '3,3', el: 'water' });

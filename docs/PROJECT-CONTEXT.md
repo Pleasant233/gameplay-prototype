@@ -1,6 +1,6 @@
 # 项目接续开发说明
 
-当前本地版本为元素生境0.2.1。[特效与造盾交互更新](FEEDBACK-2026-10-04.md)；2026-10-04新版策划与成就更新见 [V1-UPDATE-2026-10-04.md](V1-UPDATE-2026-10-04.md)，规则验证见 [V1-VALIDATION-2026-10-04.md](V1-VALIDATION-2026-10-04.md)。新账号正式项目为 `pleasant234/element-habitat`，地址 `https://element-habitat.vercel.app`，目前部署0.2.0。以下旧版规则与发布信息是历史背景，涉及当前行为时以本次更新、代码和测试为准。
+当前本地版本为元素生境0.2.2。普通、大型及逆结晶每轮不限次数，保留库存消耗和正向属性上限，见[结晶规则与发布记录](CRYSTALS-2026-10-04.md)。[特效与造盾交互更新](FEEDBACK-2026-10-04.md)；2026-10-04新版策划与成就更新见 [V1-UPDATE-2026-10-04.md](V1-UPDATE-2026-10-04.md)，规则验证见 [V1-VALIDATION-2026-10-04.md](V1-VALIDATION-2026-10-04.md)。新账号正式项目为 `pleasant234/element-habitat`，地址 `https://element-habitat.vercel.app`。以下旧版规则与发布信息是历史背景，涉及当前行为时以最新更新、代码和测试为准。
 
 本说明将本机 Claude 记忆、原计划和后续已完成的用户要求整理为仓库内的交接材料。云端以当前代码和测试为准，无需访问 `C:\Users\wangs\.claude` 或本机项目外的设计文件。
 
