@@ -609,14 +609,14 @@
       g.add(berry);
       group.add(g);
       sways.push({ m: g, p: p.id, a: 0.05 });
-    } else if (p.kind === 'crop') {
+    } else if (['crop','wheat','corn'].includes(p.kind)) {
       const g = new THREE.Group();
       g.position.set(x, h, z);
       for (let i = 0; i < 5; i++) {
         const s = new THREE.Mesh(geo.cyl, M(0xc8a030)); s.scale.set(0.012, 0.13, 0.012);
         const ox = (i % 3 - 1) * 0.04, oz = (i > 2 ? 0.04 : -0.02);
         s.position.set(ox, 0.065, oz);
-        const ear = new THREE.Mesh(geo.sphL, M(0xffd040)); ear.scale.set(0.03, 0.06, 0.03); ear.position.set(ox, 0.15, oz);
+        const ear = new THREE.Mesh(geo.sphL, M(p.kind==='corn'?0xffc52e:p.kind==='wheat'?0xdab061:0xffd040)); ear.scale.set(0.03, 0.06, 0.03); ear.position.set(ox, 0.15, oz);
         g.add(s, ear);
       }
       group.add(g);
@@ -727,10 +727,14 @@
     return g;
   }
 
-  function signature(t) {
+  function effectiveLook(t) {
+    const look=LOOK[G.TYPE[t.type].look]||LOOK.grass;
+    return look.dirty&&!t.attrs.some(v=>v<0)?Object.assign({},look,{dirty:0}):look;
+  }
+  function signature(t, k) {
     return t.type + '|' + t.attrs.join(',') + '|' + t.spirits.map(s => s.el).join('') + '|' + t.beasts.map(b => b.el).join('') +
       '|' + t.plants.map(p => p.kind).join('') + '|' + t.animals.map(a => a.kind + (a.el || '')).join('') +
-      '|' + t.ores.join('') + '|' + (t.spring ? 1 : 0) + (t.shelter ? 1 : 0);
+      '|' + t.ores.join('') + '|' + (t.spring ? 1 : 0) + (t.shelter ? 1 : 0) + '|' + [t.pond,t.farm,t.vein,t.oasis].join(',') + '|' + (t.cancers||[]).map(c=>c.el).join(',') + '|' + (stateRef.shields||[]).filter(sh=>sh.cells.includes(k)).map(sh=>sh.id+':'+Object.values(sh.defense).join(',')).join(';');
   }
 
   function rebuildUnits(node, t, h) {
@@ -764,6 +768,22 @@
       g.add(sp);
       bobs.push({ m: jet, y: 0.1, p: rnd() * 5, a: 0.03, squash: 1 });
     }
+    if((stateRef.shields||[]).some(sh=>sh.cells.includes(node.k))){
+      const ward=new THREE.Group();ward.position.set(0,h+0.05,0);
+      const marker=new THREE.Mesh(geo.octa,M(0x8bd8de,{emissive:0x3a858b,emissiveIntensity:0.15}));marker.scale.set(0.09,0.12,0.07);marker.position.set(-0.36,0.08,-0.36);ward.add(marker);
+      for(const [x,z] of [[-0.42,-0.42],[0.42,-0.42],[0.42,0.42],[-0.42,0.42]]){const post=new THREE.Mesh(geo.box,M(0xa5dfd4));post.scale.set(0.025,0.1,0.025);post.position.set(x,0.04,z);ward.add(post);}g.add(ward);
+    }
+    if(t.pond&&!t.spring){
+      const lake=new THREE.Mesh(geo.circle,mats.water);lake.rotation.x=-Math.PI/2;lake.scale.set(0.25,0.18,1);lake.position.set(-0.18,h+0.02,0.05);g.add(lake);
+      const bank=new THREE.Mesh(geo.torus,M(0xe9d5a0));bank.rotation.x=Math.PI/2;bank.scale.set(0.16,0.12,0.012);bank.position.copy(lake.position);g.add(bank);
+    }
+    if(t.vein){const vein=new THREE.Mesh(geo.octa,M(0xe3b857,{metalness:0.35,roughness:0.5}));vein.scale.set(0.13,0.1,0.13);vein.position.set(0.22,h+0.05,-0.22);g.add(vein);}
+    if(t.farm){for(let i=0;i<3;i++){const furrow=new THREE.Mesh(geo.box,M(0xb9864f));furrow.scale.set(0.32,0.025,0.045);furrow.position.set(0,h+0.015,-0.22+i*0.09);g.add(furrow);}}
+    (t.cancers||[]).slice(0,8).forEach((c,i)=>{
+      const orb=new THREE.Group(),body=new THREE.Mesh(geo.sph,M(0x6d537f,{emissive:0x542955,emissiveIntensity:0.12}));body.scale.set(0.085,0.1,0.08);orb.add(body);
+      for(const x of [-0.026,0.026]){const eye=new THREE.Mesh(geo.sph,M(0xffe2a3));eye.scale.setScalar(0.018);eye.position.set(x,0.025,0.067);orb.add(eye);}
+      const y=h+0.22+(i%2)*0.08;g.add(orb);bobs.push({m:orb,y,p:i*1.5,a:0.025,orbit:0.28,sp:0.45,spin:0.3});
+    });
     t.plants.forEach((p, i) => {
       const a = (i / Math.max(1, t.plants.length)) * Math.PI * 2 + 0.6;
       addPlant(g, p, Math.cos(a) * 0.3, Math.sin(a) * 0.3, h);
@@ -789,7 +809,7 @@
       g.add(m);
       bobs.push({ m, y, p: i * 1.3 + rnd(), a: fly ? 0.05 : 0.012, hop: !fly && !swim, fly, wander: { r, ang, sp: fly ? 0.6 : 0.15 } });
     });
-    t.spirits.forEach((s, i) => {
+    t.spirits.slice(0,18).forEach((s, i) => {
       const sg = new THREE.Group();
       const core = new THREE.Mesh(geo.octa, M(ELC[s.el], { emissive: ELC[s.el], emissiveIntensity: 0.18,metalness:0.2,roughness:0.45 }));
       core.scale.set(0.055,0.075,0.055);sg.add(core);
@@ -815,7 +835,7 @@
   }
 
   function makeTile(k, t, animate) {
-    const look = LOOK[G.TYPE[t.type].look] || LOOK.grass;
+    const look = effectiveLook(t);
     const group = new THREE.Group();
     const p = wp(k);
     group.position.set(p.x, animate ? 2.2 : 0, p.z);
@@ -834,8 +854,8 @@
     scenery.traverse(o => { if (o.isMesh && !o.material.transparent && o.geometry !== geo.circle) o.castShadow = true; });
     const units = new THREE.Group();
     group.add(units);
-    const node = { k, group, terrain, units, scenery, edgeLine, look, sig: '', rise: animate ? 1 : 0, lift: 0 };
-    node.sig = signature(t);
+    const node = { k, group, terrain, units, scenery, edgeLine, look, sceneryKey:t.type+':'+t.attrs.some(v=>v<0), sig: '', rise: animate ? 1 : 0, lift: 0 };
+    node.sig = signature(t,k);
     rebuildUnits(node, t, h);
     anchorChildren(scenery,k,h); anchorChildren(units,k,h);
     pickables.add(terrain);
@@ -858,10 +878,16 @@
   }
 
   function updateTile(n, t) {
-    const sig = signature(t);
+    const sig = signature(t,n.k);
     if (sig === n.sig) return;
     n.sig = sig;
-    const look = LOOK[G.TYPE[t.type].look] || LOOK.grass;
+    const look = effectiveLook(t);
+    const sceneryKey=t.type+':'+t.attrs.some(v=>v<0);
+    if(sceneryKey!==n.sceneryKey){
+      releaseLocalGeometry(n.scenery);while(n.scenery.children.length)n.scenery.remove(n.scenery.children[0]);
+      buildScenery(n.scenery,look,n.k,look.h);anchorChildren(n.scenery,n.k,look.h);n.sceneryKey=sceneryKey;
+    }
+    n.look=look;
     n.previousColor = new THREE.Color(0x797554);
     n.terrain.material[1].color.copy(colTint(look.side, t.attrs));
     rebuildUnits(n, t, look.h);
@@ -943,8 +969,17 @@
   function fx(kind,cell,extra) {
     if(!cell||!G.SHAPE_KEYS.has(cell))return;
     const pos=wp(cell,cellHeight(...G.parse(cell))+0.035),n=tileMap[cell];
-    const map={place:0xffe066,purify:0xfff5cf,mine:0xffcc22,spring:0x38c0ff,rich:0x79e84b,burn:0xff5a1a,merge:ELC[extra]||0xffffff,crystal:ELC[extra]||0xffffff,charm:0xfff4c0,shelter:0xffffff};
+    const map={place:0xffe066,purify:0xfff5cf,mine:0xffcc22,spring:0x38c0ff,rich:0x79e84b,burn:0xff5a1a,merge:ELC[extra]||0xffffff,crystal:ELC[extra]||0xffffff,charm:0xfff4c0,shelter:0xffffff,infection:0x9d71b2,meteor:ELC[extra]||0xd69a67,shield:0x87d9e3,upgrade:0x8aca66};
     const c=map[kind]||0xffffff;
+    if(kind==='meteor'){
+      const m=new THREE.Mesh(geo.ico,fxMaterial(c));m.scale.setScalar(0.11);m.position.copy(pos);
+      transient(m,0.65,u=>{m.position.set(pos.x+(1-u)*0.45,pos.y+(1-u)*2.2,pos.z);m.rotation.y=u*5;m.material.opacity=1-u*0.5;});spawnBurst(pos,c,8,0.35,0.6,0.5,'shard');return;
+    }
+    if(kind==='shield'){
+      const m=new THREE.Mesh(geo.sph,fxMaterial(0x8bd8de,0.16));m.position.copy(pos);m.position.y+=0.2;
+      transient(m,0.75,u=>{m.scale.set(0.5+u*0.12,0.4,0.5+u*0.12);m.material.opacity=(1-u)*0.16;});spawnBurst(pos,0xb8ecdb,6,0.2,0.6,0.4);return;
+    }
+    if(kind==='infection'){spawnBurst(pos,0x9d71b2,6,0.25,0.65,0.35,'dust');return;}
     if(kind==='place'){
       if(n&&n.rise>0)return;
       spawnBurst(pos,0xc9b896,12,0.65,0.7,0.18,'dust');
@@ -1244,7 +1279,7 @@
     if (stateRef) {
       for (const k of Object.keys(stateRef.cells)) {
         const t = stateRef.cells[k];
-        const look = LOOK[G.TYPE[t.type].look] || LOOK.grass;
+        const look = effectiveLook(t);
         if (t.spring && Math.random() < dt * 4) {
           const p = wp(k, look.h + 0.15); p.x -= 0.24; p.z -= 0.2;
           spawnBurst(p, 0x8adcff, 1, 0.25, 0.6, 1.2);
@@ -1268,10 +1303,12 @@
         if(modeRef.kind==='moveSpirit') ok=G.neighbors(modeRef.from).includes(k)&&t.spirits.length<G.spiritCap(t);
         if(modeRef.kind==='moveAnimal') {
           const a=stateRef.cells[modeRef.from].animals.find(a=>a.id===modeRef.id);
-          ok=G.neighbors(modeRef.from).includes(k)&&t.animals.length<D.RULES.maxAnimals&&!!a&&(a.kind!=='fish'||t.attrs[D.IDX.A]>0);
+          ok=G.neighbors(modeRef.from).includes(k)&&t.animals.length<D.RULES.maxAnimals&&!!a&&(a.kind!=='fish'||G.hasWater(t));
         }
         if(modeRef.kind==='shelter') ok=!t.shelter;
-        if(modeRef.kind==='cast') ok=!stateRef.magicUsed[modeRef.magic]&&(modeRef.magic!=='purify'||t.attrs.some(v=>v<0));
+        if(modeRef.kind==='cast') ok=!!stateRef.placed&&stateRef.ap>0&&G.magicUnlocked(stateRef,modeRef.magic)&&!stateRef.magicUsed[modeRef.magic]&&(modeRef.magic!=='purify'||G.canPurify(stateRef,k));
+        if(modeRef.kind==='moveBeast'){const b=stateRef.cells[modeRef.from].beasts.find(b=>b.id===modeRef.id);ok=G.neighbors(modeRef.from).includes(k)&&!!b&&t.attrs[EL.findIndex(e=>e.key===b.el)]>0;}
+        if(modeRef.kind==='movePlant'){const p=stateRef.cells[modeRef.from].plants.find(p=>p.id===modeRef.id);ok=G.neighbors(modeRef.from).includes(k)&&t.plants.length<D.RULES.maxPlants&&!!p&&(p.kind!=='weed'||G.hasWater(t));}
         if(ok) targets.add(k);
       }
     }

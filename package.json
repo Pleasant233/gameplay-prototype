@@ -1,9 +1,11 @@
 {
-  "name": "lingdi-fusu",
-  "version": "0.1.0",
+  "name": "element-habitat",
+  "version": "0.2.0",
   "private": true,
   "description": "Offline Three.js tile placement game prototype",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "node scripts/python.cjs -m http.server 8080 --bind 0.0.0.0",
     "check": "node scripts/check.cjs",
@@ -13,6 +15,10 @@
     "test:crystal": "node scripts/python.cjs scripts/crystal_check.py",
     "test:atmosphere": "node scripts/python.cjs scripts/atmosphere_check.py",
     "test:browser": "node scripts/python.cjs --suite",
-    "test:all": "npm test && npm run test:browser"
+    "test:all": "npm test && npm run test:v1-ui && npm run test:browser",
+    "test:v1-ui": "node scripts/v1_browser_check.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
   }
 }

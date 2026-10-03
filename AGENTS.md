@@ -1,4 +1,4 @@
-# 灵地复苏 — project instructions
+# 元素生境 — project instructions
 
 ## Product and current direction
 
@@ -32,7 +32,8 @@
 
 - Run `npm test` after code changes. For UI/rendering changes, run the affected browser suite and inspect desktop/mobile screenshots; JavaScript syntax alone does not verify visuals. For rules affecting the UI, also run the relevant browser test.
 - Crystals are free: ordinary +1 and large +2 to the selected element, consuming only their matching inventory; no AP, placement or round change. Feeding/casting and other paid actions retain their own costs.
-- Each round has 3 AP and must include a placement; the last AP is reserved for placement if none was made. There are 85 playable cells, initially 5. Preserve these invariants and receipt accounting unless requested otherwise.
+- Read `docs/V1-UPDATE-2026-10-04.md` for current rules and the owner-confirmed score formula. Each round begins with exactly one placement. AP scales 3/5/7/9 with peak base score; only placement and casting consume AP. Interactions are free and once per object/item category per round. Preserve 85 cells, five starting cells and receipt accounting.
+- For new rule/UI interactions run `npm run test:v1-ui`; it verifies desktop/mobile and achievement storage with real WebGL. Playwright is a development dependency only.
 - Keep shared terrain edges continuous in height and color, and clouds clear of all playable cells. Retain mobile quality reductions, reduced-motion behavior, target disposal and depth-texture fallback.
 - Visual changes should include comparison captures and describe what was checked. Software WebGL/mobile emulation does not establish physical device performance or the owner's visual acceptance.
 - Scope commits to the task and retain unrelated local work. Update concise project docs when behavior or tooling changes. Existing release reports are historical evidence; do not overwrite them with new test results.

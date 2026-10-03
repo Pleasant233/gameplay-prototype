@@ -1,4 +1,4 @@
-# 灵地复苏
+# 元素生境
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
@@ -6,9 +6,11 @@
 
 ![柔和泛光与微缩景观景深](docs/screenshots/atmosphere-desktop.png)
 
-每轮有 3 点行动，至少放置 1 块地块。放置地形、施放魔法、移动元素灵和动物、合成元素兽、使用结晶及制造物品，直到铺满 85 格地图。灵力由地块属性、元素灵、元素兽和元素动物共同计分。
+当前本地版本 **0.2.0 元素生境**按新版策划实现，包含地形连片/升级、魔法解锁、癌元与逆结晶、阶段行动、陨石雨与元素盾、剧本、愿景和成就系统。正式站点链接对应历史发布，未因本次本地修改而更新。
 
-使用普通和大型元素结晶不消耗行动点：分别使目标元素属性增加 1 和 2，仍消耗对应结晶库存。使用结晶不会自动换轮，最后 1 点行动仍可用于放置。
+每轮先放置且只放置1块，施法耗1行动，生物与物品交互免费但受每轮限制；基础灵力每达到500的倍数，行动上限从3提高到5/7/9。基础分是属性和 + 元素动物×1 + 元素兽×3 + 植物×1，愿景奖励另列。地图铺满85格结束。
+
+[策划比对与实现约定](docs/V1-UPDATE-2026-10-04.md) · [本次验证](docs/V1-VALIDATION-2026-10-04.md)。成就保存在当前浏览器，棋盘仍不保存。
 
 ## 本地运行
 
@@ -54,7 +56,9 @@ python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --re
 python scripts/atmosphere_check.py
 ```
 
-统一运行三组浏览器检查：`npm run test:browser`；规则与浏览器全部检查：`npm run test:all`。虚拟环境安装后 npm 命令会自动选择 `.venv`，无需激活。项目交接背景见 [接续开发说明](docs/PROJECT-CONTEXT.md)，云端 Codex 的工作约定见 [AGENTS.md](AGENTS.md)。
+新增UI回归：`npm run test:v1-ui`（`npm ci`安装开发依赖后，运行`npx playwright install chromium`）。
+
+统一运行三组历史浏览器检查：`npm run test:browser`；规则与浏览器全部检查：`npm run test:all`。虚拟环境安装后 npm 命令会自动选择 `.venv`，无需激活。项目交接背景见 [接续开发说明](docs/PROJECT-CONTEXT.md)，云端 Codex 的工作约定见 [AGENTS.md](AGENTS.md)。
 
 比较截图、聚焦与缩放验证见 [氛围效果说明](docs/ATMOSPHERE-2026-10-03.md)。
 

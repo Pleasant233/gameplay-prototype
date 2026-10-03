@@ -11,3 +11,10 @@ for (const file of files.sort()) {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 console.log(`JavaScript syntax passed (${files.length} files).`);
+
+const vm = require('node:vm');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+for (const [, attrs, code] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)) {
+  if (!/\bsrc=/.test(attrs)) new vm.Script(code, { filename: 'index.html inline script' });
+}
+console.log('Inline UI script syntax passed.');
