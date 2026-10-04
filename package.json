@@ -7,12 +7,13 @@
   "scripts": {
     "dev": "node scripts/python.cjs -m http.server 8080 --bind 0.0.0.0",
     "check": "node scripts/check.cjs",
-    "test": "npm run check && node test.js && node test-view.js",
+    "test": "npm run check && node test.js && node test-view.js && node test-landscape.js",
     "test:smoke": "node scripts/python.cjs scripts/cloud_smoke.py",
     "test:ui": "node scripts/python.cjs scripts/browser_check.py",
     "test:crystal": "node scripts/python.cjs scripts/crystal_check.py",
     "test:atmosphere": "node scripts/python.cjs scripts/atmosphere_check.py",
+    "test:landscape": "node scripts/python.cjs scripts/landscape_check.py",
     "test:browser": "node scripts/python.cjs --suite",
-    "test:all": "npm test && npm run test:browser"
+    "test:all": "npm test && npm run test:browser && npm run test:landscape"
   }
 }

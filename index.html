@@ -182,6 +182,13 @@
   #hint.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
   #hint.err { background: linear-gradient(180deg, #ff7a6a, #e0402f); box-shadow: 0 4px 0 #9a2a1a, 0 8px 16px rgba(0,0,0,.25); }
   #hint.err.show { animation: shake .4s; }
+  #landscapeNotice { position:fixed;left:50%;top:calc(108px + var(--safe-t));transform:translateX(-50%);z-index:8;
+    pointer-events:none;max-width:calc(100vw - 28px);padding:9px 18px;border-radius:18px;border:2px solid #edfaca;
+    background:linear-gradient(180deg,#3e8152,#245c40);box-shadow:0 4px 0 #174932,0 8px 20px #163e3433;
+    color:#fff6c0;font-size:15px;text-align:center;opacity:0; }
+  #landscapeNotice.show { animation:landscapeNotice 2.4s ease-out forwards; }
+  #landscapeNotice small { display:block;font-size:11px;font-weight:600;color:#d9efcc;margin-top:2px; }
+  @keyframes landscapeNotice { 0% {opacity:0;transform:translate(-50%,10px) scale(.85)} 15%,80% {opacity:1;transform:translate(-50%,0) scale(1)} 100% {opacity:0;transform:translate(-50%,-8px)} }
   @keyframes shake { 20%, 60% { margin-left: -8px; } 40%, 80% { margin-left: 8px; } }
 
   #tip { position: fixed; z-index: 8; pointer-events: none; padding: 6px 10px; font-size: 12px; display: none; border-radius: 10px;
@@ -259,7 +266,7 @@
     .mg { height: 52px; width: 50px; }
     #detail { max-height: calc(100vh - 80px); }
   }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } #landscapeNotice.show {animation:none!important;opacity:1;} }
 </style>
 <style>
   #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
@@ -350,13 +357,15 @@
 <script src="lib/three.min.js"></script>
 <script src="data.js"></script>
 <script src="game.js"></script>
+<script src="landscape.js"></script>
 <script src="postfx.js"></script>
 <script src="view.js"></script>
 <script src="tokens.js"></script>
+<div id="landscapeNotice" role="status" aria-live="polite"></div>
 <script>
 const D = GameData, G = Game;
 const EL = D.ELEMENTS;
-let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, offersKey = '';   // mode: {kind:'place'|'cast'|'crystal'|'moveSpirit'|'moveAnimal'|'shelter', ...}
+let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, landscapeTimer = 0, offersKey = '';   // mode: {kind:'place'|'cast'|'crystal'|'moveSpirit'|'moveAnimal'|'shelter', ...}
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const elName = k => EL.find(e => e.key === k).name;
@@ -399,6 +408,7 @@ const Sfx = (() => {
     round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
     win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
     ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
+    grow: level => [523,659,784,1046].slice(0,level+1).forEach((f,i)=>setTimeout(()=>tone(f,.22,'triangle',.075),i*65)),
     get on() { return on; },
     toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
   };
@@ -408,6 +418,8 @@ const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.b
 
 function start(seed) {
   Tokens.reset();
+  $('landscapeNotice').classList.remove('show');
+  clearTimeout(landscapeTimer);
   S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff));
   mode = null; selected = null; hint('');
   lastScore = G.score(S).total; lastRound = 1; offersKey = '';
@@ -518,6 +530,8 @@ function renderDetail() {
     <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
     <h3>${c[2]} ${esc(ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : ''}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}</div></div>`;
   h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / 6 * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
+  const region=Landscape.plan(S.cells,G.TYPE).byCell[selected],next=Landscape.MILESTONES.find(n=>n>region.size);
+  h+=`<div class="muted" style="padding:6px 14px">${esc(region.name)}连片 · ${region.size} 格${next?` · ${next} 格景观升阶`:' · 壮阔盛景'}</div>`;
   let n = 0;
   const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
   for (const e of EL) {
@@ -734,6 +748,13 @@ document.addEventListener('gesturestart', e => e.preventDefault());   // iOS 禁
 if (!View.supported || View.supported()) {
   View.init($('world'), {
     onCell, onHover,
+    onRegionGrowth(event) {
+      const notice=$('landscapeNotice');
+      notice.innerHTML=`<b>${esc(event.name)}连成 ${event.size} 格${event.milestone?' · 升阶！':''}</b><small>${event.milestone?['','地貌初成','繁茂成片','壮阔盛景'][event.level]:event.merged?'两片地貌汇合，景观继续生长':'景观继续生长'}</small>`;
+      notice.classList.remove('show');void notice.offsetWidth;notice.classList.add('show');
+      clearTimeout(landscapeTimer);landscapeTimer=setTimeout(()=>notice.classList.remove('show'),2400);
+      if(event.milestone){Sfx.grow(event.level);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)buzz([20,35,35]);}
+    },
     onFlash() { flash(); },
     onMiss() { if (!mode && selected) { selected = null; render(); } },
   });

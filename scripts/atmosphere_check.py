@@ -8,7 +8,7 @@ from pathlib import Path
 import threading
 from PIL import Image, ImageChops, ImageStat
 from playwright.sync_api import sync_playwright
-from browser_support import launch_browser
+from browser_support import launch_browser, capture_source, capture_frame
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts'
@@ -30,11 +30,12 @@ report['url']=url
 post_source=(ROOT/'postfx.js').read_text(encoding='utf-8').replace(
     'const api={enabled:true,depthSupported,resize,render,dispose};',
     'const api={enabled:true,depthSupported,resize,render,dispose,_test:{sceneTarget,bright,blurA,blurB,combine}};')
-view_source=(ROOT/'view.js').read_text(encoding='utf-8')
+view_source=capture_source((ROOT/'view.js').read_text(encoding='utf-8'))
 view_source=view_source.replace('const dt = Math.max(0,Math.min(0.05, clock.getDelta()));','const dt = root.__freezeAtmosphere?0:Math.max(0,Math.min(0.05, clock.getDelta()));')
 view_source=view_source.replace('const time = clock.elapsedTime;','const time = root.__freezeAtmosphere||clock.elapsedTime;')
 view_source=view_source.replace('  root.View = {','''
   root.__atmosphere={
+    prepare(){intro=0;cam.gR=baseR();cam.gP=.9;cam.sph.radius=cam.gR;cam.sph.phi=.9;updateCam(0);},
     freeze(){root.__freezeAtmosphere=clock.elapsedTime;},
     unfreeze(){delete root.__freezeAtmosphere;clock.getDelta();},
     configure(bloom,depth,vignette){const u=post._test.combine.uniforms;u.bloomStrength.value=bloom;u.depthEnabled.value=depth;u.vignette.value=vignette;},
@@ -49,7 +50,7 @@ SETUP='''() => {
     const cell=G.legalPlacements(S).sort((a,b)=>f(a)-f(b))[0];
     G.act(S,{type:'place',offer:0,cell});G.endRound(S);
   }
-  S.events=[];mode=null;selected=null;Tokens.reset();render();
+  S={...S};S.events=[];mode=null;selected=null;Tokens.reset();render();__atmosphere.prepare();
 }'''
 def check(name,passed):
     assert passed,name
@@ -57,7 +58,7 @@ def check(name,passed):
     print('ok - '+name,flush=True)
 def capture(page,name):
     page.wait_for_timeout(250)
-    data=page.screenshot(path=str(OUT/(name+'.png')))
+    data=capture_frame(page,OUT/(name+'.png'))
     return Image.open(io.BytesIO(data)).convert('RGB')
 def difference(a,b,box=None):
     if box:a,b=a.crop(box),b.crop(box)

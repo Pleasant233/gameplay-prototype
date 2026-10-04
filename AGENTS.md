@@ -13,6 +13,7 @@
 - `data.js`: definitions, recipes and rule parameters. `game.js`: deterministic state, actions, scoring and receipt events; can run under Node without a browser.
 - `view.js`: Three.js terrain, cartoon models, clouds, picking and transient effects. `postfx.js`: render targets, bloom, depth of field and quality fallback. `tokens.js`: DOM resource flights and delayed HUD counters. `index.html`: UI, action dispatch and synthesized sound.
 - Keep gameplay mutation in `game.js`; effects and delayed counters must settle to the authoritative state. Browser-test probes are injected into requests, never shipped as debug APIs.
+- `landscape.js` plans four-neighbor visual regions, shared ridges, perimeter clearance and growth tiers without mutating gameplay. Keep shared model seams continuous when changing these planners.
 
 ## Setup and commands
 
@@ -24,6 +25,7 @@
 - `npm run test:ui`: desktop/mobile input, selection, particles, resource flights, HUD and cleanup.
 - `npm run test:crystal`: ordinary and large crystals, AP, stock and round invariants.
 - `npm run test:atmosphere`: rendered bloom/DOF comparisons, focus, quality tiers, resizing and depth fallback.
+- `npm run test:landscape`: desktop/mobile connected models, growth feedback, raised-mountain picking, full-map budgets and geometry disposal, with before/after captures.
 - `npm run test:browser`: the three browser suites sequentially; `npm run test:all`: fast tests followed by all browser suites. Do not run software WebGL browser suites in parallel.
 - The Node wrapper selects `.venv` without needing shell activation. Default browser is Playwright's bundled Chromium. To use an installed Windows Edge, set `PLAYWRIGHT_BROWSER_CHANNEL=msedge`.
 - Screenshots and JSON reports go in ignored `artifacts/`. Test failures must remain failures; fix the cause instead of suppressing assertions or skipping software WebGL.

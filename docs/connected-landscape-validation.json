@@ -1,0 +1,253 @@
+{
+  "date": "2026-10-04",
+  "environment": "Linux cloud / Chromium 153.0.8010.12 / SwiftShader",
+  "baseCommit": "a0d03cc9a3200a58be082b7bf8c3ebd4d1f90c03",
+  "fastChecks": {
+    "command": "npm test",
+    "result": "passed",
+    "ruleChecks": 16,
+    "wholeGameSimulations": 30,
+    "sharedEdgeSamples": 7200,
+    "landscapeTopologyAndModelSeams": "passed"
+  },
+  "suites": {
+    "ui": {
+      "browser": "Chromium 153.0.8010.12 / SwiftShader",
+      "checks": [
+        "Terrain retains its per-cell transform",
+        "Ray picks the projected cell",
+        "Real pointer click selects the tile",
+        "Shader selection band is visible",
+        "Pointer places the offered tile",
+        "Space count waits for the flight",
+        "Space count settles correctly",
+        "Score waits for arriving production tokens",
+        "Production tokens visibly fly with a 40-token cap",
+        "All delayed counters settle to the game state",
+        "No flight nodes remain after settlement",
+        "purify transient meshes and lights expire",
+        "mine transient meshes and lights expire",
+        "spring transient meshes and lights expire",
+        "rich transient meshes and lights expire",
+        "burn transient meshes and lights expire",
+        "merge transient meshes and lights expire",
+        "crystal transient meshes and lights expire",
+        "Crystal consumption flies from the HUD to the tile",
+        "Crystal use preserves action points",
+        "Overflow receipts merge into at most 40 nodes",
+        "Merged receipts show their quantity",
+        "Restart clears flights and transient effects",
+        "Reduced motion settles counters without flight nodes",
+        "Phone touch selects the tile",
+        "Phone HUD and bottom controls fit within viewport",
+        "Mobile quality omits transient point lights",
+        "No browser or WebGL errors"
+      ],
+      "errors": []
+    },
+    "crystal": {
+      "checks": [
+        "desktop: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+        "desktop: large crystal consumes large stock and adds 2 without AP or round change",
+        "desktop: score, inventory counter and flights settle",
+        "desktop: help states ordinary and large crystals are free",
+        "phone: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+        "phone: large crystal consumes large stock and adds 2 without AP or round change",
+        "phone: score, inventory counter and flights settle",
+        "phone: help states ordinary and large crystals are free",
+        "No browser or WebGL errors"
+      ],
+      "errors": []
+    },
+    "atmosphere": {
+      "checks": [
+        "Desktop uses resolved depth and a quarter-resolution bloom buffer",
+        "Depth precision preserves thin surfaces without striping",
+        "Bloom measurably brightens the rendered highlights",
+        "Aperture blur changes the distant scene while preserving the sharp center",
+        "Picking still selects the rendered tile with atmosphere enabled",
+        "Focus follows a changed tile selection",
+        "Menu turns atmosphere off and stores the preference",
+        "Reload preserves the atmosphere preference",
+        "Resize updates the render targets without growing the texture count",
+        "Phone uses the cheaper pipeline without multisampling",
+        "Phone touch selects a tile with atmosphere enabled",
+        "Phone atmosphere control remains visible and usable",
+        "Simulated lack of depth textures keeps the bloom pipeline running",
+        "No browser, shader or framebuffer errors"
+      ],
+      "errors": [],
+      "surfacePrecisionDifference": 0.0,
+      "bloomBrightening": 5.507611111111146,
+      "sharpCenterDifference": 0.0,
+      "defocusedDifference": 1.3441385135135135
+    },
+    "landscape": {
+      "checks": [
+        "desktop: 12 forests, 9 mountains and 6 lakes have distinct growth tiers",
+        "desktop: all connected water surfaces share one wave phase",
+        "desktop: procedural details use instancing",
+        "desktop: raised mountain mesh can be picked",
+        "desktop: actual input selects the mountain",
+        "desktop: placement joins the forest without changing AP rules",
+        "desktop: milestone is communicated",
+        "desktop: growth wave expires and restores model scale",
+        "desktop: 85-cell canopy renders with bounded draw calls",
+        "desktop: repeated rebuilds do not accumulate geometries",
+        "desktop: reduced motion skips the growth wave but retains feedback",
+        "desktop: restart clears growth and notice",
+        "phone: 12 forests, 9 mountains and 6 lakes have distinct growth tiers",
+        "phone: all connected water surfaces share one wave phase",
+        "phone: procedural details use instancing",
+        "phone: raised mountain mesh can be picked",
+        "phone: actual input selects the mountain",
+        "phone: placement joins the forest without changing AP rules",
+        "phone: milestone is communicated",
+        "phone: growth wave expires and restores model scale",
+        "phone: 85-cell canopy renders with bounded draw calls",
+        "phone: repeated rebuilds do not accumulate geometries",
+        "phone: reduced motion skips the growth wave but retains feedback",
+        "phone: restart clears growth and notice",
+        "Mobile reduces canopy instance count",
+        "No browser, shader or WebGL errors"
+      ],
+      "errors": [],
+      "metrics": {
+        "desktopMixed": {
+          "frame": 28,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 12,
+              "level": 3
+            },
+            {
+              "family": "meadow",
+              "size": 6,
+              "level": 2
+            },
+            {
+              "family": "mountain",
+              "size": 9,
+              "level": 2
+            },
+            {
+              "family": "lake",
+              "size": 6,
+              "level": 2
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 157,
+            "textures": 7
+          },
+          "calls": 591,
+          "particles": 1,
+          "instances": 2083,
+          "pendingWaves": 0,
+          "waterPhases": [
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555
+          ]
+        },
+        "desktopFullBoard": {
+          "frame": 86,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 85,
+              "level": 3
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 189,
+            "textures": 7
+          },
+          "calls": 1627,
+          "particles": 0,
+          "instances": 13555,
+          "pendingWaves": 0,
+          "waterPhases": []
+        },
+        "desktopRebuildGeometries": [
+          158,
+          158,
+          158
+        ],
+        "phoneMixed": {
+          "frame": 31,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 12,
+              "level": 3
+            },
+            {
+              "family": "meadow",
+              "size": 6,
+              "level": 2
+            },
+            {
+              "family": "mountain",
+              "size": 9,
+              "level": 2
+            },
+            {
+              "family": "lake",
+              "size": 6,
+              "level": 2
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 148,
+            "textures": 7
+          },
+          "calls": 574,
+          "particles": 2,
+          "instances": 1552,
+          "pendingWaves": 0,
+          "waterPhases": [
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555
+          ]
+        },
+        "phoneFullBoard": {
+          "frame": 99,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 85,
+              "level": 3
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 177,
+            "textures": 7
+          },
+          "calls": 1601,
+          "particles": 0,
+          "instances": 9645,
+          "pendingWaves": 0,
+          "waterPhases": []
+        },
+        "phoneRebuildGeometries": [
+          148,
+          148,
+          148
+        ]
+      }
+    }
+  }
+}

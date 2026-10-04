@@ -4,11 +4,13 @@
 
 [打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
 
-![柔和泛光与微缩景观景深](docs/screenshots/atmosphere-desktop.png)
+![连片森林、山脉与湖泊（固定测试地图）](docs/screenshots/connected-desktop.png)
 
 每轮有 3 点行动，至少放置 1 块地块。放置地形、施放魔法、移动元素灵和动物、合成元素兽、使用结晶及制造物品，直到铺满 85 格地图。灵力由地块属性、元素灵、元素兽和元素动物共同计分。
 
 使用普通和大型元素结晶不消耗行动点：分别使目标元素属性增加 1 和 2，仍消耗对应结晶库存。使用结晶不会自动换轮，最后 1 点行动仍可用于放置。
+
+相容地貌按上下左右连接成片（森林／雨林、荒山／岩山、湖泊／湿地等）。山脉共享跨格山脊，湖岸沿整片湖泊的外围生成，溪流在相邻地块间接通，树群跨过内部边界。连片达到 **3／6／10 格**时，景观增加模型密度、分枝、地被和山体细节，并播放按距离扩散的成长波、连片提示与升阶音效；地块详情可查看当前连片数和下一档。景观装饰不参与资源、行动点或灵力计分。见 [连片景观开发说明](docs/CONNECTED-LANDSCAPE.md)。
 
 ## 本地运行
 
@@ -56,6 +58,8 @@ python scripts/atmosphere_check.py
 
 统一运行三组浏览器检查：`npm run test:browser`；规则与浏览器全部检查：`npm run test:all`。虚拟环境安装后 npm 命令会自动选择 `.venv`，无需激活。项目交接背景见 [接续开发说明](docs/PROJECT-CONTEXT.md)，云端 Codex 的工作约定见 [AGENTS.md](AGENTS.md)。
 
+连片景观专项检查：`npm run test:landscape`，覆盖桌面／手机的连片升阶、山体拾取、成长反馈、满图森林、重建回收及减少动态效果偏好；截图和报告保存在 `artifacts/landscape-*`。
+
 比较截图、聚焦与缩放验证见 [氛围效果说明](docs/ATMOSPHERE-2026-10-03.md)。
 
 ## 实现
@@ -64,6 +68,7 @@ python scripts/atmosphere_check.py
 | --- | --- |
 | `data.js` | 地块、元素、生物、配方及规则参数 |
 | `game.js` | 状态、行动、轮末产出、计分及表现事件 |
+| `landscape.js` | 视觉地貌区域、外围距离场、山脊与连片升阶判定 |
 | `view.js` | 连续地表、装饰、拾取、虚线框及分类型特效 |
 | `postfx.js` | 高光泛光、深度景深、焦点跟随、轻暗角及画质分档 |
 | `tokens.js` | 收益飞行、40 个 Token 上限、HUD 延迟计数、结晶落地 |

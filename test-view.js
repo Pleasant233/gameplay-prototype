@@ -3,10 +3,10 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const THREE=require('./lib/three.min.js');
-const Game=require('./game.js'),GameData=require('./data.js');
+const Game=require('./game.js'),GameData=require('./data.js'),Landscape=require('./landscape.js');
 const source=fs.readFileSync('view.js','utf8').replace('  root.View = {',
   '  root.testView={setState(s){G=root.Game;D=root.GameData;EL=D.ELEMENTS;stateRef=s;},surfaceHeight,surfaceColor,terrainGeometry,outlineGeometry,cloudDistance,cloudGeometry};\n  root.View = {');
-const context={THREE,Game,GameData,navigator:{userAgent:'test',hardwareConcurrency:8}};
+const context={THREE,Game,GameData,Landscape,navigator:{userAgent:'test',hardwareConcurrency:8}};
 vm.runInNewContext(source,context);
 const v=context.testView,s=Game.newGame(42),half=1.12/2;
 // Include high peaks, low water, empty cells, and diagonally placed tiles.

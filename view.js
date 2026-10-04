@@ -36,6 +36,8 @@
   let G, D, EL;
   let cb = {};
   let tileMap = {};
+  let landscape = {byCell:{},regions:[]};
+  const reducedMotion=()=>root.matchMedia&&root.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let pads = {};
   let pickables, fxGroup, ghost;
   let hoverK = null, selectedK = null, modeRef = null, stateRef = null;
@@ -163,17 +165,19 @@
   }
   function anchorChildren(group,k,h) {
     group.children.forEach(o=> {
+      if(o.userData.landscape)return;
       if(o.userData.groundOffset == null) o.userData.groundOffset=o.position.y-h;
-      const next=surfaceHeight(k,o.position.x,o.position.z)+o.userData.groundOffset;
+      const next=visualHeight(k,o.position.x,o.position.z)+o.userData.groundOffset;
       const delta=next-o.position.y; o.position.y=next;
       const water=waters.find(w=>w.m===o); if(water) water.y+=delta;
-      const bob=bobs.find(b=>b.m===o); if(bob) { bob.y+=delta; bob.cell=k; bob.offset=bob.y-surfaceHeight(k,o.position.x,o.position.z); }
+      const bob=bobs.find(b=>b.m===o); if(bob) { bob.y+=delta; bob.cell=k; bob.offset=bob.y-visualHeight(k,o.position.x,o.position.z); }
     });
   }
   function releaseLocalGeometry(group) {
     const shared=new Set([...Object.values(geo),...Object.values(slabCache)]),disposed=new Set();
     const sharedMats=new Set([...Object.values(matCache),...Object.values(mats)]),disposedMats=new Set();
     group.traverse(o=>{
+      if(o.isInstancedMesh&&o.dispose)o.dispose();
       if(o.geometry&&!shared.has(o.geometry)&&!disposed.has(o.geometry)){o.geometry.dispose();disposed.add(o.geometry);}
       for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){if(!sharedMats.has(m)&&!disposedMats.has(m)){m.dispose();disposedMats.add(m);}}
     });
@@ -209,10 +213,11 @@
   function dashedFrame(color) {
     const p=[],uv=[],ix=[],r=HALF-0.015,w=0.025;
     const v=[[-r,-r],[r,-r],[r,r],[-r,r]];
-    for(let side=0;side<4;side++) {
-      const a=v[side],b=v[(side+1)%4],s=p.length/3;
+    for(let side=0;side<4;side++)for(let segment=0;segment<16;segment++) {
+      const from=v[side],to=v[(side+1)%4],at=t=>[from[0]+(to[0]-from[0])*t,from[1]+(to[1]-from[1])*t];
+      const a=at(segment/16),b=at((segment+1)/16),s=p.length/3;
       p.push(a[0],0,a[1],b[0],0,b[1],a[0]*(1-w/r),0,a[1]*(1-w/r),b[0]*(1-w/r),0,b[1]*(1-w/r));
-      uv.push(side,0,side+1,0,side,1,side+1,1);ix.push(s,s+2,s+1,s+1,s+2,s+3);
+      uv.push(side+segment/16,0,side+(segment+1)/16,0,side+segment/16,1,side+(segment+1)/16,1);ix.push(s,s+2,s+1,s+1,s+2,s+3);
     }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(ix);
     const material=new THREE.ShaderMaterial({
@@ -268,6 +273,7 @@
     geo.dode = new THREE.DodecahedronGeometry(0.5, 0);
     geo.pebble=new THREE.IcosahedronGeometry(0.5,1);
     geo.foliage=new THREE.IcosahedronGeometry(0.5,2);
+    geo.ecologyFoliage=new THREE.IcosahedronGeometry(0.5,1);
     geo.mountain=new THREE.LatheGeometry([new THREE.Vector2(0.5,-0.5),new THREE.Vector2(0.43,-0.35),new THREE.Vector2(0.29,-0.06),new THREE.Vector2(0.12,0.34),new THREE.Vector2(0.04,0.5),new THREE.Vector2(0,0.52)],8);
     geo.plane = new THREE.PlaneGeometry(1, 1);
     geo.circle = new THREE.CircleGeometry(0.5, 24);
@@ -417,7 +423,7 @@
     } else {
       const greens = [0x92d457, 0x72b942, 0xb1dd64];
       [[0, 0.18, 0, 0.42], [0.1, 0.12, 0.06, 0.3], [-0.09, 0.1, -0.05, 0.28], [0.02, 0.3, -0.02, 0.28]].forEach(([px, py, pz, s], i) => {
-        const b = new THREE.Mesh(geo.foliage, M(greens[i % 3],{roughness:0.75}));
+        const b = new THREE.Mesh(still?geo.ecologyFoliage:geo.foliage, M(greens[i % 3],{roughness:0.75}));
         b.scale.setScalar(s * scale);
         b.position.set(px * scale, py * scale, pz * scale);
         b.castShadow = true;
@@ -491,7 +497,159 @@
     return w;
   }
 
+  // Static ecological decorations are instanced by geometry/material. Large
+  // regions gain branches and undergrowth without a draw call per leaf.
+  function batchScenery(group) {
+    group.updateMatrixWorld(true);
+    const inverse=new THREE.Matrix4().copy(group.matrixWorld).invert(),batches=new Map();
+    group.traverse(o=>{
+      if(!o.isMesh)return;
+      const key=o.geometry.uuid+':'+o.material.uuid;
+      if(!batches.has(key))batches.set(key,{geometry:o.geometry,material:o.material,matrices:[],castShadow:false});
+      batches.get(key).castShadow ||= o.castShadow;
+      batches.get(key).matrices.push(new THREE.Matrix4().multiplyMatrices(inverse,o.matrixWorld));
+    });
+    group.clear();
+    for(const b of batches.values()){
+      const mesh=new THREE.InstancedMesh(b.geometry,b.material,b.matrices.length);
+      b.matrices.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
+      mesh.castShadow=b.castShadow&&b.geometry!==geo.trunk;mesh.receiveShadow=true;mesh.userData.landscape=true;group.add(mesh);
+    }
+  }
+  function modelHeight(region,k,x,z) {
+    const [cx,cz]=G.parse(k),wx=cx+x/T,wz=cz+z/T;
+    const factor=region.family==='mountain'?1:region.family==='sand'?.26:.34;
+    return surfaceHeight(k,x,z)+.012+root.Landscape.ridge(region,wx,wz)*factor;
+  }
+  function visualHeight(k,x,z) {
+    const region=landscape.byCell[k];
+    return region&&['mountain','rock','dirtyRock','sand'].includes(region.family)?modelHeight(region,k,x,z):surfaceHeight(k,x,z);
+  }
+  function ridgeGeometry(region,k) {
+    const [cx,cz]=G.parse(k),positions=[],colors=[],normals=[],indices=[],steps=8+region.level*(LOW?2:4);
+    const snow=new THREE.Color(0xf1fbff),hasSnow=region.members.some(key=>G.TYPE[stateRef.cells[key].type].look==='peak');
+    const rock=new THREE.Color(region.family==='sand'?0xeac779:region.family==='dirtyRock'?0x89749e:region.family==='mountain'?(hasSnow?0x91acb9:0xbc9871):0xb9b1a4);
+    for(let j=0;j<=steps;j++)for(let i=0;i<=steps;i++){
+      const x=(i/steps-.5)*T,z=(j/steps-.5)*T,y=modelHeight(region,k,x,z);
+      positions.push(x,y,z);
+      const relative=y-surfaceHeight(k,x,z),shade=.92+Math.sin((cx+x/T)*8+(cz+z/T)*6)*.07;
+      const c=rock.clone().multiplyScalar(shade);
+      if(hasSnow&&region.family==='mountain')c.lerp(snow,THREE.MathUtils.smoothstep(relative,.64,.87));
+      colors.push(c.r,c.g,c.b);
+      const e=.001,n=new THREE.Vector3(modelHeight(region,k,x-e,z)-modelHeight(region,k,x+e,z),2*e,modelHeight(region,k,x,z-e)-modelHeight(region,k,x,z+e)).normalize();
+      normals.push(n.x,n.y,n.z);
+      if(i<steps&&j<steps){const a=j*(steps+1)+i,b=a+1,c=a+steps+1;indices.push(a,c,b,b,c,c+1);}
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));g.setIndex(indices);return g;
+  }
+  function waterGeometry(region,k,inset) {
+    const [cx,cz]=G.parse(k),positions=[],steps=16;
+    const distance=(x,z)=>{
+      if(region.family!=='river')return root.Landscape.clearance(region,cx+x/T,cz+z/T)-inset-.018*Math.sin((cx+x/T)*9)*Math.cos((cz+z/T)*7);
+      // Streams run through tile centers, joining at exactly the same edge.
+      let d=Math.hypot(x,z);
+      for(const neighbor of G.neighbors(k).filter(n=>landscape.byCell[n]===region)){
+        const [nx,nz]=G.parse(neighbor),ax=(nx-cx)*T,az=(nz-cz)*T;
+        const t=Math.max(0,Math.min(.5,(x*ax+z*az)/(T*T)));
+        d=Math.min(d,Math.hypot(x-t*ax,z-t*az));
+      }
+      return (.14+region.level*.016)-d-inset*T;
+    };
+    function triangle(points){
+      let clipped=[];
+      for(let i=0;i<3;i++){
+        const a=points[i],b=points[(i+1)%3],da=distance(...a),db=distance(...b);
+        if(da>=0)clipped.push(a);
+        if((da>=0)!==(db>=0)){const t=da/(da-db);clipped.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}
+      }
+      for(let i=1;i+1<clipped.length;i++)for(const [x,z] of [clipped[0],clipped[i],clipped[i+1]])
+        positions.push(x,surfaceHeight(k,x,z)+(inset>.06?.025:.017),z);
+    }
+    for(let j=0;j<steps;j++)for(let i=0;i<steps;i++){
+      const x=(i/steps-.5)*T,z=(j/steps-.5)*T,d=T/steps;
+      triangle([[x,z],[x,z+d],[x+d,z]]);triangle([[x+d,z],[x,z+d],[x+d,z+d]]);
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();return g;
+  }
+  function buildLandscapeScenery(group,look,k) {
+    const region=landscape.byCell[k];if(!region)return false;
+    const family=region.family,rnd=hashk('ecology:'+k),count=root.Landscape.density(region,LOW);
+    const ground=(x,z)=>surfaceHeight(k,x,z);
+    const point=i=>{const a=i*2.399963+hashk('position:'+k+':'+i)()*.35,r=.14+Math.sqrt((i+.5)/13)*.33;return [Math.cos(a)*r,Math.sin(a)*r];};
+    group.userData.region={family,size:region.size,level:region.level};
+    if(['mountain','rock','dirtyRock','sand'].includes(family)){
+      const mesh=new THREE.Mesh(ridgeGeometry(region,k),M(0xffffff,{vertexColors:true,roughness:.88}));
+      mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.landscape=true;mesh.userData.k=k;group.add(mesh);
+      if(family==='mountain')pickables.add(mesh);
+      // Growing ranges expose additional outcrops, scree and alpine trees.
+      for(let i=0;i<count;i++){
+        const [x,z]=point(i),y=modelHeight(region,k,x,z);
+        if(family==='sand'&&i%3===0)addCactus(group,x,y,z);
+        else addRock(group,x,y,z,.065+rnd()*.065,rnd,look.dirty?0x7c6a8b:look.snow?0xbdced4:0xc2ad85);
+        if(region.level>1&&family==='mountain'&&!look.snow&&i%3===0)addTree(group,x,y,z,.3,true,rnd,true);
+      }
+    }else if(['lake','dirtyLake','river','lava'].includes(family)){
+      const shore=new THREE.Mesh(waterGeometry(region,k,.035),M(family==='lava'?0x59483b:family==='dirtyLake'?0x98a564:0xffdd92));
+      const water=new THREE.Mesh(waterGeometry(region,k,.105),family==='lava'?mats.lava:family==='dirtyLake'?mats.dirtyW:mats.water);
+      shore.userData.landscape=water.userData.landscape=true;group.add(shore,water);
+      if(family==='lava')lavas.push(water);else waters.push({m:water,y:0,p:hashk(region.members[0])()*6});
+      for(let i=0;i<count;i++){
+        const [x,z]=point(i),y=ground(x,z)+.035;
+        if(family==='lava')addRock(group,x,y,z,.06+rnd()*.035,rnd,0x504539);
+        else if(family!=='dirtyLake'){
+          if(i%2===0){const lily=new THREE.Mesh(geo.circle,M(0x58b946,{side:THREE.DoubleSide}));lily.rotation.x=-Math.PI/2;lily.scale.setScalar(.055+rnd()*.045);lily.position.set(x,y,z);group.add(lily);}
+          else if(region.level>0)addFlower(group,x,y,z,i%3?0xffadc6:0xffed9e);
+        }
+      }
+    }else if(family==='forest'||family==='meadow'){
+      for(let i=0;i<count;i++){
+        const [x,z]=point(i),y=ground(x,z);
+        if(family==='forest'){
+          const s=.48+rnd()*.15+region.level*.08;
+          const tree=addTree(group,x,y,z,s,look.dense||i%3===0,rnd,true);
+          if(region.level>0)for(const sign of [-1,1]){
+            const branch=new THREE.Mesh(geo.trunk,M(0x8a5a2e));branch.scale.set(.038*s,.2*s,.038*s);
+            branch.position.set(sign*.055*s,.22*s,0);branch.rotation.z=-sign*.8;tree.add(branch);
+          }
+          if(region.level>1){addTuft(group,x+.08,y,z,0x439c39,.7);addFlower(group,x-.07,y,z+.06,0xffd273);}
+        }else{
+          addTuft(group,x,y,z,0x58af38,.8+region.level*.12);
+          addFlower(group,x+.025,y,z+.018,[0xff788b,0xffdc51,0xf7f9e1,0xbd99ef][i%4]);
+          if(region.level>1&&i%4===0)addRock(group,x,y,z,.06,rnd,0xd4c396);
+        }
+      }
+      // A border grove spans the shared edge. One owner prevents duplicates.
+      for(const neighbor of G.neighbors(k).filter(n=>landscape.byCell[n]===region&&n>k)){
+        const [x,z]=G.parse(k),[nx,nz]=G.parse(neighbor),px=(nx-x)*HALF,pz=(nz-z)*HALF;
+        if(family==='forest')addTree(group,px,ground(px,pz),pz,.5+region.level*.08,false,rnd,true);
+        else for(let i=-1;i<=1;i++)addFlower(group,px+(nz-z)*i*.09,ground(px,pz),pz+(nx-x)*i*.09,0xffed9b);
+      }
+    }else return false;
+    // Ridges and water retain their unique geometry/animation; other static
+    // meshes share a small number of draw calls instead of thousands of leaves.
+    const fixed=new THREE.Group(),special=[];
+    for(const o of [...group.children]){if(o.userData.landscape)special.push(o);else fixed.add(o);}
+    batchScenery(fixed);fixed.children.forEach(o=>o.userData.landscape=true);
+    group.clear();group.add(...special,...[...fixed.children]);return true;
+  }
+  function rebuildScenery(node) {
+    node.scenery.traverse(o=>{if(o.isMesh)pickables.delete(o);});
+    const oldObjects=new Set();node.scenery.traverse(o=>oldObjects.add(o));
+    sways=sways.filter(o=>!oldObjects.has(o.m));waters=waters.filter(o=>!oldObjects.has(o.m));lavas=lavas.filter(o=>!oldObjects.has(o));
+    releaseLocalGeometry(node.scenery);node.scenery.clear();
+    buildScenery(node.scenery,node.look,node.k,node.look.h);anchorChildren(node.scenery,node.k,node.look.h);
+    if(node.frame)fitFrame(node);
+  }
+  function fitFrame(node) {
+    const p=node.frame.userData.band.geometry.attributes.position;
+    for(let i=0;i<p.count;i++)p.setY(i,visualHeight(node.k,p.getX(i),p.getZ(i))+.055);
+    p.needsUpdate=true;
+    node.frame.children.slice(1).forEach(c=>c.position.y=visualHeight(node.k,c.position.x,c.position.z)+.055);
+    node.frame.position.y=0;
+  }
   function buildScenery(group, look, k, h) {
+    if(buildLandscapeScenery(group,look,k))return;
     const rnd = hashk(k);
     const kind = look.kind;
     const R = () => (rnd() - 0.5) * 0.6;
@@ -585,6 +743,31 @@
       s.position.set(0, h - 0.005, 0);
       group.add(s);
       waters.push({ m: s, p: rnd() * 6, y: h - 0.005 });
+    }
+    // Ruins, mines and dry/polluted ground keep their recognizable landmarks,
+    // but gain connected stone paths and increasingly layered local details.
+    const region=landscape.byCell[k];
+    if(region){
+      const detail=root.Landscape.density(region,LOW),extra=new THREE.Group();
+      for(let i=0;i<detail;i++){
+        const x=R()*1.4,z=R()*1.4,y=surfaceHeight(k,x,z);
+        addRock(extra,x,y,z,.045+rnd()*.04,rnd,look.dirty?0x857754:0xcab58e);
+        if(region.level&&i%3===0){
+          if(look.kind==='ruin'){
+            const column=new THREE.Mesh(geo.cyl,M(0xc9bea1));column.scale.set(.045,.12+region.level*.04,.045);column.position.set(x,y+column.scale.y/2,z);extra.add(column);
+          }else addTuft(extra,x,y,z,look.dirty?0x858e36:0xa8ab51,.65+region.level*.12);
+        }
+      }
+      if(['mine','ruin'].includes(region.family)){
+        const positions=[];
+        for(const neighbor of G.neighbors(k).filter(n=>landscape.byCell[n]===region)){
+          const [x,z]=G.parse(k),[nx,nz]=G.parse(neighbor),dx=nx-x,dz=nz-z,w=.065;
+          const p=[[dz*w,-dx*w],[dx*HALF+dz*w,dz*HALF-dx*w],[-dz*w,dx*w],[dx*HALF-dz*w,dz*HALF+dx*w]];
+          for(const i of [0,2,1,1,2,3])positions.push(p[i][0],surfaceHeight(k,...p[i])+.024,p[i][1]);
+        }
+        if(positions.length){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();const path=new THREE.Mesh(g,M(0xcbb997,{roughness:1}));path.userData.landscape=true;group.add(path);}
+      }
+      batchScenery(extra);group.add(...[...extra.children]);
     }
   }
 
@@ -831,10 +1014,10 @@
     const scenery = new THREE.Group();
     group.add(scenery);
     buildScenery(scenery, look, k, h);
-    scenery.traverse(o => { if (o.isMesh && !o.material.transparent && o.geometry !== geo.circle) o.castShadow = true; });
+    scenery.traverse(o => { if (o.isMesh && !o.userData.landscape && !o.material.transparent && o.geometry !== geo.circle) o.castShadow = true; });
     const units = new THREE.Group();
     group.add(units);
-    const node = { k, group, terrain, units, scenery, edgeLine, look, sig: '', rise: animate ? 1 : 0, lift: 0 };
+    const node = { k, group, terrain, units, scenery, edgeLine, look, sig: '', scenerySig:scenerySignature(k),rise: animate && !reducedMotion() ? 1 : 0, lift: 0 };
     node.sig = signature(t);
     rebuildUnits(node, t, h);
     anchorChildren(scenery,k,h); anchorChildren(units,k,h);
@@ -848,6 +1031,9 @@
     const n = tileMap[k];
     if (!n) return;
     scene.remove(n.group);
+    const oldObjects=new Set();n.group.traverse(o=>oldObjects.add(o));
+    sways=sways.filter(o=>!oldObjects.has(o.m));waters=waters.filter(o=>!oldObjects.has(o.m));bobs=bobs.filter(o=>!oldObjects.has(o.m));lavas=lavas.filter(o=>!oldObjects.has(o));
+    n.scenery.traverse(o=>{if(o.isMesh)pickables.delete(o);});
     releaseLocalGeometry(n.scenery); releaseLocalGeometry(n.units);
     n.terrain.geometry.dispose(); n.edgeLine.geometry.dispose(); n.edgeLine.material.dispose();
     if(n.frame) { n.frame.userData.band.geometry.dispose(); n.frame.userData.band.material.dispose(); n.frame.userData.cornerMat.dispose(); }
@@ -877,7 +1063,27 @@
   }
 
   // ---------- 特效 ----------
+  function scenerySignature(k) {
+    const [x,z]=G.parse(k),neighbors=[];
+    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++)neighbors.push(stateRef.cells[G.key(x+dx,z+dz)]?.type||'-');
+    return landscape.byCell[k].signature+'@'+neighbors.join(',');
+  }
+  function regionGrowth(event) {
+    const {origin,milestone}=event,region=landscape.byCell[origin];
+    if(!region||region.family!==event.region.family)return;
+    if(cb.onRegionGrowth)cb.onRegionGrowth({cell:origin,name:region.name,size:region.size,level:region.level,milestone,merged:event.merged});
+    if(reducedMotion())return;
+    const distances=new Map([[origin,0]]),queue=[origin];
+    for(let i=0;i<queue.length;i++)for(const k of G.neighbors(queue[i]))if(landscape.byCell[k]===region&&!distances.has(k)){distances.set(k,distances.get(queue[i])+1);queue.push(k);}
+    queue.slice(0,LOW?12:24).forEach(k=>{
+      const n=tileMap[k];if(!n)return;
+      n.growth={t:-distances.get(k)*.075,milestone,family:region.family};
+    });
+    flashLight(wp(origin,visualHeight(origin,0,0)+.2),region.family==='lake'?0x57caff:0xbafa70);
+    shake=Math.max(shake,milestone?.07:.025);
+  }
   function spawnBurst(pos, color, n, speed, life, up, style) {
+    if(reducedMotion())return;
     const c = new THREE.Color(color);
     n = Math.ceil(n * (LOW ? 0.5 : 1));
     for (let i = 0; i < n && particles.length < (LOW ? 400 : 800); i++) {
@@ -938,11 +1144,11 @@
   }
   function burstAt(cell,color) {
     if(!stateRef||!G.SHAPE_KEYS.has(cell))return;
-    spawnBurst(wp(cell,cellHeight(...G.parse(cell))+0.18),color||0xe7cf8e,3,0.2,0.35,0.7);
+    spawnBurst(wp(cell,visualHeight(cell,0,0)+0.18),color||0xe7cf8e,3,0.2,0.35,0.7);
   }
   function fx(kind,cell,extra) {
     if(!cell||!G.SHAPE_KEYS.has(cell))return;
-    const pos=wp(cell,cellHeight(...G.parse(cell))+0.035),n=tileMap[cell];
+    const pos=wp(cell,visualHeight(cell,0,0)+0.035),n=tileMap[cell];
     const map={place:0xffe066,purify:0xfff5cf,mine:0xffcc22,spring:0x38c0ff,rich:0x79e84b,burn:0xff5a1a,merge:ELC[extra]||0xffffff,crystal:ELC[extra]||0xffffff,charm:0xfff4c0,shelter:0xffffff};
     const c=map[kind]||0xffffff;
     if(kind==='place'){
@@ -1210,7 +1416,7 @@
         // 元素灵绕地块中心转圈
         const a = time * b.sp + b.p;
         const x=Math.cos(a)*b.orbit,z=Math.sin(a)*b.orbit;
-        m.position.set(x,(b.cell?surfaceHeight(b.cell,x,z)+b.offset:b.y)+Math.sin(time*2.4+b.p)*b.a,z);
+        m.position.set(x,(b.cell?visualHeight(b.cell,x,z)+b.offset:b.y)+Math.sin(time*2.4+b.p)*b.a,z);
         m.rotation.y += dt * b.spin;
         return;
       }
@@ -1220,7 +1426,7 @@
         const a = w.ang + Math.sin(time * w.sp + b.p) * (b.fly ? 3 : 0.7);
         m.position.x = Math.cos(a) * w.r;
         m.position.z = Math.sin(a) * w.r;
-        const ground=b.cell?surfaceHeight(b.cell,m.position.x,m.position.z)+b.offset:b.y;
+        const ground=b.cell?visualHeight(b.cell,m.position.x,m.position.z)+b.offset:b.y;
         m.rotation.y = -a - Math.PI / 2 * Math.sign(Math.cos(time * w.sp + b.p) || 1);
         if (b.hop) m.position.y = ground + Math.abs(Math.sin(time * 4 + b.p)) * 0.025;
         else m.position.y = ground + Math.sin(time * 2 + b.p) * b.a;
@@ -1246,11 +1452,11 @@
         const t = stateRef.cells[k];
         const look = LOOK[G.TYPE[t.type].look] || LOOK.grass;
         if (t.spring && Math.random() < dt * 4) {
-          const p = wp(k, look.h + 0.15); p.x -= 0.24; p.z -= 0.2;
+          const p = wp(k, visualHeight(k,-.24,-.2) + 0.15); p.x -= 0.24; p.z -= 0.2;
           spawnBurst(p, 0x8adcff, 1, 0.25, 0.6, 1.2);
         }
         if (look.kind === 'lava' && Math.random() < dt * 3) spawnBurst(wp(k, look.h + 0.05), 0xff7a20, 1, 0.3, 0.8, 1.3);
-        if (t.beasts.length && Math.random() < dt * 3) spawnBurst(wp(k, look.h + 0.75), ELC[t.beasts[0].el], 1, 0.4, 0.7, 0.6);
+        if (t.beasts.length && Math.random() < dt * 3) spawnBurst(wp(k, visualHeight(k,0,0) + 0.75), ELC[t.beasts[0].el], 1, 0.4, 0.7, 0.6);
         if (look.kind === 'water' && !look.dirty && Math.random() < dt * 1.2) {
           const p = wp(k, look.h + 0.03); p.x += (Math.random() - 0.5) * 0.6; p.z += (Math.random() - 0.5) * 0.6;
           spawnBurst(p, 0xffffff, 1, 0.05, 0.4, 0.3);
@@ -1291,7 +1497,7 @@
     }
     for(const k of Object.keys(tileMap)) {
       const n=tileMap[k],sel=selectedK===k,tg=targets.has(k);
-      if((sel||tg)&&!n.frame){n.frame=dashedFrame(0xffd23a);n.group.add(n.frame);}
+      if((sel||tg)&&!n.frame){n.frame=dashedFrame(0xffd23a);fitFrame(n);n.group.add(n.frame);}
       if(n.frame){
         n.frame.visible=sel||tg;
         if(sel||tg){
@@ -1301,7 +1507,7 @@
           if(sel&&!n.wasSelected)n.selectTime=0;
           n.selectTime=(n.selectTime||0)+dt;
           const u=Math.min(1,n.selectTime/0.35);
-          n.frame.scale.setScalar(1+0.3*(1-backOut(u))+Math.sin(time*3)*0.008);n.frame.position.y=n.look.h+0.055;
+          n.frame.scale.setScalar(1+0.3*(1-backOut(u))+Math.sin(time*3)*0.008);
         }
       }
       n.wasSelected=sel;n.lift+=((sel?0.06:0)-n.lift)*Math.min(1,dt*12);
@@ -1332,7 +1538,7 @@
         n.rise = Math.max(0, n.rise - dt * 2.5);
         var u = 1 - n.rise;
         y += (1 - backOut(u)) * 2.2;
-        if (n.rise === 0) { n.pop = 1; fx('place', k); }
+        if (n.rise === 0) { n.pop = 1; fx('place', k);if(n.growthPending){regionGrowth(n.growthPending);delete n.growthPending;} }
       }
       if (n.pop > 0) {
         // 落地挤压
@@ -1342,12 +1548,22 @@
       }
       n.group.position.y = y;
       n.group.scale.set(sxz, sy, sxz);
+      if(n.growth){
+        const g=n.growth;g.t+=dt;
+        if(g.t>=0){
+          if(!g.started){g.started=true;spawnBurst(wp(k,visualHeight(k,0,0)+.2),g.family==='lake'?0x9be9ff:0xe1ff9c,g.milestone?7:3,.28,.65,.75,g.family==='lake'?'water':'spark');}
+          const wave=Math.sin(Math.min(1,g.t/.65)*Math.PI);
+          n.scenery.children.filter(o=>o.isInstancedMesh).forEach(o=>o.scale.y=1+wave*(g.milestone?.12:.055));
+          n.terrain.material[0].emissive.setHex(0xa8c76a);n.terrain.material[0].emissiveIntensity=wave*.2;
+          if(g.t>=.65||reducedMotion()){n.scenery.children.filter(o=>o.isInstancedMesh).forEach(o=>o.scale.y=1);n.terrain.material[0].emissiveIntensity=0;delete n.growth;}
+        }
+      }
     }
     updateFX(dt, time);
     cloudBanks.forEach((bank,i)=>{bank.position.y=Math.sin(time*0.18+i)*0.035;bank.position.x=Math.sin(time*0.065)*0.08;});
     if(post){
       const k=hoverK&&modeRef?hoverK:selectedK;
-      const p=k?wp(k,surfaceHeight(k,0,0)+.2):cam.target.clone();
+      const p=k?wp(k,visualHeight(k,0,0)+.2):cam.target.clone();
       if(k&&tileMap[k])p.y+=tileMap[k].group.position.y;
       post.render(scene,camera,p,dt);
     }else renderer.render(scene,camera);
@@ -1377,7 +1593,9 @@
       cam.gx = 0; cam.gz = 0;
     }
     const fresh = !stateRef || S !== stateRef;
+    const previousLandscape=fresh?{byCell:{},regions:[]}:landscape;
     stateRef = S;
+    landscape=root.Landscape.plan(S.cells,G.TYPE);
     modeRef = ui.mode;
     selectedK = ui.selected;
     const terrainKey=Object.keys(S.cells).map(k=>k+':'+S.cells[k].type+':'+S.cells[k].attrs.join(',')).join('|');
@@ -1385,20 +1603,25 @@
     const keysNow = new Set(Object.keys(S.cells));
     for (const k of Object.keys(tileMap)) if (!keysNow.has(k)) removeTile(k);
     for (const k of keysNow) {
+      if(tileMap[k]&&tileMap[k].look!==(LOOK[G.TYPE[S.cells[k].type].look]||LOOK.grass))removeTile(k);
       if (!tileMap[k]) makeTile(k, S.cells[k], !fresh);
       else updateTile(tileMap[k], S.cells[k]);
+      const node=tileMap[k],sig=scenerySignature(k);
+      if(node.scenerySig!==sig){rebuildScenery(node);node.scenerySig=sig;}
     }
     if(terrainChanged){
       Object.values(tileMap).forEach(rebuildTerrain);
       Object.entries(pads).forEach(([k,m])=>{m.geometry.dispose();m.geometry=terrainGeometry(k);});
     }
+    if(!fresh)for(const event of root.Landscape.growth(previousLandscape,landscape)){
+      const node=tileMap[event.origin];
+      if(node&&node.rise>0)node.growthPending=event;else regionGrowth(event);
+    }
     if (S.round !== lastRound) {
       lastRound = S.round;
       shake = Math.max(shake, 0.2);
       for (const k of keysNow) {
-        const t = S.cells[k];
-        const h = (LOOK[G.TYPE[t.type].look] || LOOK.grass).h;
-        spawnBurst(wp(k, h + 0.1), 0xfff2a0, 3, 0.5, 0.9, 1.4);
+        spawnBurst(wp(k, visualHeight(k,0,0) + 0.1), 0xfff2a0, 3, 0.5, 0.9, 1.4);
       }
     }
     ensureGhost();
@@ -1505,7 +1728,7 @@
     if (!camera || !renderer || !k || !G.SHAPE_KEYS.has(k)) return null;
     const look = stateRef && stateRef.cells[k] ? LOOK[G.TYPE[stateRef.cells[k].type].look] : null;
     const n=tileMap[k];
-    const pos = wp(k, (look ? look.h : PAD_H) + 0.4 + (n?n.group.position.y:0));
+    const pos = wp(k, visualHeight(k,0,0) + 0.4 + (n?n.group.position.y:0));
     pos.project(camera);
     if (pos.z > 1 || pos.z < -1 || Math.abs(pos.x)>1.15 || Math.abs(pos.y)>1.15) return null;
     const r = renderer.domElement.getBoundingClientRect();
