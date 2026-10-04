@@ -104,9 +104,22 @@
     const h=THREE.MathUtils.lerp(THREE.MathUtils.lerp(cellHeight(bx,bz),cellHeight(bx+1,bz),u),THREE.MathUtils.lerp(cellHeight(bx,bz+1),cellHeight(bx+1,bz+1),u),v);
     return h + Math.sin(wx*1.13+wz*0.39)*Math.cos(wz*0.92-wx*0.25)*0.012;
   }
+  // World-space shading so neighbouring tiles agree: soft occlusion in hollows, warm light on high ground.
+  const WARM_HIGH=new THREE.Color(0xfff1c8);
+  function shadeSurface(c,k,x,z,h) {
+    const d=0.34,ring=(surfaceHeight(k,x+d,z)+surfaceHeight(k,x-d,z)+surfaceHeight(k,x,z+d)+surfaceHeight(k,x,z-d))/4;
+    const occlusion=THREE.MathUtils.clamp((ring-h)*2.6,0,0.2);
+    c.multiplyScalar(1-occlusion);
+    return c.lerp(WARM_HIGH,THREE.MathUtils.clamp((h-0.15)*1.1,0,0.12));
+  }
+  function sideColor(k) {
+    const t=stateRef&&stateRef.cells[k];
+    return t?colTint(effectiveLook(t).side,t.attrs):new THREE.Color(0x9a7650);
+  }
   function cellColor(x,z) {
     const t=stateRef&&stateRef.cells[G.key(x,z)];
-    if(!t)return new THREE.Color(0xb4d18d);
+    // Unclaimed cells read as a softly mown lawn so placed land stands out.
+    if(!t)return new THREE.Color((x+z)&1?0xb0cd89:0xb8d593);
     return colTint((LOOK[G.TYPE[t.type].look]||LOOK.grass).top,t.attrs);
   }
   function surfaceColor(k,x,z) {
@@ -132,8 +145,9 @@
     const p = [], colors = [], uv=[], ix = [], n = AXIS.length;
     const [cx,cz]=G.parse(k);
     for (const z of AXIS) for (const x of AXIS) {
-      p.push(x, surfaceHeight(k, x, z), z);
-      const c=surfaceColor(k,x,z);colors.push(c.r,c.g,c.b);uv.push((cx+x/T)/3,(cz+z/T)/3);
+      const h=surfaceHeight(k, x, z);
+      p.push(x, h, z);
+      const c=shadeSurface(surfaceColor(k,x,z),k,x,z,h);colors.push(c.r,c.g,c.b);uv.push((cx+x/T)/3,(cz+z/T)/3);
     }
     for (let j=0;j<n-1;j++) for(let i=0;i<n-1;i++) {
       const a=j*n+i,b=a+1,c=a+n,d=c+1; ix.push(a,c,b,b,c,d);
@@ -144,10 +158,26 @@
     for(let i=1;i<n;i++) perimeter.push([HALF,AXIS[i]]);
     for(let i=n-2;i>=0;i--) perimeter.push([AXIS[i],HALF]);
     for(let i=n-2;i>0;i--) perimeter.push([-HALF,AXIS[i]]);
+    // Cookie-cut side walls: a dark grass lip over layered soil that fades toward the base.
+    const soil=sideColor(k);
+    const bands=[
+      [0,0.05,null,0.74],
+      [0.05,0.07,soil.clone().multiplyScalar(1.08),1],
+      [-0.13,null,soil,0.82],
+      [TERRAIN_BOTTOM,null,soil,0.5],
+    ];
     for(let i=0;i<perimeter.length;i++) {
-      const a=perimeter[i],b=perimeter[(i+1)%perimeter.length],s=p.length/3;
-      p.push(a[0],surfaceHeight(k,...a),a[1],b[0],surfaceHeight(k,...b),b[1],a[0],TERRAIN_BOTTOM,a[1],b[0],TERRAIN_BOTTOM,b[1]);
-      colors.push(...Array(12).fill(1));uv.push(0,0,1,0,0,1,1,1); ix.push(s,s+1,s+2,s+1,s+3,s+2);
+      const a=perimeter[i],b=perimeter[(i+1)%perimeter.length];
+      const ha=surfaceHeight(k,...a),hb=surfaceHeight(k,...b);
+      const level=(h,band)=>band[1]==null?band[0]:h-band[1];
+      for(let j=0;j<bands.length-1;j++) {
+        const top=bands[j],bottom=bands[j+1],s=p.length/3;
+        const ya=[level(ha,top),level(hb,top),Math.min(level(ha,top),level(ha,bottom)),Math.min(level(hb,top),level(hb,bottom))];
+        p.push(a[0],ya[0],a[1],b[0],ya[1],b[1],a[0],ya[2],a[1],b[0],ya[3],b[1]);
+        const tone=(band,x,z)=>(band[2]?band[2].clone():surfaceColor(k,x,z)).multiplyScalar(band[3]);
+        for(const c of [tone(top,...a),tone(top,...b),tone(bottom,...a),tone(bottom,...b)])colors.push(c.r,c.g,c.b);
+        uv.push(0,0,1,0,0,1,1,1); ix.push(s,s+1,s+2,s+1,s+3,s+2);
+      }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
@@ -299,7 +329,7 @@
     mats.landMap=landTexture();
     mats.ground = new THREE.MeshStandardMaterial({ color: 0x879f65, roughness: 1, map:mats.landMap });
     mats.pad = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors:true, map:mats.landMap, roughness: 0.9 });
-    mats.padSide = new THREE.MeshStandardMaterial({ color: 0x5a9a3a, roughness: 0.9 });
+    mats.padSide = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors:true, roughness: 0.95 });
     mats.padLegal = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors:true, map:mats.landMap, roughness: 0.9, emissive: 0x67813b, emissiveIntensity: 0.2 });
     mats.hill = new THREE.MeshStandardMaterial({ color: 0x5cb440, roughness: 1, flatShading: true });
     mats.hill2 = new THREE.MeshStandardMaterial({ color: 0x4ea838, roughness: 1, flatShading: true });
@@ -1048,7 +1078,7 @@
     const p = wp(k);
     group.position.set(p.x, animate ? 2.2 : 0, p.z);
     const h = look.h;
-    const terrain = new THREE.Mesh(terrainGeometry(k), [ownMat(0xffffff, { vertexColors: true,map:mats.landMap }), ownMat(colTint(look.side, t.attrs), { roughness: 0.95 })]);
+    const terrain = new THREE.Mesh(terrainGeometry(k), [ownMat(0xffffff, { vertexColors: true,map:mats.landMap }), ownMat(0xffffff, { vertexColors: true, roughness: 0.95 })]);
     terrain.castShadow = true;
     terrain.receiveShadow = true;
     terrain.userData.k = k;
@@ -1099,7 +1129,6 @@
       rebuildScenery(n);n.sceneryKey=sceneryKey;
     }
     n.previousColor = new THREE.Color(0x797554);
-    n.terrain.material[1].color.copy(colTint(look.side, t.attrs));
     rebuildUnits(n, t, look.h);
     anchorChildren(n.units,n.k,look.h);
     n.pop = 1;   // 变化时轻弹一下
@@ -1864,9 +1893,10 @@
     initGeos();
     scene.add(makeSky());
     // 明亮的卡通光照：天空蓝 / 草地绿半球光 + 暖色主光
-    scene.add(new THREE.HemisphereLight(0xe2f2ff, 0x85aa61, 0.5));
-        sun = new THREE.DirectionalLight(0xfff0d0, 0.78);
-    sun.position.set(12, 22, 8);
+    scene.add(new THREE.HemisphereLight(0xe6f3ff, 0x8aa866, 0.46));
+    // Late-afternoon key light: lower angle gives longer, more readable model shadows.
+    sun = new THREE.DirectionalLight(0xffe9c4, 0.9);
+    sun.position.set(13, 17, 7);
     sun.castShadow = true;
     sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
     sun.shadow.camera.left = -14;
@@ -1878,7 +1908,7 @@
     sun.shadow.bias = -0.0008;
     sun.shadow.radius = 3;
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xb0d8ff, 0.14);
+    const fill = new THREE.DirectionalLight(0xa8ccff, 0.2);
     fill.position.set(-10, 8, -12);
     scene.add(fill);
     addHorizon();
