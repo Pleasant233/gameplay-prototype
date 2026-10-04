@@ -31,16 +31,19 @@ post_source=(ROOT/'postfx.js').read_text(encoding='utf-8').replace(
     'const api={enabled:true,depthSupported,resize,render,dispose};',
     'const api={enabled:true,depthSupported,resize,render,dispose,_test:{sceneTarget,bright,blurA,blurB,combine}};')
 view_source=capture_source((ROOT/'view.js').read_text(encoding='utf-8'))
-view_source=view_source.replace('const dt = Math.max(0,Math.min(0.05, clock.getDelta()));','const dt = root.__freezeAtmosphere?0:Math.max(0,Math.min(0.05, clock.getDelta()));')
-view_source=view_source.replace('const time = clock.elapsedTime;','const time = root.__freezeAtmosphere||clock.elapsedTime;')
+delta_source='const elapsed=Math.max(0,clock.getDelta()),dt=Math.min(.05,elapsed);'
+assert delta_source in view_source, 'Update the test freeze hook when the renderer clock changes'
+view_source=view_source.replace(delta_source,'const elapsed=root.__freezeAtmosphere!=null?0:Math.max(0,clock.getDelta()),dt=Math.min(.05,elapsed);')
+view_source=view_source.replace('const time = clock.elapsedTime;','const time = root.__freezeAtmosphere!=null?root.__freezeAtmosphere:clock.elapsedTime;')
+view_source=view_source.replace('const now=performance.now()/1000;','const now=root.__freezePerformance!=null?root.__freezePerformance:performance.now()/1000;')
 view_source=view_source.replace('  root.View = {','''
   root.__atmosphere={
     prepare(){intro=0;cam.gR=baseR();cam.gP=.9;cam.sph.radius=cam.gR;cam.sph.phi=.9;updateCam(0);},
-    freeze(){root.__freezeAtmosphere=clock.elapsedTime;},
-    unfreeze(){delete root.__freezeAtmosphere;clock.getDelta();},
+    freeze(){root.__freezeAtmosphere=clock.elapsedTime;root.__freezePerformance=performance.now()/1000;shake=0;},
+    unfreeze(){delete root.__freezeAtmosphere;delete root.__freezePerformance;clock.getDelta();},
     configure(bloom,depth,vignette){const u=post._test.combine.uniforms;u.bloomStrength.value=bloom;u.depthEnabled.value=depth;u.vignette.value=vignette;},
     status(){const t=post._test,u=t.combine.uniforms;return {enabled:post.enabled,depth:post.depthSupported,focus:u.focusDepth.value,focusUv:{x:u.focusUv.value.x,y:u.focusUv.value.y},size:[t.sceneTarget.width,t.sceneTarget.height],bloomSize:[t.bright.width,t.bright.height],samples:t.sceneTarget.samples||0,memory:{...renderer.info.memory},falling:Object.values(tileMap).some(n=>n.rise>0)};},
-    point(k){const p=wp(k,surfaceHeight(k,0,0)+.005);p.project(camera);return {x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};}
+    point(k){const p=wp(k,visualHeight(k,0,0)+.005);p.project(camera);return {x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};}
   };
   root.View = {''')
 SETUP='''() => {

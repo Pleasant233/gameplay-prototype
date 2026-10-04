@@ -3,10 +3,9 @@ import functools
 import http.server
 import json
 from pathlib import Path
-import subprocess
 import threading
 from playwright.sync_api import sync_playwright
-from browser_support import launch_browser
+from browser_support import launch_browser, capture_source, capture_frame
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'artifacts'
@@ -31,6 +30,7 @@ source=(ROOT/'view.js').read_text(encoding='utf-8').replace('    updateCam(dt);'
     settled(){return Object.values(tileMap).every(n=>n.scenery.children.every(o=>o.scale.y===1)&&!n.growth);}
   };
   root.View = {''')
+source=capture_source(source)
 FIXTURE='''(kind) => {
   start(37);const template=JSON.parse(JSON.stringify(S.cells['3,3']));
   S=JSON.parse(JSON.stringify(S));S.cells={};
@@ -58,12 +58,13 @@ def settle(page):
     page.wait_for_function('(frame)=>__landscapeTest.status().frame>=frame+2&&!__landscapeTest.status().growing',arg=frame,timeout=60000)
 def capture(page,name):
     print('capture - '+name,flush=True)
-    page.screenshot(path=str(OUT/(name+'.png')),timeout=60000)
+    capture_frame(page,OUT/(name+'.png'))
 try:
     with sync_playwright() as p:
         browser=launch_browser(p)
         # Same controlled map and seed, old renderer versus new renderer.
-        baseline=subprocess.run(['git','show','a0d03cc:view.js'],cwd=ROOT,check=True,capture_output=True,text=True).stdout.replace('  root.View = {','  root.__stableLandscape=()=>{intro=0;cam.gR=baseR();cam.gP=.9;cam.sph.radius=cam.gR;cam.sph.phi=cam.gP;cam.sph.theta=cam.gT;cam.target.set(cam.gx,cam.gy,cam.gz);updateCam(0);};\n  root.View = {')
+        baseline=(ROOT/'scripts/fixtures/element-habitat-view.js').read_text(encoding='utf-8').replace('  root.View = {','  root.__stableLandscape=()=>{intro=0;cam.gR=baseR();cam.gP=.9;cam.sph.radius=cam.gR;cam.sph.phi=cam.gP;cam.sph.theta=cam.gT;cam.target.set(cam.gx,cam.gy,cam.gz);updateCam(0);};\n  root.View = {')
+        baseline=capture_source(baseline)
         before=browser.new_page(viewport={'width':1440,'height':900})
         before.route('**/view.js',lambda route:route.fulfill(body=baseline,content_type='application/javascript'))
         before.goto(url,wait_until='domcontentloaded');before.wait_for_function('typeof S!=="undefined" && S')

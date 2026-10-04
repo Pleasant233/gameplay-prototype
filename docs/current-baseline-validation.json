@@ -1,0 +1,340 @@
+{
+  "verifiedAt": "2026-10-04T09:50:31.821491+00:00",
+  "recoveredFrom": {
+    "deployment": "dpl_BdroLNTmciwRZ7YysJKvRhLXeKQ3",
+    "recordedCommit": "7b3eb1fa00d756640a8491452aebf638d7bbc1b6",
+    "files": {
+      "achievements.js": "67a0f5aa041603c4de001f5fdd046a833222a075",
+      "data.js": "db2bba12290731c3685b9189992fcb52d3ff978e",
+      "game.js": "60e87a12bc386f525caae7b5a1586ec4815b2b20",
+      "icon.svg": "4684d716d57dbc53bf012aa665ecb97d9d5929e4",
+      "index.html": "db18cd8b98b217a02596c194bf9f06ebeca9bcf1",
+      "manifest.webmanifest": "5025ef7c351041b24924338eb53e6ac4341a5f63",
+      "postfx.js": "56e3bb2f6c30b6a5ff9d49c459bc79ffdc470dde",
+      "tokens.js": "2abe388c96c73e7fa03f16cf5d6ad166a04063e0",
+      "view.js": "7d2c28a4cbac3e659bd64874c08e30ece62e5ad0"
+    },
+    "allSourceHashesVerified": true
+  },
+  "unchangedGameplayFiles": [
+    "game.js",
+    "data.js",
+    "achievements.js",
+    "tokens.js",
+    "postfx.js",
+    "icon.svg",
+    "manifest.webmanifest"
+  ],
+  "fastChecks": {
+    "rules": 16,
+    "currentGameplayRegressions": 5,
+    "wholeGameSimulations": 30,
+    "sharedEdgeSamples": 7200,
+    "terrainCloudTopologyAndModelSeams": "passed"
+  },
+  "browserReports": {
+    "ui": {
+      "browser": "Chromium 153.0.8010.12 / SwiftShader",
+      "checks": [
+        "Terrain retains its per-cell transform",
+        "Ray picks the projected cell",
+        "Real pointer click selects the tile",
+        "Shader selection band is visible",
+        "Pointer places the offered tile",
+        "Space count waits for the flight",
+        "Space count settles correctly",
+        "Score waits for arriving production tokens",
+        "Production tokens visibly fly with a 40-token cap",
+        "All delayed counters settle to the game state",
+        "No flight nodes remain after settlement",
+        "purify transient meshes and lights expire",
+        "mine transient meshes and lights expire",
+        "spring transient meshes and lights expire",
+        "rich transient meshes and lights expire",
+        "burn transient meshes and lights expire",
+        "merge transient meshes and lights expire",
+        "crystal transient meshes and lights expire",
+        "Crystal consumption flies from the HUD to the tile",
+        "Crystal use preserves action points",
+        "Overflow receipts merge into at most 40 nodes",
+        "Merged receipts show their quantity",
+        "Restart clears flights and transient effects",
+        "Reduced motion settles counters without flight nodes",
+        "Phone touch selects the tile",
+        "Phone HUD and bottom controls fit within viewport",
+        "Mobile quality omits transient point lights",
+        "No browser or WebGL errors"
+      ],
+      "errors": []
+    },
+    "crystal": {
+      "url": "http://127.0.0.1:35879",
+      "checks": [
+        "desktop: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+        "desktop: large crystal consumes large stock and adds 2 without AP or round change",
+        "desktop: score, inventory counter and flights settle",
+        "desktop: help states ordinary and large crystals are free",
+        "phone: ordinary crystal consumes only ordinary stock and adds 1 without AP or round change",
+        "phone: large crystal consumes large stock and adds 2 without AP or round change",
+        "phone: score, inventory counter and flights settle",
+        "phone: help states ordinary and large crystals are free",
+        "No browser or WebGL errors"
+      ],
+      "errors": []
+    },
+    "atmosphere": {
+      "checks": [
+        "Desktop uses resolved depth and a quarter-resolution bloom buffer",
+        "Depth precision preserves thin surfaces without striping",
+        "Bloom measurably brightens the rendered highlights",
+        "Aperture blur changes the distant scene while preserving the sharp center",
+        "Picking still selects the rendered tile with atmosphere enabled",
+        "Focus follows a changed tile selection",
+        "Menu turns atmosphere off and stores the preference",
+        "Reload preserves the atmosphere preference",
+        "Resize updates the render targets without growing the texture count",
+        "Phone uses the cheaper pipeline without multisampling",
+        "Phone touch selects a tile with atmosphere enabled",
+        "Phone atmosphere control remains visible and usable",
+        "Simulated lack of depth textures keeps the bloom pipeline running",
+        "No browser, shader or framebuffer errors"
+      ],
+      "errors": [],
+      "url": "http://127.0.0.1:45771",
+      "surfacePrecisionDifference": 0.0,
+      "bloomBrightening": 6.3197052469136,
+      "sharpCenterDifference": 0.0,
+      "defocusedDifference": 1.3755743243243244
+    },
+    "landscape": {
+      "checks": [
+        "desktop: 12 forests, 9 mountains and 6 lakes have distinct growth tiers",
+        "desktop: all connected water surfaces share one wave phase",
+        "desktop: procedural details use instancing",
+        "desktop: raised mountain mesh can be picked",
+        "desktop: actual input selects the mountain",
+        "desktop: placement joins the forest without changing AP rules",
+        "desktop: milestone is communicated",
+        "desktop: growth wave expires and restores model scale",
+        "desktop: 85-cell canopy renders with bounded draw calls",
+        "desktop: repeated rebuilds do not accumulate geometries",
+        "desktop: reduced motion skips the growth wave but retains feedback",
+        "desktop: restart clears growth and notice",
+        "phone: 12 forests, 9 mountains and 6 lakes have distinct growth tiers",
+        "phone: all connected water surfaces share one wave phase",
+        "phone: procedural details use instancing",
+        "phone: raised mountain mesh can be picked",
+        "phone: actual input selects the mountain",
+        "phone: placement joins the forest without changing AP rules",
+        "phone: milestone is communicated",
+        "phone: growth wave expires and restores model scale",
+        "phone: 85-cell canopy renders with bounded draw calls",
+        "phone: repeated rebuilds do not accumulate geometries",
+        "phone: reduced motion skips the growth wave but retains feedback",
+        "phone: restart clears growth and notice",
+        "Mobile reduces canopy instance count",
+        "No browser, shader or WebGL errors"
+      ],
+      "errors": [],
+      "metrics": {
+        "desktopMixed": {
+          "frame": 12,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 12,
+              "level": 3
+            },
+            {
+              "family": "meadow",
+              "size": 6,
+              "level": 2
+            },
+            {
+              "family": "mountain",
+              "size": 9,
+              "level": 2
+            },
+            {
+              "family": "lake",
+              "size": 6,
+              "level": 2
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 156,
+            "textures": 7
+          },
+          "calls": 589,
+          "particles": 0,
+          "instances": 2083,
+          "pendingWaves": 0,
+          "waterPhases": [
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555
+          ]
+        },
+        "desktopFullBoard": {
+          "frame": 91,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 85,
+              "level": 3
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 188,
+            "textures": 7
+          },
+          "calls": 1627,
+          "particles": 0,
+          "instances": 13555,
+          "pendingWaves": 0,
+          "waterPhases": []
+        },
+        "desktopRebuildGeometries": [
+          157,
+          157,
+          157
+        ],
+        "phoneMixed": {
+          "frame": 9,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 12,
+              "level": 3
+            },
+            {
+              "family": "meadow",
+              "size": 6,
+              "level": 2
+            },
+            {
+              "family": "mountain",
+              "size": 9,
+              "level": 2
+            },
+            {
+              "family": "lake",
+              "size": 6,
+              "level": 2
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 148,
+            "textures": 7
+          },
+          "calls": 573,
+          "particles": 0,
+          "instances": 1552,
+          "pendingWaves": 0,
+          "waterPhases": [
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555,
+            0.3735440243035555
+          ]
+        },
+        "phoneFullBoard": {
+          "frame": 101,
+          "regions": [
+            {
+              "family": "forest",
+              "size": 85,
+              "level": 3
+            }
+          ],
+          "growing": false,
+          "memory": {
+            "geometries": 178,
+            "textures": 7
+          },
+          "calls": 1601,
+          "particles": 0,
+          "instances": 9645,
+          "pendingWaves": 0,
+          "waterPhases": []
+        },
+        "phoneRebuildGeometries": [
+          149,
+          149,
+          149
+        ]
+      }
+    },
+    "currentGameplay": {
+      "url": "http://127.0.0.1:41403",
+      "checks": [
+        "desktop: correct title and current gameplay APIs loaded",
+        "desktop: mine magic starts locked",
+        "desktop: unlocked magic still requires placement",
+        "desktop: magic becomes available after placement",
+        "desktop: real magic button adds 5 metal, vein and costs one AP",
+        "desktop: same magic cannot cast twice in a round",
+        "desktop: area purify clears neighbor cancer and adds 5 to negatives",
+        "desktop: purified connected water uses clean water material",
+        "desktop: real end-round button triggers connected fire rain",
+        "desktop: fire rain is announced in UI and log",
+        "desktop: meteor warning, falling meshes and queued impacts are active",
+        "desktop: scheduled meteor impacts run and the queue drains",
+        "desktop: meteor effects finish and dispose",
+        "desktop: new scenario, shield composer and achievement book remain available",
+        "phone: correct title and current gameplay APIs loaded",
+        "phone: mine magic starts locked",
+        "phone: unlocked magic still requires placement",
+        "phone: magic becomes available after placement",
+        "phone: real magic button adds 5 metal, vein and costs one AP",
+        "phone: same magic cannot cast twice in a round",
+        "phone: area purify clears neighbor cancer and adds 5 to negatives",
+        "phone: purified connected water uses clean water material",
+        "phone: real end-round button triggers connected fire rain",
+        "phone: fire rain is announced in UI and log",
+        "phone: meteor warning, falling meshes and queued impacts are active",
+        "phone: scheduled meteor impacts run and the queue drains",
+        "phone: meteor effects finish and dispose",
+        "phone: new scenario, shield composer and achievement book remain available",
+        "No browser or WebGL errors"
+      ],
+      "errors": [],
+      "testProbes": true,
+      "desktopFireSeed": 19,
+      "phoneFireSeed": 19
+    }
+  },
+  "runtimeSha256": {
+    "index.html": "d0b086076ed662c34d1056d918c18b2f030847588305747d5dff19d2cbc978ea",
+    "data.js": "bf155cb3fa446cc4fbfb90aa78ed0828cc94991f316d9c1a7ba9bc7d4916d084",
+    "game.js": "2f395c15a6c60cf7439c4893d9c1011cc91ab0987e8c93bff473e881cefd9d3e",
+    "achievements.js": "3ae683a2410a0fcbb977030fa22ed3e1358d8f5e393e0bb276b9c3c4a8d41746",
+    "landscape.js": "206007626009c2fadf02e7b13f922b480e7e9d56e754be53755f46f4d91a1eca",
+    "view.js": "cb2d44fbe163753d857501a0c5c46eda94d4430a5f3763e4a30bf43c07deeeff",
+    "postfx.js": "163723151fa3e9e9cb3b0fcbf49af14a6a882e4b81b469ba2ef61832bcceba15",
+    "tokens.js": "6b0fe6bb64eb08e310b4661ebdd9937e82ba4a484a3265aeedc495aff499dc70",
+    "lib/three.min.js": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
+    "manifest.webmanifest": "feb24d37f58487f2430a07bfa3f6f90c611905542c1f86672afc012a00e09ec2",
+    "icon.svg": "f39238a2d1a06710b4aee97243a1fff533699508458a1d77b1f6ce8f1236e5df"
+  },
+  "screenshots": {
+    "desktopFire": "screenshots/current-fire-rain-desktop.png",
+    "phoneFire": "screenshots/current-fire-rain-phone.png",
+    "desktopLandscape": "screenshots/current-landscape-desktop.png",
+    "phoneLandscape": "screenshots/current-landscape-phone.png"
+  },
+  "comparisonFixture": {
+    "sourceDeployment": "dpl_BdroLNTmciwRZ7YysJKvRhLXeKQ3",
+    "originalSha1": "7d2c28a4cbac3e659bd64874c08e30ece62e5ad0",
+    "normalizedSha1": "e615bc0615799d89f626cfdb9ad6cdcd24db3965",
+    "normalization": "Only trailing whitespace removed; runtime logic is identical."
+  }
+}

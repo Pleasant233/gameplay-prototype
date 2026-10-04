@@ -128,7 +128,7 @@ try:
             capture_frame(page, OUT / 'round-tokens.png', advance=False)
             page.clock.resume()
             page.wait_for_function("Number(document.getElementById('score').textContent)===G.score(S).total && !document.querySelector('.token')", timeout=30000)
-            check('All delayed counters settle to the game state', page.evaluate("Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===Object.values(S.inv.crystal).reduce((a,b)=>a+b,0)+Object.values(S.inv.bigCrystal).reduce((a,b)=>a+b,0)+Object.values(S.inv.ore).reduce((a,b)=>a+b,0)+S.inv.wood+S.inv.bucket+S.inv.charm"))
+            check('All delayed counters settle to the game state', page.evaluate("Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===G.bagCount(S)"))
             check('No flight nodes remain after settlement', page.locator('.token').count() == 0)
 
             for kind in ['purify', 'mine', 'spring', 'rich', 'burn', 'merge', 'crystal']:

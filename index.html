@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="灵地复苏：五行地块策略小游戏">
+<meta name="description" content="元素生境：五行地块策略小游戏">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>灵地复苏</title>
+<title>元素生境</title>
 <style>
   :root {
     --ink: #fff; --ink2: #5a4220; --muted: #8a7a62;
@@ -127,6 +127,8 @@
   .mg[data-magic=rich] { --c: #d09a5a; --d: #8a5a2a; }
   .mg[data-magic=burn] { --c: #ff6a3a; --d: #b8302a; }
 
+  .mg small { white-space:nowrap; }
+  .mg.locked::after { content:"🔒";position:absolute;right:-3px;top:-6px;font-size:11px; }
   #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
   #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
   #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
@@ -182,7 +184,7 @@
   #hint.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
   #hint.err { background: linear-gradient(180deg, #ff7a6a, #e0402f); box-shadow: 0 4px 0 #9a2a1a, 0 8px 16px rgba(0,0,0,.25); }
   #hint.err.show { animation: shake .4s; }
-  #landscapeNotice { position:fixed;left:50%;top:calc(108px + var(--safe-t));transform:translateX(-50%);z-index:8;
+  #landscapeNotice { position:fixed;left:50%;top:calc(152px + var(--safe-t));transform:translateX(-50%);z-index:8;
     pointer-events:none;max-width:calc(100vw - 28px);padding:9px 18px;border-radius:18px;border:2px solid #edfaca;
     background:linear-gradient(180deg,#3e8152,#245c40);box-shadow:0 4px 0 #174932,0 8px 20px #163e3433;
     color:#fff6c0;font-size:15px;text-align:center;opacity:0; }
@@ -267,6 +269,59 @@
     #detail { max-height: calc(100vh - 80px); }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } #landscapeNotice.show {animation:none!important;opacity:1;} }
+
+  #btnReroll { position:absolute;right:8px;top:-14px;font-size:10px;padding:3px 6px; }
+  #bag { max-height:calc(100vh - 290px);overflow:auto;touch-action:pan-y; }
+  #detail, dialog, .dlg { touch-action:pan-y; }
+  dialog { max-height:85dvh; }
+  .dlg { max-height:82dvh;overflow:auto; }
+  .dlg .close { right:8px;top:8px; }
+  .dlg h2 { padding:0 24px; }
+  .progress-card { background:rgba(255,255,255,.68);border:2px solid #dbc69c;border-radius:12px;margin:8px 0;padding:10px; }
+  .progress-card.done { border-color:#8aba51;background:#eff6da; }
+  .progress-card b { display:block;color:var(--ink2);font-size:14px; }
+  .progress-card p { font-size:12px; }
+  .progress-card progress { width:100%;height:8px;accent-color:#6cad47;display:block;margin-top:6px; }
+  #stageHud { position:fixed;top:calc(57px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:12px;max-width:calc(100vw - 16px);font-size:11px;padding:4px 12px;border-radius:16px;background:rgba(28,47,64,.6);white-space:nowrap;pointer-events:none; }
+  #achievementToast { position:fixed;top:calc(92px + var(--safe-t));left:50%;transform:translate(-50%,-16px);z-index:18;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 24px); }
+  #achievementToast.show { opacity:1;transform:translate(-50%,0); }
+  #dlgAchievements,#dlgShield { width:min(440px,calc(100vw - 32px)); }
+  #dlgShield .dlg { max-height:84dvh;overflow:hidden;padding:22px 16px 16px;display:flex;flex-direction:column; }
+  #shieldBody { overflow:auto;min-height:0;overscroll-behavior:contain; }
+  #dlgShield .close { right:6px;top:6px; }
+  #dlgShield h2 { padding-right:16px;flex-shrink:0; }
+  #dlgShield .intro { font-size:12px;color:var(--muted);text-align:center; }
+  .shield-presets { display:flex;flex-wrap:wrap;gap:5px;margin:12px 0; }
+  .shield-presets .btn { flex:1;white-space:nowrap;min-height:38px;font-size:12px;padding:5px 8px; }
+  .shield-row { display:grid;grid-template-columns:1fr 40px 38px 40px;gap:6px;align-items:center;margin:8px 0;padding:7px 9px;border:1px solid #d6c8ac;border-radius:12px;background:#fff8e9; }
+  .shield-row .element-pick { border:0;background:none;text-align:left;font:inherit;font-weight:900;padding:0;cursor:pointer; }
+  .shield-row .element-pick:disabled { opacity:.5;cursor:default; }
+  .shield-row small { display:block;font-size:10px;color:var(--muted);font-weight:600; }
+  .shield-row output { text-align:center;font-size:19px;font-weight:900; }
+  .shield-row .btn { width:40px;min-height:40px;padding:2px;font-size:20px; }
+  .shield-row input[type=range] { grid-column:1/-1;width:100%;height:18px;margin:0;cursor:pointer;accent-color:var(--el-color); }
+  .shield-row input[type=range] { appearance:none;-webkit-appearance:none;background:transparent;height:22px; }
+  .shield-row input[type=range]::-webkit-slider-runnable-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-webkit-slider-thumb { appearance:none;-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--el-color);border:3px solid #fff;box-shadow:0 1px 3px #ae9774; }
+  .shield-row input[type=range]::-moz-range-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-moz-range-thumb { width:14px;height:14px;border-radius:50%;background:var(--el-color);border:3px solid #fff; }
+  .shield-row input[type=range]:disabled { opacity:.4;cursor:default; }
+  #shieldPreview { border-radius:12px;padding:10px;background:#e5f0dc;border:1px solid #c2d5b1;text-align:center; }
+  #shieldPreview b { display:block;font-size:18px; }
+  #shieldPreview small { display:block;font-size:11px;margin-top:4px; }
+  .shield-bar { display:flex;height:10px;overflow:hidden;border-radius:8px;background:#cfc7b6;margin:8px 0; }
+  #shieldPreview.incomplete { background:#fff0d9;border-color:#e4c08c; }
+  #shieldComplete { min-height:34px;margin-top:6px; }
+  #btnCraftShield { width:100%;min-height:44px;margin-top:10px;flex-shrink:0; }
+  #scenario { width:100%;padding:8px;background:var(--paper);border:2px solid var(--edge);border-radius:10px;font:inherit; }
+  .sum5 { grid-template-columns:repeat(3,1fr); }
+  @media(max-width:760px) {
+    #ap i { display:none; } #ap::after { content:attr(data-value);font-size:12px; }
+    #stageHud { font-size:10px;gap:0;padding:4px 8px;flex-direction:column;align-items:center; }
+    #bag { max-height:calc(100dvh - 330px); }
+    #detail { bottom:calc(250px + var(--safe-b)); }
+    #achievementToast { font-size:12px;top:calc(100px + var(--safe-t)); }
+  }
 </style>
 <style>
   #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
@@ -302,17 +357,20 @@
 
 <aside id="detail" class="panel" aria-live="polite"></aside>
 <aside id="bag" class="panel"><span class="tag toon">背包</span>
-  <div class="sec">元素结晶 · 不消耗行动点 · 点击后选地块使用</div><div id="crystals"></div>
+  <div class="sec">元素结晶 · 不耗行动 · 每轮不限次数 · 点击后选地块使用</div><div id="crystals"></div>
   <div class="sec">材料</div><div class="mats" id="mats"></div>
-  <div class="sec">制造</div><div id="recipes"></div>
+  <div class="sec">制造 · 免费 · 每个配方每轮一次</div><div id="recipes"></div>
+  <div class="sec">元素盾</div><div id="shieldStock"></div><button class="btn sm" id="btnShield">🛡 调配元素盾</button>
 </aside>
 
+<div id="stageHud" class="toon"><span id="stageLabel"></span><span id="globalLabel"></span></div>
+<div id="achievementToast" class="panel" role="status" aria-live="polite"></div>
 <div id="hint" class="toon" role="status" aria-live="polite"></div>
 <div id="tip"></div>
 <div id="banner" class="toon"><div class="rib" id="banTxt"></div><div class="sub" id="banSub"></div></div>
 
 <footer id="dock">
-  <div class="tray panel"><span class="tag toon">待选地块</span><div id="offers"></div></div>
+  <div class="tray panel"><span class="tag toon" id="offerTag">待选地块</span><button class="btn sm" id="btnReroll" title="消耗3颗普通结晶，按金木水火土顺序扣除">↻ 重投 · 3◆</button><div id="offers"></div></div>
   <div class="row2">
     <div class="tray panel" id="magicTray"><span class="tag toon" style="background:linear-gradient(180deg,#c49aff,var(--purple));box-shadow:0 2px 0 var(--purple-d)">魔法</span><div id="magics"></div></div>
     <div id="endWrap"><button class="btn green toon" id="btnEnd"><span class="t">结束本轮 ▶</span></button></div>
@@ -322,10 +380,13 @@
 <dialog id="dlgHelp"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
   <h2>怎么玩</h2>
-  <p>① 选一张<b>待选地块</b>，点亮起的空位放下。每轮至少放 1 块。</p>
-  <p>② 使用普通或大型元素结晶不消耗行动点。其他行动消耗 1 颗💎，用完自动进入下一轮。</p>
-  <p>③ 点地块看详情：移动元素灵、合成元素兽、砍树、采矿、喂养动物…</p>
-  <p>④ 选中地块后点魔法可直接施放。铺满地图即结束，灵力越高越好。</p>
+  <p>① 每轮先选一张<b>地块</b>放置，每轮仅放一块。可用 3 颗普通结晶重投。</p>
+  <p>② 魔法消耗 1 点行动；生物与其他物品交互免费，同一生物或同类物品每轮一次。使用普通或大型元素结晶不消耗行动点；普通、大型及逆结晶每轮不限次数，仍消耗库存，正向属性受连片上限约束。</p>
+  <p>③ 点地块可移动、合成、采集、喂养和升级。净化影响选中与四邻；其余魔法需全图对应属性≥20。</p>
+  <p>④ 同类连片提高属性上限；灵力每达到 500 的倍数增加 2 点行动，上限 9。免费升级保留现有属性。</p>
+  <p>⑤ 每 10 轮陨石雨使约三分之一地块的某元素−3。用普通结晶调配盾，选地块部署；盾的防护总量在覆盖区共享。</p>
+  <p>⑥ 负属性孕育癌元，癌元移动会感染原地元素灵，每 3 轮吸收属性并产逆结晶。净化或焚尽可清除。</p>
+  <p>⑦ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新开始新对局。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
   手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
   <p class="muted" id="scoreDetail"></p>
@@ -335,16 +396,18 @@
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
   <h2>菜单</h2>
   <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">
+    <button class="btn gold" id="btnAchievements">🏆 成就与愿景</button>
     <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
     <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
     <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
     <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
   </div>
+  <div class="sec">下局剧本</div><select id="scenario" aria-label="下局剧本"><option value="standard">荒芜初醒</option><option value="fire">火脉躁动</option><option value="water">水泽污浊</option></select>
   <div class="sec">日志</div><ul id="log"></ul>
 </div></dialog>
 
 <dialog id="over"><div class="panel dlg">
-  <h2 class="toon" style="font-size:28px;color:#fff;margin-top:-4px">灵地复苏！</h2>
+  <h2 class="toon" style="font-size:28px;color:#fff;margin-top:-4px">元素生境！</h2>
   <div class="stars" id="stars"></div>
   <div class="big toon" id="overScore" style="color:var(--gold)"></div>
   <div class="sum5" id="overSum"></div>
@@ -352,11 +415,26 @@
   <div style="text-align:center;margin-top:10px"><button class="btn green toon" id="btnAgain" style="font-size:18px;padding:12px 28px"><span class="t">再来一局</span></button></div>
 </div></dialog>
 
+<dialog id="dlgAchievements"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭成就册">✕</button>
+  <h2>🏆 生境成就册</h2><p id="achievementSummary" class="muted"></p>
+  <div class="sec">本局愿景 · 完成后分别奖励 30 分</div><div id="visions"></div>
+  <div class="sec">旅途成就 · 本机记录</div><div id="achievementList"></div>
+</div></dialog>
+<dialog id="dlgShield"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗覆盖 1 格 · 点元素名称可集中防御该元素</p>
+  <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
+  <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
+  <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
+  <button class="btn green" id="btnCraftShield">制造元素盾</button>
+</div></dialog>
 <div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
 
 <script src="lib/three.min.js"></script>
 <script src="data.js"></script>
 <script src="game.js"></script>
+<script src="achievements.js"></script>
 <script src="landscape.js"></script>
 <script src="postfx.js"></script>
 <script src="view.js"></script>
@@ -370,6 +448,9 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const elName = k => EL.find(e => e.key === k).name;
 const ELC = { metal: '#f2c230', wood: '#5ccf3a', water: '#3fa6ff', fire: '#ff6a3a', earth: '#d09a5a' };
+let archiveStore;try{archiveStore=localStorage;}catch(_){}
+const achievementBook=AchievementBook.create(archiveStore);
+let achievementQueue=[],achievementTimer=0,overTimer=0,gameSession=0;
 const ELD = { metal: '#b88a10', wood: '#33912a', water: '#1f5fb8', fire: '#b8302a', earth: '#8a5a2a' };
 
 // 地块卡面配色与图标（按 look）
@@ -408,6 +489,10 @@ const Sfx = (() => {
     round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
     win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
     ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
+    link: n => [660,880,1100].slice(0,Math.min(3,n)).forEach((f,i)=>setTimeout(()=>tone(f,.18,'triangle',.055),i*65)),
+    guard: () => { tone(420,.22,'sine',.09,1000);setTimeout(()=>tone(1320,.3,'triangle',.04),120); },
+    meteor: () => tone(320,.65,'sine',.065,75),
+    impact: blocked => { tone(blocked?980:95,blocked?.18:.22,blocked?'triangle':'sine',blocked?.045:.065,blocked?1500:45); },
     grow: level => [523,659,784,1046].slice(0,level+1).forEach((f,i)=>setTimeout(()=>tone(f,.22,'triangle',.075),i*65)),
     get on() { return on; },
     toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
@@ -418,9 +503,11 @@ const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.b
 
 function start(seed) {
   Tokens.reset();
+  document.querySelectorAll('.float').forEach(el=>el.remove());
+  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{scenario:$('scenario').value});
+  gameSession++;clearTimeout(overTimer);clearTimeout(achievementTimer);achievementTimer=0;achievementQueue=[];$('achievementToast').classList.remove('show');
   $('landscapeNotice').classList.remove('show');
   clearTimeout(landscapeTimer);
-  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff));
   mode = null; selected = null; hint('');
   lastScore = G.score(S).total; lastRound = 1; offersKey = '';
   render();
@@ -465,10 +552,13 @@ function fxOf(a) {
     case 'place': return ['place', a.cell];
     case 'cast': return [a.magic, a.cell];
     case 'merge': return ['merge', a.cell, a.el];
-    case 'useCrystal': return ['crystal', a.cell, a.el];
+    case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
+    case 'upgrade': return ['upgrade',a.cell];
+    case 'pour': return ['spring',a.cell];
+    case 'deployShield': return null; // Region-wide deployment is shown after state sync.
     case 'useCharm': return ['charm', a.cell];
     case 'craft': return a.cell ? ['shelter', a.cell] : null;
-    case 'moveSpirit': case 'moveAnimal': return ['place', a.to];
+    case 'moveSpirit': case 'moveAnimal': case 'moveBeast': case 'movePlant': return ['crystal', a.to, a.el];
     default: return a.cell ? ['place', a.cell] : null;
   }
 }
@@ -482,15 +572,17 @@ function doAct(action) {
   if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
   Tokens.enqueue(S.events);
   render();
+  eventEffects(S.events);
+  if(action.type==='deployShield') { const sh=S.shields.find(sh=>sh.id===action.shieldId);if(sh)View.shieldDeploy(sh);Sfx.guard();buzz([15,35,20]); }
   if (f) {
     if(action.type==='useCrystal') { const session=S;Tokens.down(action.cell,action.el,()=>{if(S===session)View.fx(...f);}); }
-    else View.fx(f[0], f[1], f[2]);
+    else if(!(action.type==='cast'&&action.magic==='purify')&&action.type!=='useCharm')View.fx(f[0], f[1], f[2]);
   }
   const gain = (S.round === round ? G.score(S).total : before) - before;
   const cell = action.cell || action.to;
   if (gain && cell) floatAtCell(cell, (gain > 0 ? '+' : '') + gain, gain > 0 ? '#ffe14a' : '#ff6a5a');
   else if (cell) floatAtCell(cell, r.msg.length > 10 ? '✓' : r.msg, '#fff');
-  if (S.over) setTimeout(showOver, 900);
+  if (S.over) { const session=gameSession;overTimer=setTimeout(()=>{if(gameSession===session&&S.over)showOver();},900); }
   return true;
 }
 
@@ -499,6 +591,8 @@ function gemRow(a) {
 }
 
 function renderOffers() {
+  $('offerTag').textContent=S.placed?'本轮已放置':'待选地块';
+  $('btnReroll').disabled=!!S.placed||S.over||Object.values(S.inv.crystal).reduce((a,b)=>a+b,0)<3;
   const key = S.round + ':' + S.offers.join(',');
   const fresh = key !== offersKey && S.offers.length >= D.RULES.offersPerRound;
   offersKey = key;
@@ -508,14 +602,14 @@ function renderOffers() {
     return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
       <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
       <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
-  }).join('') || '<span class="muted" style="padding:20px 8px">本轮已用完</span>';
+  }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
 }
 
 function renderMagics() {
   $('magics').innerHTML = D.MAGICS.map(m => {
     const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
-    const used = S.magicUsed[m.id];
-    return `<button class="btn mg toon ${on} ${used ? 'used' : ''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+    const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
+    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
   }).join('');
 }
 
@@ -525,13 +619,13 @@ function renderDetail() {
   if (!t) { box.classList.remove('open'); return; }
   box.classList.add('open');
   const ty = G.TYPE[t.type], c = CARD[ty.look] || CARD.grass;
-  const cap = G.spiritCap(t);
+  const cap = G.spiritCap(t), attrCap=G.attrCap(S,selected);
   let h = `<div class="dh toon" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})">
     <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
-    <h3>${c[2]} ${esc(ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : ''}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}</div></div>`;
-  h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / 6 * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
+    <h3>${c[2]} ${esc(t.oasis?"沙漠绿洲":ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : t.pond ? '💧小湖 · ' : ''}${t.vein?"⛏矿脉 · ":""}${t.farm?"🌾耕田 · ":""}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}<br>连片 ${G.cluster(S,selected).length} 格 · 属性上限 ${attrCap}</div></div>`;
+  h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / attrCap * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
   const region=Landscape.plan(S.cells,G.TYPE).byCell[selected],next=Landscape.MILESTONES.find(n=>n>region.size);
-  h+=`<div class="muted" style="padding:6px 14px">${esc(region.name)}连片 · ${region.size} 格${next?` · ${next} 格景观升阶`:' · 壮阔盛景'}</div>`;
+  h+=`<div class="muted" style="padding:6px 14px">${esc(region.name)}景观连片 · ${region.size} 格${next?` · ${next} 格景观升阶`:' · 壮阔盛景'}</div>`;
   let n = 0;
   const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
   for (const e of EL) {
@@ -541,11 +635,16 @@ function renderDetail() {
       `<button class="btn sm" data-a="moveSpirit" data-id="${list[0].id}">移动</button>
        <button class="btn sm gold" data-a="merge" data-el="${e.key}" ${list.length < D.RULES.mergeCount ? 'disabled' : ''}>合成兽</button>`);
   }
-  for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, '<span class="muted">每 2 轮产大结晶</span>');
+  const availableUpgrades=G.upgrades(S,selected);
+  if(availableUpgrades.length)h+=row('⬆ 免费升级',availableUpgrades.map(ty=>`<button class="btn sm green" data-a="upgrade" data-type="${ty.id}">${ty.name}</button>`).join(''));
+  if(t.cancers.length)h+=row(`☣ 癌元 ×${t.cancers.length}`,'<span class="muted">净化 / 焚尽可消灭</span>');
+  const shield=S.shields.filter(sh=>sh.cells.includes(selected));
+  if(shield.length)h+=row('🛡 元素盾',`<span class="muted">${shield.map(sh=>EL.filter(e=>sh.defense[e.key]).map(e=>e.name+sh.defense[e.key]).join(' ')).join(' / ')} · 共享</span>`);
+  for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, `<button class="btn sm" data-a="moveBeast" data-id="${b.id}">移动</button><span class="muted">每 2 轮产大结晶</span>`);
   for (const p of t.plants) {
     const choppable = p.kind === 'tree' || p.kind === 'shrub';
     h += row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,
-      `${choppable ? `<button class="btn sm green" data-a="chop" data-id="${p.id}">砍伐</button>` : ''}<button class="btn sm" data-a="compostPlant" data-id="${p.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>`);
+      `<button class="btn sm" data-a="movePlant" data-id="${p.id}">移植</button>${choppable ? `<button class="btn sm green" data-a="chop" data-id="${p.id}">砍伐</button>` : ''}<button class="btn sm" data-a="compostPlant" data-id="${p.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>`);
   }
   const hasCrystal = EL.filter(e => S.inv.crystal[e.key] > 0);
   for (const a of t.animals) {
@@ -557,48 +656,65 @@ function renderDetail() {
        ${!a.el ? hasCrystal.map(e => `<button class="btn sm" data-a="feed" data-id="${a.id}" data-el="${e.key}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}">喂${e.name}</button>`).join('') : ''}`);
   }
   t.ores.forEach((o, i) => { h += row(`⛏ ${D.ORES[o].name}`, `<button class="btn sm gold" data-a="mineOre" data-i="${i}">采集</button>`); });
-  if (S.inv.bucket) h += row(`🪣 桶 空${S.inv.bucket - S.inv.bucketFull}/满${S.inv.bucketFull}`, '<button class="btn sm" data-a="scoop">舀水</button><button class="btn sm" data-a="pour">倒水</button>');
+  if (S.inv.bucket || S.inv.water) h += row(`🪣 桶 空${S.inv.bucket - S.inv.bucketFull}/满${S.inv.bucketFull} / 产水${S.inv.water}`, '<button class="btn sm" data-a="scoop">舀水</button><button class="btn sm" data-a="pour">倒水</button>');
   if (S.inv.charm) h += row(`📜 净化符 ×${S.inv.charm}`, '<button class="btn sm" data-a="useCharm" style="--c:#8fd8ff;--d:#3a8ab8">使用</button>');
   if (!n) h += '<div class="muted" style="padding:6px 14px">这块地还很安静。结束本轮后会孕育元素灵和生灵。</div>';
   box.innerHTML = h;
+  box.querySelectorAll('[data-a]').forEach(b=>{const a=b.dataset.a;if(a==='close'||a==='upgrade')return;const id=+b.dataset.id;let lock=false;
+    if(['moveSpirit'].includes(a))lock=S.interactionUsed['spirit:'+id];
+    if(['moveBeast'].includes(a))lock=S.interactionUsed['beast:'+id];
+    if(['movePlant','chop','compostPlant'].includes(a))lock=S.interactionUsed['plant:'+id];
+    if(['moveAnimal','feed','pair','compostAnimal'].includes(a))lock=S.interactionUsed['animal:'+id];
+    if(['scoop','pour'].includes(a))lock=S.interactionUsed.bucket;
+    if(a==='mineOre')lock=S.interactionUsed['ore:'+t.ores[+b.dataset.i]];
+    if(a==='useCharm')lock=S.interactionUsed.charm;
+    if(lock||S.over){b.disabled=true;b.title='本轮已交互';}
+  });
 }
 
 function renderInv() {
   const inv = S.inv;
   let h = '', total = 0;
-  for (const e of EL) for (const big of [false, true]) {
-    const n = (big ? inv.bigCrystal : inv.crystal)[e.key];
+  for (const e of EL) for (const kind of ['normal','big','inverse']) {
+    const big=kind==='big',inverse=kind==='inverse';
+    const n = (inverse ? inv.inverseCrystal : big ? inv.bigCrystal : inv.crystal)[e.key];
     if (!n) continue;
     total += n;
-    const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big ? 'on' : '';
-    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${big ? '大型结晶 +2' : '结晶 +1'}，不消耗行动点"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${big ? '大' : ''}${e.name}×${n}</button>`;
+    const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big && !!mode.inverse===inverse ? 'on' : '';
+    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" data-inverse="${inverse?1:''}" ${S.over?'disabled':''} style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${inverse?'逆结晶 −1':big ? '大型结晶 +2' : '结晶 +1'}，不消耗行动点，每轮不限次数"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${inverse?'逆':big ? '大' : ''}${e.name}×${n}</button>`;
   }
   $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
   $('btnBag').dataset.n = total;
   $('mats').innerHTML = `<span>🪵 木<b>${inv.wood}</b></span>` + Object.entries(D.ORES).map(([k, v]) => `<span>${v.name}<b>${inv.ore[k]}</b></span>`).join('') +
-    `<span>🪣 桶<b>${inv.bucket}</b></span><span>📜 符<b>${inv.charm}</b></span>`;
+    `<span>🪣 桶<b>${inv.bucket}</b></span><span>💧 产水<b>${inv.water}</b></span><span>📜 符<b>${inv.charm}</b></span>`;
   $('recipes').innerHTML = D.RECIPES.map(r => {
     const cost = Object.entries(r.cost).map(([k, n]) => (k === 'wood' ? '木' : D.ORES[k].name.slice(0, 1)) + n).join(' ');
-    const can = Object.entries(r.cost).every(([k, n]) => (k === 'wood' ? inv.wood : inv.ore[k]) >= n);
+    const can = !S.over&&!S.interactionUsed["craft:"+r.id]&&Object.entries(r.cost).every(([k, n]) => (k === 'wood' ? inv.wood : inv.ore[k]) >= n);
     const on = mode && mode.kind === 'shelter' && r.id === 'shelter' ? 'on' : '';
     return `<button class="btn sm ${can ? 'green' : ''} toon ${on}" data-recipe="${r.id}" title="${esc(r.desc)}" ${can ? '' : 'disabled'}>${r.name}<small>${cost}</small></button>`;
   }).join('');
+  $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
+  $('btnShield').disabled=S.over||!!S.interactionUsed['craft:shield'];
 }
 
 function render() {
   $('round').textContent = S.round;
-  $('ap').innerHTML = Array.from({ length: D.RULES.apPerRound }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
+  $('ap').innerHTML = Array.from({ length: S.roundAP }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
+  $('ap').dataset.value=`${S.ap}/${S.roundAP}`;
+  $('stageLabel').textContent=`阶段 ${G.stage(S)} · 行动 ${S.ap}/${S.roundAP} · 星雨 ${10-(S.round-1)%10}轮`;
+  $('globalLabel').innerHTML=G.globalAttrs(S).map((v,i)=>`<span style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join(' ');
   $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
   const sc = G.score(S);
   Tokens.numbers(S);
   lastScore = sc.total;
-  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素灵 ${sc.spirits} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 元素动物 ${sc.elemAnimals}×${D.SCORE.elemAnimal}`;
+  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 元素动物 ${sc.elemAnimals}×${D.SCORE.elemAnimal} + 植物 ${sc.plants} + 愿景 ${sc.bonus}`;
   const be = $('btnEnd');
   be.disabled = S.over || S.placed === 0;
   be.classList.toggle('ready', !be.disabled && S.ap > 0);
   renderOffers(); renderMagics(); renderDetail(); renderInv();
   $('log').innerHTML = S.log.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join('');
   View.sync(S, { mode, selected });
+  renderProgress();
   if (S.round !== lastRound) {
     lastRound = S.round;
     bump($('pillRound'));
@@ -612,9 +728,9 @@ function showOver() {
   const sc = G.score(S);
   const stars = sc.total >= 220 ? 3 : sc.total >= 150 ? 2 : 1;
   $('stars').innerHTML = [1, 2, 3].map(i => `<span class="${i > stars ? 'off' : ''}" style="animation-delay:${300 + i * 200}ms">⭐</span>`).join('');
-  $('overSum').innerHTML = [['属性', sc.attrs], ['元素灵', sc.spirits], ['元素兽', sc.beasts], ['元素动物', sc.elemAnimals]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
+  $('overSum').innerHTML = [['属性', sc.attrs], ['元素兽×3', sc.beasts*3], ['元素动物', sc.elemAnimals], ['植物',sc.plants],['愿景奖励',sc.bonus],['基础灵力',sc.base]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
   $('overText').textContent = `${S.round} 轮铺满了整片灵地`;
-  $('over').showModal();
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());$('over').showModal();
   Sfx.win();
   // 分数滚动
   const el = $('overScore'), t0 = performance.now();
@@ -629,7 +745,10 @@ function onCell(k) {
     if (m.kind === 'place') { if (!t) doAct({ type: 'place', offer: m.offer, cell: k }); return; }
     if (!t) return;
     if (m.kind === 'cast') doAct({ type: 'cast', magic: m.magic, cell: k });
-    else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big });
+    else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big, inverse:m.inverse });
+    else if (m.kind==='deployShield') doAct({type:'deployShield',cell:k,shieldId:m.id});
+    else if (m.kind==='moveBeast') {if(doAct({type:'moveBeast',from:m.from,beastId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind==='movePlant') {if(doAct({type:'movePlant',from:m.from,plantId:m.id,to:k})){selected=k;render();}}
     else if (m.kind === 'shelter') doAct({ type: 'craft', recipe: 'shelter', cell: k });
     else if (m.kind === 'moveSpirit') { if (doAct({ type: 'moveSpirit', from: m.from, spiritId: m.id, to: k })) { selected = k; render(); } }
     else if (m.kind === 'moveAnimal') { if (doAct({ type: 'moveAnimal', from: m.from, animalId: m.id, to: k })) { selected = k; render(); } }
@@ -646,10 +765,11 @@ function onHover(k, x, y) {
   if (!k || (!t && !(mode && mode.kind === 'place'))) { tip.style.display = 'none'; return; }
   if (t) {
     const s = t.attrs.reduce((a, b) => a + b, 0);
-    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('');
+    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('')+`<br>连片 ×${G.cluster(S,k).length} · 上限 ${G.attrCap(S,k)}`;
+    if(mode&&mode.kind==='deployShield'){const sh=S.inv.shields.find(sh=>sh.id===mode.id);if(sh)tip.innerHTML+=`<br>🛡 覆盖 ${G.region(S,k,sh.coverage).length} 格 · 点击部署`;}
   } else {
     const ok = G.legalPlacements(S).includes(k);
-    tip.innerHTML = ok ? `放置 <b>${esc(G.TYPE[S.offers[mode.offer]].name)}</b>` : '需与已有地块相邻';
+    if(ok){const type=S.offers[mode.offer],preview={...S,cells:{...S.cells,[k]:G.makeTile(type)}},n=G.cluster(preview,k).length;tip.innerHTML=`放置 <b>${esc(G.TYPE[type].name)}</b>${n>1?`<br>连成 ${n} 格 · 上限 ${G.attrCap(preview,k)}`:''}`;}else tip.innerHTML='需与已有地块相邻';
   }
   tip.style.display = 'block';
   tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, x + 14) + 'px';
@@ -684,9 +804,9 @@ $('magics').addEventListener('click', e => {
 $('bag').addEventListener('click', e => {
   const c = e.target.closest('[data-crystal]');
   if (c) {
-    const el = c.dataset.crystal, big = c.dataset.big === '1';
-    if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big }); return; }
-    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big ? null : { kind: 'crystal', el, big }, '使用结晶（不消耗行动点）：点击目标地块');
+    const el = c.dataset.crystal, big = c.dataset.big === '1',inverse=c.dataset.inverse==='1';
+    if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big, inverse }); return; }
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '使用结晶（不消耗行动点）：点击目标地块');
     return;
   }
   const r = e.target.closest('[data-recipe]');
@@ -703,6 +823,9 @@ $('detail').addEventListener('click', e => {
   switch (b.dataset.a) {
     case 'close': selected = null; render(); break;
     case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
+    case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
+    case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
+    case 'movePlant':setMode({kind:'movePlant',from:k,id},'移植：点击相邻地块');break;
     case 'moveAnimal': setMode({ kind: 'moveAnimal', from: k, id }, '移动动物：点击相邻地块'); break;
     case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
     case 'chop': doAct({ type: 'chop', cell: k, plantId: id }); break;
@@ -716,7 +839,56 @@ $('detail').addEventListener('click', e => {
     case 'useCharm': doAct({ type: 'useCharm', cell: k }); break;
   }
 });
-$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render(); };
+function eventEffects(events){
+  const meteors=events.filter(e=>e.kind==='meteor');
+  if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.damage<3).length} 格获护盾拦截`);}
+  events.filter(e=>['purify','infection'].includes(e.kind)||(!meteors.length&&e.kind==='shield')).forEach(e=>View.fx(e.kind,e.cell,e.el));
+}
+function renderProgress() {
+  const values=G.metrics(S), fresh=achievementBook.observe(S,values), archive=achievementBook.snapshot();
+  for(const id of fresh)achievementQueue.push(D.ACHIEVEMENTS.find(a=>a.id===id));
+  if(fresh.length&&!achievementTimer)nextAchievement();
+  $('achievementSummary').textContent=`已解锁 ${archive.unlocked.length}/${D.ACHIEVEMENTS.length} · ${achievementBook.persistent()?'记录保存在此浏览器':'本次会话记录，浏览器存储不可用'}`;
+  $('visions').innerHTML=S.visions.map(v=>{const d=D.VISIONS.find(d=>d.id===v.id),n=Math.min(d.target,values[d.metric]||0);return `<div class="progress-card ${v.done?'done':''}"><b>${v.done?'✓':'☆'} ${d.name} · +${d.bonus}</b><p>${d.desc}</p><progress max="${d.target}" value="${v.done?d.target:n}"></progress><small>${v.done?'已完成':n+'/'+d.target}</small></div>`;}).join('');
+  $('achievementList').innerHTML=D.ACHIEVEMENTS.map(a=>{const done=archive.unlocked.includes(a.id),n=archive.progress[a.id]||0;return `<div class="progress-card ${done?'done':''}" data-achievement="${a.id}"><b>${a.icon} ${a.name} ${done?'✓':''}</b><p>${a.desc}</p><progress max="${a.target}" value="${done?a.target:n}"></progress><small>${done?'已解锁':n+'/'+a.target} · 本局 ${Math.min(a.target,values[a.metric]||0)}/${a.target}</small></div>`;}).join('');
+}
+function nextAchievement() {
+  if(!achievementQueue.length){achievementTimer=0;return;}
+  const a=achievementQueue.shift();$('achievementToast').textContent=`${a.icon} 成就解锁 · ${a.name}`;$('achievementToast').classList.add('show');
+  achievementTimer=setTimeout(()=>{$('achievementToast').classList.remove('show');achievementTimer=setTimeout(nextAchievement,350);},3000);
+}
+$('btnAchievements').onclick=()=>{$('dlgMenu').close();renderProgress();$('dlgAchievements').showModal();};
+$('btnReroll').onclick=()=>doAct({type:'reroll'});
+$('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;$('bag').classList.remove('open');setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：预览覆盖区，点击地块确认');};
+let shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+function shieldValues(){return {...shieldMix};}
+function shieldFill(count,primary){
+  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+  let remaining=Math.min(count,Object.values(S.inv.crystal).reduce((a,b)=>a+b,0));
+  if(primary){const n=Math.min(remaining,S.inv.crystal[primary]);shieldMix[primary]=n;remaining-=n;}
+  while(remaining>0){let filled=false;for(const e of EL)if(remaining&&shieldMix[e.key]<S.inv.crystal[e.key]){shieldMix[e.key]++;remaining--;filled=true;}if(!filled)break;}
+  shieldPreview();
+}
+function shieldPreview(){
+  const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0),stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;
+  const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
+  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);if(!row)continue;row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv.crystal[e.key];row.querySelector('[data-shield-focus]').disabled=!S.inv.crystal[e.key];row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv.crystal[e.key];}
+  $('shieldPreview').classList.toggle('incomplete',!valid);
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${stock<5?'库存不足 5 颗，先积攒结晶':missing?`还差 ${missing} 颗，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗覆盖 1 格'}</small>`;
+  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 颗 → ${Math.ceil(Math.max(5,n)/5)} 格`;
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗结晶`:stock<5?'库存不足，需 5 颗结晶':'先凑齐 5 颗的倍数';
+  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&stock<(p==='max'?5:Number(p));});
+}
+$('btnShield').onclick=()=>{
+  $('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>库存 ${S.inv.crystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}结晶">−</button><output aria-label="已选${e.name}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}结晶">+</button><input type="range" min="0" max="${S.inv.crystal[e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}结晶配比"></div>`).join('');
+  const stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(stock>=5?5:0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();
+};
+$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],Math.round(Number(e.target.value))));shieldPreview();};
+$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],shieldMix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,shieldMix[el]));}else if(focus){const n=Object.values(shieldMix).reduce((a,b)=>a+b,0);shieldFill(n>=5?n:5,focus.dataset.shieldFocus);Sfx.pick();}};
+$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset,stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(p==='clear'?0:p==='max'?Math.floor(stock/5)*5:Math.min(Number(p),Math.floor(stock/5)*5));Sfx.pick();};
+$('shieldComplete').onclick=()=>{let n=Object.values(shieldMix).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;for(const e of EL){const add=Math.min(missing,S.inv.crystal[e.key]-shieldMix[e.key]);shieldMix[e.key]+=add;missing-=add;}shieldPreview();Sfx.pick();};
+$('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',crystals:shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render();if(r.ok)eventEffects(S.events); };
 $('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
 $('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
 $('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
@@ -756,6 +928,8 @@ if (!View.supported || View.supported()) {
       if(event.milestone){Sfx.grow(event.level);if(!matchMedia('(prefers-reduced-motion: reduce)').matches)buzz([20,35,35]);}
     },
     onFlash() { flash(); },
+    onLink(count,cell) { Sfx.link(count);floatAtCell(cell,`连片 ×${count} · 上限 ${G.attrCap(S,cell)}`,'#e9ffaf');buzz(15); },
+    onImpact(blocked) { Sfx.impact(blocked); },
     onMiss() { if (!mode && selected) { selected = null; render(); } },
   });
   start();

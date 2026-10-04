@@ -1,14 +1,14 @@
-# 灵地复苏
+# 元素生境
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
 [打开正式版](https://element-habitat.vercel.app) · [连片景观与上线验证](docs/CONNECTED-LANDSCAPE.md) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
 
-![连片森林、山脉与湖泊（固定测试地图）](docs/screenshots/connected-desktop.png)
+![连片森林、山脉与湖泊（固定测试地图）](docs/screenshots/current-landscape-desktop.png)
 
-每轮有 3 点行动，至少放置 1 块地块。放置地形、施放魔法、移动元素灵和动物、合成元素兽、使用结晶及制造物品，直到铺满 85 格地图。灵力由地块属性、元素灵、元素兽和元素动物共同计分。
+每轮恰好放置 1 块地块后施法，初始 3 点行动，随进度提升至 5／7／9 点。魔法在全图对应元素属性达到 20 时解锁，每种每轮可用一次；范围净化处理目标及四邻，其他魔法增加 5 点对应属性。地形升级、癌元感染、愿景、成就册和元素盾均保留。每 10 轮触发一种元素的陨石雨，火属性陨石雨会落在一片相连区域，护盾抵挡对应伤害。
 
-使用普通和大型元素结晶不消耗行动点：分别使目标元素属性增加 1 和 2，仍消耗对应结晶库存。使用结晶不会自动换轮，最后 1 点行动仍可用于放置。
+普通／大型／逆结晶分别使目标元素属性 +1／+2／−1，消耗对应库存，不耗行动点、每轮不限次数，并遵守同类型地块连片带来的属性上限。规则详情见 `data.js` 与 `game.js`。[版本基线恢复说明](docs/BASELINE-RECOVERY.md) 记录此前发布错用旧基线的原因与修复。
 
 相容地貌按上下左右连接成片（森林／雨林、荒山／岩山、湖泊／湿地等）。山脉共享跨格山脊，湖岸沿整片湖泊的外围生成，溪流在相邻地块间接通，树群跨过内部边界。连片达到 **3／6／10 格**时，景观增加模型密度、分枝、地被和山体细节，并播放按距离扩散的成长波、连片提示与升阶音效；地块详情可查看当前连片数和下一档。景观装饰不参与资源、行动点或灵力计分。见 [连片景观开发说明](docs/CONNECTED-LANDSCAPE.md)。
 
@@ -47,7 +47,7 @@ python scripts/browser_check.py
 
 ```sh
 python scripts/crystal_check.py
-python scripts/crystal_check.py --url https://gameplay-prototype.vercel.app --report crystal-check-production.json
+python scripts/crystal_check.py --url https://element-habitat.vercel.app --report crystal-check-production.json
 ```
 
 泛光与景深的图像和交互检查需要 Pillow，用固定画面对比分别开启 Bloom 和景深后的结果：
@@ -67,6 +67,7 @@ python scripts/atmosphere_check.py
 | 文件 | 职责 |
 | --- | --- |
 | `data.js` | 地块、元素、生物、配方及规则参数 |
+| `achievements.js` | 浏览器本地成就进度及解锁记录 |
 | `game.js` | 状态、行动、轮末产出、计分及表现事件 |
 | `landscape.js` | 视觉地貌区域、外围距离场、山脊与连片升阶判定 |
 | `view.js` | 连续地表、装饰、拾取、虚线框及分类型特效 |
@@ -92,10 +93,12 @@ python scripts/atmosphere_check.py
 vercel deploy --target preview --yes
 ```
 
-上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。当前正式版包含连续地形、卡通云海与结晶免费使用规则。
+上面的命令只创建预览。发布正式版运行 `vercel deploy --prod --yes`。正式发布前核对生产部署与 main 的基线、魔法和陨石雨回归，不能仅以线上文件匹配 main 判断版本正确。
 
 Vercel 会验证提交作者，请使用部署账号关联的邮箱署名提交。此次正式上线与专项复测见 [发布记录](docs/RELEASE-2026-10-02.md)。
 
 [GitHub Actions 示例](docs/ci-example.yml) 可做规则与地形检查，不触发部署；当前 GitHub 登录令牌缺少 `workflow` 权限，因此暂未启用自动检查。获得该权限后可把示例移到 `.github/workflows/check.yml`。
 
 此原型没有账号系统或对局存档。刷新页面会开始新对局；音效偏好使用浏览器本地存储。Three.js 授权见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+当前玩法专项：`npm run test:gameplay`；可用 `node scripts/python.cjs scripts/gameplay_check.py --url https://element-habitat.vercel.app` 检查正式环境的魔法按钮与第 10 轮火属性陨石雨。

@@ -8,7 +8,7 @@
     let queue=[],active=[],raf=0,sequence=0;
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     const center=el=>{const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};};
-    const bagCount=s=>Object.values(s.inv.crystal).reduce((a,b)=>a+b,0)+Object.values(s.inv.bigCrystal).reduce((a,b)=>a+b,0)+Object.values(s.inv.ore).reduce((a,b)=>a+b,0)+s.inv.wood+s.inv.bucket+s.inv.charm;
+    const bagCount=s=>Game.bagCount(s);
     function numbers(s) {
       $('score').textContent=options.score(s)-pending.score;
       $('left').textContent=options.left(s)-pending.left;
@@ -66,11 +66,12 @@
     function enqueue(events) {
       const cells=new Map(),now=performance.now();
       events.forEach(e=> {
+        if(['achievement','purify','cancer','infection','meteor','shield','predation','upgrade'].includes(e.kind))return;
         if(!cells.has(e.cell))cells.set(e.cell,cells.size);
         const count=e.n==null?1:e.n,color=COLORS[e.el]||'#ffe14a';
         let target='score',delta=e.score||0,icon='✦';
         if(e.kind==='place'){target='left';delta=-count;icon='⬢';}
-        if(['crystal','bigCrystal','ore','wood','item'].includes(e.kind)){target='bag';delta=count;icon=e.kind==='wood'?'🪵':e.kind==='item'?'🎒':'◆';}
+        if(['crystal','bigCrystal','inverseCrystal','ore','wood','item'].includes(e.kind)){target='bag';delta=count;icon=e.kind==='wood'?'🪵':e.kind==='item'?'🎒':'◆';}
         if(e.kind==='plant')icon='🌱';
         if(e.kind==='animal')icon='🐾';
         if(e.kind==='oreSpawn')icon='◆';

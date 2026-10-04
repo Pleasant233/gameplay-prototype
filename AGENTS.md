@@ -1,4 +1,4 @@
-# 灵地复苏 — project instructions
+# 元素生境 — project instructions
 
 ## Product and current direction
 
@@ -11,7 +11,7 @@
 
 - Pure static HTML/JavaScript, no build step, backend, runtime npm dependencies, or runtime CDN. Three.js r128 is vendored in `lib/`; retain its license.
 - `data.js`: definitions, recipes and rule parameters. `game.js`: deterministic state, actions, scoring and receipt events; can run under Node without a browser.
-- `view.js`: Three.js terrain, cartoon models, clouds, picking and transient effects. `postfx.js`: render targets, bloom, depth of field and quality fallback. `tokens.js`: DOM resource flights and delayed HUD counters. `index.html`: UI, action dispatch and synthesized sound.
+- `view.js`: Three.js terrain, cartoon models, clouds, picking and transient effects. `postfx.js`: render targets, bloom, depth of field and quality fallback. `tokens.js`: DOM resource flights and delayed HUD counters. `achievements.js`: browser-local achievement archive. `index.html`: UI, action dispatch and synthesized sound.
 - Keep gameplay mutation in `game.js`; effects and delayed counters must settle to the authoritative state. Browser-test probes are injected into requests, never shipped as debug APIs.
 - `landscape.js` plans four-neighbor visual regions, shared ridges, perimeter clearance and growth tiers without mutating gameplay. Keep shared model seams continuous when changing these planners.
 
@@ -25,6 +25,7 @@
 - `npm run test:ui`: desktop/mobile input, selection, particles, resource flights, HUD and cleanup.
 - `npm run test:crystal`: ordinary and large crystals, AP, stock and round invariants.
 - `npm run test:atmosphere`: rendered bloom/DOF comparisons, focus, quality tiers, resizing and depth fallback.
+- `npm run test:gameplay`: desktop/mobile magic unlock and casting, area purify, natural round-10 fire meteor events, effects, cleanup and current feature availability.
 - `npm run test:landscape`: desktop/mobile connected models, growth feedback, raised-mountain picking, full-map budgets and geometry disposal, with before/after captures.
 - `npm run test:browser`: the three browser suites sequentially; `npm run test:all`: fast tests followed by all browser suites. Do not run software WebGL browser suites in parallel.
 - The Node wrapper selects `.venv` without needing shell activation. Default browser is Playwright's bundled Chromium. To use an installed Windows Edge, set `PLAYWRIGHT_BROWSER_CHANNEL=msedge`.
@@ -33,8 +34,8 @@
 ## Acceptance and delivery
 
 - Run `npm test` after code changes. For UI/rendering changes, run the affected browser suite and inspect desktop/mobile screenshots; JavaScript syntax alone does not verify visuals. For rules affecting the UI, also run the relevant browser test.
-- Crystals are free: ordinary +1 and large +2 to the selected element, consuming only their matching inventory; no AP, placement or round change. Feeding/casting and other paid actions retain their own costs.
-- Each round has 3 AP and must include a placement; the last AP is reserved for placement if none was made. There are 85 playable cells, initially 5. Preserve these invariants and receipt accounting unless requested otherwise.
+- Crystals are free: ordinary +1 and large +2 to the selected element, consuming only their matching inventory; no AP, placement or round change. Placement and casting cost 1 AP; other interactions are free, with their own entity/type per-round restrictions. Crystals have no per-round use limit and retain attribute-cap checks.
+- Each round starts with 3 AP, grows to 5/7/9 with progression, and permits exactly one placement before casting. There are 85 playable cells, initially 5. Magic unlocks at 20 matching global attributes, persists once unlocked, and each magic can cast once per round. Preserve the recovered Element Habitat rules, area purify, shields, upgrades, visions, achievements and elemental meteor rain every 10 rounds. Gameplay clusters require identical tile types; compatible visual regions do not change gameplay attribute caps. See `docs/BASELINE-RECOVERY.md` before changing rules or publishing.
 - Keep shared terrain edges continuous in height and color, and clouds clear of all playable cells. Retain mobile quality reductions, reduced-motion behavior, target disposal and depth-texture fallback.
 - Visual changes should include comparison captures and describe what was checked. Software WebGL/mobile emulation does not establish physical device performance or the owner's visual acceptance.
 - Scope commits to the task and retain unrelated local work. Update concise project docs when behavior or tooling changes. Existing release reports are historical evidence; do not overwrite them with new test results.

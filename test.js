@@ -26,12 +26,15 @@ t('只能放在相邻空位', () => {
   assert.strictEqual(s.ap, 2);
 });
 
-t('最后 1 点必须放置', () => {
-  const s = G.newGame(3);
-  const k = Object.keys(s.cells)[0];
-  assert.ok(G.act(s, { type: 'cast', magic: 'mine', cell: k }).ok);
-  assert.ok(G.act(s, { type: 'cast', magic: 'rich', cell: k }).ok);
-  assert.strictEqual(G.act(s, { type: 'cast', magic: 'spring', cell: k }).ok, false);
+t('先放置再施法，每轮只能放置一次', () => {
+  const s = G.newGame(3), k = '3,3';
+  s.unlockedMagics.push('mine');
+  assert.strictEqual(G.act(s, {type:'cast',magic:'mine',cell:k}).ok,false);
+  assert.ok(G.act(s,{type:'place',offer:0,cell:G.legalPlacements(s)[0]}).ok);
+  assert.deepStrictEqual(G.legalPlacements(s),[]);
+  assert.strictEqual(G.act(s,{type:'place',offer:0,cell:'0,0'}).ok,false);
+  assert.ok(G.act(s,{type:'cast',magic:'mine',cell:k}).ok);
+  assert.strictEqual(G.act(s,{type:'cast',magic:'mine',cell:k}).ok,false);
 });
 
 t('普通和大型结晶免费，零行动点也不自动换轮', () => {
@@ -82,22 +85,25 @@ t('跳过前必须已放置', () => {
   assert.strictEqual(s.round, 2);
 });
 
-t('焚尽：水木归零、火+1', () => {
+t('焚尽：水木归零、火+5', () => {
   const s = G.newGame(5);
   const k = Object.keys(s.cells)[0];
+  s.placed=1;s.unlockedMagics.push('burn');
   s.cells[k].attrs = [0, 2, 2, 0, 1];
   G.act(s, { type: 'cast', magic: 'burn', cell: k });
-  assert.deepStrictEqual(s.cells[k].attrs, [0, 0, 0, 1, 1]);
+  assert.deepStrictEqual(s.cells[k].attrs, [0, 0, 0, 5, 1]);
 });
 
-t('净化：所有负值 +1，无负值时拒绝', () => {
+t('范围净化：负值 +5 并清癌元，干净区域拒绝', () => {
   const s = G.newGame(6);
   const k = Object.keys(s.cells)[0];
-  s.cells[k].attrs = [1, 1, 1, 1, 1];
+  s.placed=1;for(const tile of Object.values(s.cells)){tile.attrs=[1,1,1,1,1];tile.cancers=[];}
   assert.strictEqual(G.act(s, { type: 'cast', magic: 'purify', cell: k }).ok, false);
-  s.cells[k].attrs = [-1, -2, 0, 0, 1];
+  s.cells[k].attrs = [-1, -6, 0, 0, 1];
+  const neighbor=G.neighbors(k).find(n=>s.cells[n]);s.cells[neighbor].attrs[0]=-2;s.cells[neighbor].cancers=[{id:999,el:'metal',age:0}];
   assert.ok(G.act(s, { type: 'cast', magic: 'purify', cell: k }).ok);
-  assert.deepStrictEqual(s.cells[k].attrs, [0, -1, 0, 0, 1]);
+  assert.deepStrictEqual(s.cells[k].attrs, [4, -1, 0, 0, 1]);
+  assert.strictEqual(s.cells[neighbor].attrs[0],3);assert.strictEqual(s.cells[neighbor].cancers.length,0);
 });
 
 t('3 灵合成元素兽', () => {
@@ -168,7 +174,7 @@ t('事件流：失败行动清空，自动轮末保留行动事件', () => {
 });
 
 t('事件流：行动和轮末灵力事件总和等于实际分数变化', () => {
-  const s = G.newGame(41);
+  const s = G.newGame(41);s.unlockedMagics.push('mine');
   for (let r = 0; r < 15; r++) {
     for (const action of [
       { type: 'place', offer: 0, cell: G.legalPlacements(s)[0] },
