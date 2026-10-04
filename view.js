@@ -453,6 +453,29 @@
     });
   }
 
+  // Empty cells carry a few instanced grass tufts so the unclaimed lawn is not flat squares.
+  // One draw call for the whole board; tufts on claimed cells are collapsed to zero scale.
+  let lawn=null;
+  function updateLawn() {
+    const LAWN_PER_CELL=LOW?3:5;
+    if(!lawn){
+      const g=new THREE.ConeGeometry(0.5,1,4);g.translate(0,0.5,0);
+      lawn=new THREE.InstancedMesh(g,M(0x8fc35c,{roughness:0.9,flatShading:true}),G.SHAPE.length*LAWN_PER_CELL);
+      lawn.frustumCulled=false;lawn.receiveShadow=true;scene.add(lawn);
+    }
+    const m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),at=new THREE.Vector3(),tint=new THREE.Color();
+    G.SHAPE.forEach(([x,z],ci)=>{
+      const k=G.key(x,z),empty=!(stateRef&&stateRef.cells[k]),rnd=hashk('lawn:'+k),c=wp(k);
+      for(let i=0;i<LAWN_PER_CELL;i++){
+        const lx=(rnd()-0.5)*0.9,lz=(rnd()-0.5)*0.9,h=0.05+rnd()*0.05,w=0.022+rnd()*0.014,j=ci*LAWN_PER_CELL+i;
+        e.set((rnd()-0.5)*0.4,rnd()*6,(rnd()-0.5)*0.4);q.setFromEuler(e);
+        s.set(empty?w:0,empty?h:0,empty?w:0);at.set(c.x+lx,surfaceHeight(k,lx,lz)-0.004,c.z+lz);
+        lawn.setMatrixAt(j,m.compose(at,q,s));
+        const l=0.86+rnd()*0.22;lawn.setColorAt(j,tint.setRGB(l,l*1.02,l*0.9));
+      }
+    });
+    lawn.instanceMatrix.needsUpdate=true;if(lawn.instanceColor)lawn.instanceColor.needsUpdate=true;
+  }
   function addPad(k) {
     const m = new THREE.Mesh(terrainGeometry(k), [mats.pad, mats.padSide]);
     const p = wp(k);
@@ -1888,6 +1911,7 @@
     if(terrainChanged){
       Object.values(tileMap).forEach(rebuildTerrain);
       Object.entries(pads).forEach(([k,m])=>{m.geometry.dispose();m.geometry=terrainGeometry(k);});
+      updateLawn();
     }
     if(!fresh)for(const event of root.Landscape.growth(previousLandscape,landscape)){
       const node=tileMap[event.origin];
