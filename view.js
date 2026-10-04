@@ -1209,11 +1209,11 @@
   }
   function spawnBeam(pos, color) {
     const m = new THREE.Mesh(geo.cylT, new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false, fog: false, blending: THREE.AdditiveBlending,
+      color, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false, fog: false, blending: THREE.AdditiveBlending,
     }));
     m.position.copy(pos);
     m.position.y += 0.9;
-    m.scale.set(0.09, 1.8, 0.09);
+    m.scale.set(0.13, 1.8, 0.13);
     fxGroup.add(m);
     beams.push({ m, t: 0, born:performance.now()/1000, life: 0.6 });
   }
@@ -1332,9 +1332,19 @@
     x.beginPath();for(let i=0;i<=6;i++){const a=i*Math.PI*2/3;x.lineTo(128+70*Math.cos(a),128+70*Math.sin(a));}x.stroke();
     runeMap=new THREE.CanvasTexture(c);return runeMap;
   }
+  function spellOpening(pos,color,size) {
+    if(reducedMotion())return;
+    size=size||1;
+    const flare=new THREE.Sprite(new THREE.SpriteMaterial({map:mats.glowMap,color,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
+    flare.position.copy(pos);flare.position.y+=0.25;
+    transient(flare,0.55,u=>{flare.scale.setScalar((0.4+Math.sin(Math.min(1,u*2.2)*Math.PI/2)*1.3)*size);flare.material.opacity=(1-u)*(1-u)*0.75;});
+    const wave=new THREE.Mesh(geo.ring,fxMaterial(color,0.6));wave.material.blending=THREE.AdditiveBlending;wave.rotation.x=-Math.PI/2;wave.position.copy(pos);wave.position.y+=0.02;
+    transient(wave,0.7,u=>{const e=1-Math.pow(1-u,3);wave.scale.setScalar((0.3+e*1.5)*size);wave.material.opacity=(1-u)*0.55;},0.05);
+  }
   function rune(pos,color) {
     const m=new THREE.Mesh(geo.plane,fxMaterial(color));m.material.map=runeTexture();m.rotation.x=-Math.PI/2;m.position.copy(pos);m.position.y+=0.015;
-    transient(m,0.85,u=>{m.scale.setScalar(0.2+Math.min(1,u*4)*0.75);m.rotation.z=u*0.5;m.material.opacity=(1-u)*0.28;});
+    m.material.blending=THREE.AdditiveBlending;
+    transient(m,1.0,u=>{const e=1-Math.pow(1-Math.min(1,u*3),3);m.scale.setScalar(0.25+e*1.05);m.rotation.z=u*0.9;m.material.opacity=Math.min(1,u*6)*(1-u)*0.62;});
   }
   function flashLight(pos,color) {
     if(LOW)return;
@@ -1374,7 +1384,7 @@
       G.neighbors(cell).forEach((k,i)=>{const other=tileMap[k];if(other)other.impactDelay=0.04*(i+1);});return;
     }
     if(['purify','charm','merge','crystal'].includes(kind))rune(pos,c);
-    flashLight(pos,c);if(cb.onFlash&&['purify','merge'].includes(kind))cb.onFlash(0.2);if(n)n.pop=1;
+    flashLight(pos,c);spellOpening(pos,c,kind==='burn'||kind==='merge'?1.25:1);if(cb.onFlash&&['purify','merge'].includes(kind))cb.onFlash(0.2);if(n)n.pop=1;
     if(kind==='purify'||kind==='charm'){
       spawnBeam(pos,c);spawnBurst(pos,0xdbe8c0,20,0.26,1.0,1.8);
       if(n){
