@@ -36,6 +36,7 @@
 - For new rule/UI interactions run `npm run test:v1-ui`; it verifies desktop/mobile and achievement storage with real WebGL. Playwright is a development dependency only.
 - For meteor, connected-terrain, shield or mixer changes also run `npm run test:feedback` after the UI suite; inspect fixed-clock desktop/mobile captures and preserve effect budgets, disposal and reduced-motion behavior. See `docs/FEEDBACK-2026-10-04.md`.
 - Keep shared terrain edges continuous in height and color, and clouds clear of all playable cells. Retain mobile quality reductions, reduced-motion behavior, target disposal and depth-texture fallback.
+- Keep the base below the terrain walls; their exterior faces must not overlap. For board/base rendering changes run `npm run test:ground` and inspect desktop/mobile front and rear captures, in addition to `npm test`.
 - Visual changes should include comparison captures and describe what was checked. Software WebGL/mobile emulation does not establish physical device performance or the owner's visual acceptance.
 - Scope commits to the task and retain unrelated local work. Update concise project docs when behavior or tooling changes. Existing release reports are historical evidence; do not overwrite them with new test results.
 - Normal cloud iteration produces reviewable changes or a PR. Deploy to production only when the active request authorizes it. Development/tests need no OpenAI API key or Vercel token. Do not commit local credentials, `.env*`, `.vercel/`, `.venv/`, or browser caches.

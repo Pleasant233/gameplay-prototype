@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const THREE=require('./lib/three.min.js');
 const Game=require('./game.js'),GameData=require('./data.js');
 const source=fs.readFileSync('view.js','utf8').replace('  root.View = {',
-  '  root.testView={setState(s){G=root.Game;D=root.GameData;EL=D.ELEMENTS;stateRef=s;},surfaceHeight,surfaceColor,terrainGeometry,outlineGeometry,cloudDistance,cloudGeometry};\n  root.View = {');
+  '  root.testView={setState(s){G=root.Game;D=root.GameData;EL=D.ELEMENTS;stateRef=s;},surfaceHeight,surfaceColor,terrainGeometry,baseGeometry,outlineGeometry,cloudDistance,cloudGeometry};\n  root.View = {');
 const context={THREE,Game,GameData,navigator:{userAgent:'test',hardwareConcurrency:8}};
 vm.runInNewContext(source,context);
 const v=context.testView,s=Game.newGame(42),half=1.12/2;
@@ -35,6 +35,17 @@ delete s.cells['3,3'];s.cells['3,2'].type=GameData.TILE_TYPES.find(t=>t.look==='
 const second=checkEdges();
 console.log(`ok - ${first+second} shared edge/corner heights agree, including placement/removal`);
 console.log('ok - all terrain meshes have finite vertices, upward tops and buried side walls');
+// Base and terrain share an edge, never an area of coplanar exterior wall.
+const base=v.baseGeometry(),baseY=[...base.attributes.position.array].filter((_,i)=>i%3===1);
+assert.ok(baseY.every(Number.isFinite));
+assert.ok(Math.abs(Math.min(...baseY)+.34)<1e-6,'preserve board bottom');
+assert.ok(Math.abs(Math.max(...baseY)+.32)<1e-6,'base ends where terrain walls start');
+for(const [x,z] of Game.SHAPE){
+  const g=v.terrainGeometry(Game.key(x,z)),ys=[...g.attributes.position.array].filter((_,i)=>i%3===1);
+  assert.ok(Math.max(...baseY)<=Math.min(...ys)+1e-6,'no overlapping base and terrain side walls');g.dispose();
+}
+base.dispose();
+console.log('ok - base and all 85 terrain walls have no overlapping vertical area');
 Game.SHAPE.forEach(([x,z])=>assert.strictEqual(v.cloudDistance((x-3)*1.12,(z-3)*1.12),0));
 assert.ok(v.cloudDistance(20,20)>1.35);
 console.log('ok - shared boundary colors agree and cloud clearance covers the entire board');

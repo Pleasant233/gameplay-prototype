@@ -1,0 +1,77 @@
+{
+  "checks": [
+    "desktop-before reproduces overlapping exterior walls",
+    "desktop-before front plain renders without GL errors",
+    "desktop-before front post renders without GL errors",
+    "desktop-before rear plain renders without GL errors",
+    "desktop-before rear post renders without GL errors",
+    "desktop-fixed base never overlaps terrain side walls",
+    "desktop-fixed preserves bottom and empty green cells",
+    "desktop-fixed front plain renders without GL errors",
+    "desktop-fixed front plain static wall pixels stay identical",
+    "desktop-fixed front post renders without GL errors",
+    "desktop-fixed front post static wall pixels stay identical",
+    "desktop-fixed rear plain renders without GL errors",
+    "desktop-fixed rear plain static wall pixels stay identical",
+    "desktop-fixed rear post renders without GL errors",
+    "desktop-fixed rear post static wall pixels stay identical",
+    "desktop-fixed empty ground and occupied terrain remain pickable",
+    "desktop-fixed preserves game score and HUD",
+    "phone-before reproduces overlapping exterior walls",
+    "phone-before front plain renders without GL errors",
+    "phone-before front post renders without GL errors",
+    "phone-before rear plain renders without GL errors",
+    "phone-before rear post renders without GL errors",
+    "phone-fixed base never overlaps terrain side walls",
+    "phone-fixed preserves bottom and empty green cells",
+    "phone-fixed front plain renders without GL errors",
+    "phone-fixed front plain static wall pixels stay identical",
+    "phone-fixed front post renders without GL errors",
+    "phone-fixed front post static wall pixels stay identical",
+    "phone-fixed rear plain renders without GL errors",
+    "phone-fixed rear plain static wall pixels stay identical",
+    "phone-fixed rear post renders without GL errors",
+    "phone-fixed rear post static wall pixels stay identical",
+    "phone-fixed empty ground and occupied terrain remain pickable",
+    "phone-fixed preserves game score and HUD",
+    "No console, JavaScript or shader errors"
+  ],
+  "errors": [],
+  "screenshots": [
+    "ground-desktop-before-front.png",
+    "ground-desktop-before-rear.png",
+    "ground-desktop-fixed-front.png",
+    "ground-desktop-fixed-rear.png",
+    "ground-phone-before-front.png",
+    "ground-phone-before-rear.png",
+    "ground-phone-fixed-front.png",
+    "ground-phone-fixed-rear.png"
+  ],
+  "samples": [
+    {
+      "label": "desktop-before",
+      "overlap": 0.31999999642372123,
+      "bottom": -0.3400000035762787,
+      "visiblePads": 66
+    },
+    {
+      "label": "desktop-fixed",
+      "overlap": 0,
+      "bottom": -0.3400000035762787,
+      "visiblePads": 66
+    },
+    {
+      "label": "phone-before",
+      "overlap": 0.31999999642372123,
+      "bottom": -0.3400000035762787,
+      "visiblePads": 66
+    },
+    {
+      "label": "phone-fixed",
+      "overlap": 0,
+      "bottom": -0.3400000035762787,
+      "visiblePads": 66
+    }
+  ],
+  "browser": "154.0.8037.93"
+}

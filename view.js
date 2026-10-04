@@ -49,6 +49,7 @@
   const wardMats = {};
   const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const PAD_H = 0.11, HALF = T / 2;
+  const TERRAIN_BOTTOM = -0.32, BASE_BOTTOM = -0.34;
   const AXIS = [-HALF, -HALF + 0.03, -T / 3, -T / 6, 0, T / 6, T / 3, HALF - 0.03, HALF];
   const pointer = { x: 0, y: 0, down: null, ndc: new THREE.Vector2() };
   const ray = new THREE.Raycaster();
@@ -143,7 +144,7 @@
     for(let i=n-2;i>0;i--) perimeter.push([-HALF,AXIS[i]]);
     for(let i=0;i<perimeter.length;i++) {
       const a=perimeter[i],b=perimeter[(i+1)%perimeter.length],s=p.length/3;
-      p.push(a[0],surfaceHeight(k,...a),a[1],b[0],surfaceHeight(k,...b),b[1],a[0],-0.32,a[1],b[0],-0.32,b[1]);
+      p.push(a[0],surfaceHeight(k,...a),a[1],b[0],surfaceHeight(k,...b),b[1],a[0],TERRAIN_BOTTOM,a[1],b[0],TERRAIN_BOTTOM,b[1]);
       colors.push(...Array(12).fill(1));uv.push(0,0,1,0,0,1,1,1); ix.push(s,s+1,s+2,s+1,s+3,s+2);
     }
     const g = new THREE.BufferGeometry();
@@ -186,7 +187,7 @@
     n.edgeLine.geometry.dispose(); n.edgeLine.geometry=outlineGeometry(n.k);
     anchorChildren(n.scenery,n.k,n.look.h); anchorChildren(n.units,n.k,n.look.h);
   }
-  function addBase() {
+  function baseGeometry() {
     const edges=new Map();
     const code=p=>p.join(',');
     G.SHAPE.forEach(([x,z])=> {
@@ -204,8 +205,15 @@
       if(i===0)shape.moveTo(a.x,a.y);else shape.lineTo(a.x,a.y);
       shape.quadraticCurveTo(p.x,p.y,b.x,b.y);
     }); shape.closePath();
-    const g=new THREE.ExtrudeGeometry(shape,{depth:0.34,bevelEnabled:false,steps:1,curveSegments:3});
-    g.rotateX(-Math.PI/2); g.translate(0,-0.34,0);
+    // The terrain walls already extend to TERRAIN_BOTTOM. A thick base with
+    // walls up to y=0 duplicates those exterior faces and causes z-fighting.
+    // Close the underside with only the remaining bottom rim instead.
+    const g=new THREE.ExtrudeGeometry(shape,{depth:TERRAIN_BOTTOM-BASE_BOTTOM,bevelEnabled:false,steps:1,curveSegments:3});
+    g.rotateX(-Math.PI/2); g.translate(0,BASE_BOTTOM,0);
+    return g;
+  }
+  function addBase() {
+    const g=baseGeometry();
     const m=new THREE.Mesh(g,M(0x805838,{roughness:1}));m.receiveShadow=true;m.castShadow=true;scene.add(m);
   }
 
