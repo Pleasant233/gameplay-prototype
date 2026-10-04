@@ -55,7 +55,7 @@
   const isFarm = t => t.farm || D.FARM_TYPES.includes(t.type);
   const hasOre = t => t.vein || D.ORE_TYPES.includes(t.type);
   function makeTile(typeId) {
-    return { type: typeId, attrs: TYPE[typeId].attrs.slice(), spirits: [], cancers: [], beasts: [], plants: [], animals: [], ores: [], spring: false, pond: false, farm: false, vein: false, shelter: false, oasis: false };
+    return { type: typeId, attrs: TYPE[typeId].attrs.slice(), spirits: [], cancers: [], beasts: [], guardians: [], plants: [], animals: [], ores: [], spring: false, pond: false, farm: false, vein: false, shelter: false, oasis: false };
   }
   function cluster(s, cell) {
     if (!s.cells[cell]) return [];
@@ -147,6 +147,7 @@
     }
   }
   const nearby = (s, a, b) => !!s.cells[a] && !!s.cells[b] && neighbors(a).includes(b);
+  const guardianArea = (s, cell) => s.cells[cell] ? [cell, ...neighbors(cell).filter(k => s.cells[k])] : [];
   function interactionKeys(s, a) {
     const t = s.cells[a.cell || a.from];
     if (a.type === 'moveSpirit') return ['spirit:' + a.spiritId];
@@ -227,6 +228,25 @@
       if (!b || s.cells[a.to].attrs[EL.indexOf(b.el)] <= 0) return fail('目标需要该元素的正属性');
       from.beasts = from.beasts.filter(x => x !== b); s.cells[a.to].beasts.push(b); addAttr(s, a.to, EL.indexOf(b.el), 1);
       return success('元素兽移动并滋养地块');
+    },
+    mergeGuardian(s, a) {
+      const t = s.cells[a.cell], ids = a.beastIds;
+      if (!t || !Array.isArray(ids) || ids.length !== RULES.guardianMergeCount || new Set(ids).size !== ids.length) return fail('请选择同一地块的 5 个不同元素兽');
+      const beasts = ids.map(i => t.beasts.find(b => b.id === i));
+      if (beasts.some(b => !b || !EL.includes(b.el))) return fail('元素兽不在该地块');
+      const power = emptyEl(); beasts.forEach(b => power[b.el]++);
+      t.beasts = t.beasts.filter(b => !ids.includes(b.id));
+      const guardian = { id: id(s), power }; (t.guardians || (t.guardians = [])).push(guardian);
+      countStat(s, 'guardians'); emit(s, { cell: a.cell, kind: 'guardianMerge', guardianId: guardian.id, power: { ...power } });
+      return success('合成守护灵：' + EL.filter(e => power[e]).map(e => elName(e) + '×' + power[e]).join(' '));
+    },
+    moveGuardian(s, a) {
+      if (!nearby(s, a.from, a.to)) return fail('守护灵只能移到四邻已放置地块');
+      const from = s.cells[a.from], i = (from.guardians || []).findIndex(g => g.id === a.guardianId);
+      if (i < 0) return fail('找不到该守护灵');
+      const to = s.cells[a.to]; (to.guardians || (to.guardians = [])).push(from.guardians.splice(i, 1)[0]);
+      emit(s, { cell: a.to, from: a.from, kind: 'guardianMove', guardianId: a.guardianId });
+      return success('移动守护灵 · 消耗 1 行动点');
     },
     movePlant(s, a) {
       if (!nearby(s, a.from, a.to)) return fail('只能移到相邻地块');
@@ -351,9 +371,9 @@
     s.events = [];
     if (!action || !handlers[action.type]) return fail('未知行动');
     if (s.over) return fail('游戏已结束');
-    const cost = ['place', 'cast'].includes(action.type) ? 1 : 0;
+    const cost = ['place', 'cast', 'moveGuardian'].includes(action.type) ? 1 : 0;
     if (s.ap < cost) return fail('行动点不足');
-    if (action.type === 'cast' && !s.placed) return fail('请先放置本轮地块');
+    if (['cast', 'moveGuardian'].includes(action.type) && !s.placed) return fail('请先放置本轮地块');
     const used = interactionKeys(s, action);
     if (used.some(k => s.interactionUsed[k])) return fail('该生物或物品本轮已交互');
     const before = score(s).total, beforeBag = bagCount(s);
@@ -417,6 +437,18 @@
     if (s.over) return fail('游戏已结束');
     if (!s.placed) return fail('本轮必须先放置一块地块');
     const before = score(s).total, keys = placedKeys(s), eventStart = s.events.length;
+    // Guardians remain attached: settle each at its current location exactly once.
+    // Apply the aura before natural spawning so every tile sees its final boost.
+    for (const k of keys) for (const guardian of s.cells[k].guardians || []) {
+      const targets = guardianArea(s, k), gains = [];
+      for (const target of targets) EL.forEach((el, i) => {
+        const power = guardian.power[el] || 0; if (!power) return;
+        const previous = s.cells[target].attrs[i]; addAttr(s, target, i, power);
+        const n = s.cells[target].attrs[i] - previous;
+        if (n) { emit(s, { cell: target, kind: 'attr', el, n, score: n }); gains.push({ cell: target, el, n }); }
+      });
+      emit(s, { cell: k, kind: 'guardian', guardianId: guardian.id, power: { ...guardian.power }, targets, gains });
+    }
     for (const k of keys) {
       const t = s.cells[k];
       const pos = EL.map((e, i) => [e, Math.max(0, t.attrs[i])]).filter(p => p[1]);
@@ -483,7 +515,7 @@
   }
   function finish(s) { s.over = true; log(s, `地图已铺满，最终灵力值 ${score(s).total}`); }
   function endRoundPublic(s) { s.events = []; return endRound(s); }
-  const Game = { newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
+  const Game = { newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, guardianArea, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
   if (typeof module !== 'undefined' && module.exports) module.exports = Game;
   else root.Game = Game;
 })(this);

@@ -67,4 +67,23 @@ test('stage progression raises AP to 5, 7 and 9, achievements persist in the bro
   const reopened=Book.create(storage);assert.ok(reopened.snapshot().unlocked.includes(a.id));
   assert.deepEqual(reopened.observe(G.newGame(38),{}),[]);assert.equal(reopened.snapshot().progress[a.id],a.target);
 });
+test('five beasts merge into a free guardian that moves for 1 AP and nourishes its area each round',()=>{
+  const s=G.newGame(37),k='3,3',t=s.cells[k];
+  t.beasts=['fire','fire','water','wood','metal'].map((el,i)=>({id:900+i,el,age:0}));
+  const ids=t.beasts.map(b=>b.id);
+  assert.equal(G.act(s,{type:'mergeGuardian',cell:k,beastIds:ids.slice(0,4)}).ok,false);
+  assert.ok(G.act(s,{type:'mergeGuardian',cell:k,beastIds:ids}).ok);
+  assert.equal(s.ap,3);assert.equal(t.beasts.length,0);
+  assert.deepEqual(t.guardians[0].power,{metal:1,wood:1,water:1,fire:2,earth:0});
+  const gid=t.guardians[0].id,to=G.neighbors(k).find(n=>s.cells[n]);
+  assert.equal(G.act(s,{type:'moveGuardian',from:k,guardianId:gid,to}).ok,false);   // place first
+  place(s);
+  assert.ok(G.act(s,{type:'moveGuardian',from:k,guardianId:gid,to}).ok);
+  assert.equal(s.ap,1);assert.equal(s.cells[to].guardians[0].id,gid);
+  const area=G.guardianArea(s,to),before=area.map(c=>s.cells[c].attrs[3]);
+  assert.ok(G.endRound(s).ok);
+  const ev=s.events.find(e=>e.kind==='guardian');
+  assert.ok(ev);assert.deepEqual(ev.targets,area);
+  area.forEach((c,i)=>assert.ok(s.cells[c].attrs[3]>=before[i]));
+});
 console.log(`${passed} current-gameplay regressions passed`);
