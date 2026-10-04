@@ -1068,6 +1068,8 @@
     (t.cancers||[]).slice(0,8).forEach((c,i)=>{
       const orb=new THREE.Group(),body=new THREE.Mesh(geo.sph,M(0x6d537f,{emissive:0x542955,emissiveIntensity:0.12}));body.scale.set(0.085,0.1,0.08);orb.add(body);
       for(const x of [-0.026,0.026]){const eye=new THREE.Mesh(geo.sph,M(0xffe2a3));eye.scale.setScalar(0.018);eye.position.set(x,0.025,0.067);orb.add(eye);}
+      // A faint toxic haze makes infection readable at board zoom without hiding the terrain.
+      if(i<4){const haze=new THREE.Sprite(glow(0x9a5cc4,LOW?0.22:0.3));haze.scale.setScalar(0.3);orb.add(haze);}
       const y=h+0.22+(i%2)*0.08;g.add(orb);bobs.push({m:orb,y,p:i*1.5,a:0.025,orbit:0.28,sp:0.45,spin:0.3});
     });
     t.plants.forEach((p, i) => {
