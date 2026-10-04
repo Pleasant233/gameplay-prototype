@@ -56,3 +56,11 @@
 - 景深测试原冻结方法依赖旧版渲染时钟，已适配新版帧时间与特效时间。保留原图像差异阈值；没有修改生产后处理代码或跳过失败断言。
 
 详见 [修复验证报告](current-baseline-validation.json)。软件 WebGL 和手机模拟验证功能、画面及资源回收，不代表实机帧率。
+
+## 正式部署复测
+
+源码修复提交 [`45659fd`](https://github.com/Pleasant233/gameplay-prototype/commit/45659fd34017fd94808e799b83af73f79e01ab21) 已更新 main 并自动部署为 `dpl_HdJmeyg6xg57A3Q9LRSsDEpxMUzZ`，状态 READY、production、git。正式域名 `https://element-habitat.vercel.app` 已指向该修复。
+
+线上 12 个核心／许可证文件返回 HTTP 200 并逐字节匹配修复后的 main；正式地址的桌面／手机玩法专项 21 项通过，无浏览器或 WebGL 错误。该复测不替换线上源码、不注入渲染探针，直接使用线上加载的规则和按钮复现魔法与第 10 轮火属性陨石雨。
+
+文件核对见 [正式文件报告](current-production-files.json)，实际按钮与玩法见 [正式玩法报告](current-production-gameplay.json)。后续纯文档提交可能生成新部署，公开运行源码保持一致。

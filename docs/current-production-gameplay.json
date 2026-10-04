@@ -1,0 +1,30 @@
+{
+  "url": "https://element-habitat.vercel.app",
+  "checks": [
+    "desktop: correct title and current gameplay APIs loaded",
+    "desktop: mine magic starts locked",
+    "desktop: unlocked magic still requires placement",
+    "desktop: magic becomes available after placement",
+    "desktop: real magic button adds 5 metal, vein and costs one AP",
+    "desktop: same magic cannot cast twice in a round",
+    "desktop: area purify clears neighbor cancer and adds 5 to negatives",
+    "desktop: real end-round button triggers connected fire rain",
+    "desktop: fire rain is announced in UI and log",
+    "desktop: new scenario, shield composer and achievement book remain available",
+    "phone: correct title and current gameplay APIs loaded",
+    "phone: mine magic starts locked",
+    "phone: unlocked magic still requires placement",
+    "phone: magic becomes available after placement",
+    "phone: real magic button adds 5 metal, vein and costs one AP",
+    "phone: same magic cannot cast twice in a round",
+    "phone: area purify clears neighbor cancer and adds 5 to negatives",
+    "phone: real end-round button triggers connected fire rain",
+    "phone: fire rain is announced in UI and log",
+    "phone: new scenario, shield composer and achievement book remain available",
+    "No browser or WebGL errors"
+  ],
+  "errors": [],
+  "testProbes": false,
+  "desktopFireSeed": 19,
+  "phoneFireSeed": 19
+}

@@ -1,0 +1,92 @@
+{
+  "verifiedAt": "2026-10-04T09:53:17.054744+00:00",
+  "url": "https://element-habitat.vercel.app",
+  "codeCommit": "45659fd34017fd94808e799b83af73f79e01ab21",
+  "deployment": "dpl_HdJmeyg6xg57A3Q9LRSsDEpxMUzZ",
+  "files": [
+    {
+      "file": "index.html",
+      "status": 200,
+      "bytes": 71039,
+      "sha256": "d0b086076ed662c34d1056d918c18b2f030847588305747d5dff19d2cbc978ea",
+      "matchesMain": true
+    },
+    {
+      "file": "data.js",
+      "status": 200,
+      "bytes": 7797,
+      "sha256": "bf155cb3fa446cc4fbfb90aa78ed0828cc94991f316d9c1a7ba9bc7d4916d084",
+      "matchesMain": true
+    },
+    {
+      "file": "game.js",
+      "status": 200,
+      "bytes": 30987,
+      "sha256": "2f395c15a6c60cf7439c4893d9c1011cc91ab0987e8c93bff473e881cefd9d3e",
+      "matchesMain": true
+    },
+    {
+      "file": "achievements.js",
+      "status": 200,
+      "bytes": 1529,
+      "sha256": "3ae683a2410a0fcbb977030fa22ed3e1358d8f5e393e0bb276b9c3c4a8d41746",
+      "matchesMain": true
+    },
+    {
+      "file": "landscape.js",
+      "status": 200,
+      "bytes": 4731,
+      "sha256": "206007626009c2fadf02e7b13f922b480e7e9d56e754be53755f46f4d91a1eca",
+      "matchesMain": true
+    },
+    {
+      "file": "view.js",
+      "status": 200,
+      "bytes": 107576,
+      "sha256": "cb2d44fbe163753d857501a0c5c46eda94d4430a5f3763e4a30bf43c07deeeff",
+      "matchesMain": true
+    },
+    {
+      "file": "postfx.js",
+      "status": 200,
+      "bytes": 6978,
+      "sha256": "163723151fa3e9e9cb3b0fcbf49af14a6a882e4b81b469ba2ef61832bcceba15",
+      "matchesMain": true
+    },
+    {
+      "file": "tokens.js",
+      "status": 200,
+      "bytes": 5051,
+      "sha256": "6b0fe6bb64eb08e310b4661ebdd9937e82ba4a484a3265aeedc495aff499dc70",
+      "matchesMain": true
+    },
+    {
+      "file": "lib/three.min.js",
+      "status": 200,
+      "bytes": 603445,
+      "sha256": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2",
+      "matchesMain": true
+    },
+    {
+      "file": "lib/THREE-LICENSE.txt",
+      "status": 200,
+      "bytes": 1081,
+      "sha256": "7dddf7c5b8fd10ee654db8857d75d104b5557889aa5a91fc4ca545ea7c07062f",
+      "matchesMain": true
+    },
+    {
+      "file": "manifest.webmanifest",
+      "status": 200,
+      "bytes": 298,
+      "sha256": "feb24d37f58487f2430a07bfa3f6f90c611905542c1f86672afc012a00e09ec2",
+      "matchesMain": true
+    },
+    {
+      "file": "icon.svg",
+      "status": 200,
+      "bytes": 421,
+      "sha256": "f39238a2d1a06710b4aee97243a1fff533699508458a1d77b1f6ce8f1236e5df",
+      "matchesMain": true
+    }
+  ]
+}
