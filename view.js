@@ -322,6 +322,8 @@
     geo.foliage=new THREE.IcosahedronGeometry(0.5,2);
     geo.ecologyFoliage=new THREE.IcosahedronGeometry(0.5,1);
     geo.mountain=new THREE.LatheGeometry([new THREE.Vector2(0.5,-0.5),new THREE.Vector2(0.43,-0.35),new THREE.Vector2(0.29,-0.06),new THREE.Vector2(0.12,0.34),new THREE.Vector2(0.04,0.5),new THREE.Vector2(0,0.52)],8);
+    { const tri=new THREE.Shape();tri.moveTo(-0.5,0);tri.lineTo(0.5,0);tri.lineTo(0,0.5);tri.lineTo(-0.5,0);
+      geo.prism=new THREE.ExtrudeGeometry(tri,{depth:1,bevelEnabled:false});geo.prism.translate(0,0,-0.5); }
     geo.plane = new THREE.PlaneGeometry(1, 1);
     geo.circle = new THREE.CircleGeometry(0.5, 24);
     geo.ring = new THREE.RingGeometry(0.5, 0.6, 48);
@@ -917,8 +919,10 @@
     return m;
   }
   function eyes(g, x, y, z, gap, s) {
-    part(g, geo.sphL, 0x1a1a1a, s, s, s, x, y, z + gap);
-    part(g, geo.sphL, 0x1a1a1a, s, s, s, x, y, z - gap);
+    for (const side of [1, -1]) {
+      part(g, geo.sphL, 0xffffff, s * 1.7, s * 1.7, s * 1.7, x, y, z + side * gap);
+      part(g, geo.sphL, 0x1a1420, s, s * 1.1, s, x + s * 0.9, y + s * 0.15, z + side * gap);
+    }
   }
   function legs(g, color, x, z, h, w) {
     [[x, z], [x, -z], [-x, z], [-x, -z]].forEach(([a, b]) => part(g, geo.cyl, color, w, h, w, a, h / 2, b));
@@ -1029,13 +1033,20 @@
       const house = new THREE.Group();
       house.position.set(0.24, h, 0.2);
       house.rotation.y = -0.5;
-      part(house, geo.box, 0xfff0d0, 0.24, 0.16, 0.2, 0, 0.08, 0);
-      const roof = part(house, geo.cone4, 0xe0402a, 0.26, 0.15, 0.26, 0, 0.235, 0, { flatShading: true });
-      roof.rotation.y = Math.PI / 4;
-      roof.scale.set(0.24, 0.15, 0.22);
-      part(house, geo.box, 0x8a5030, 0.05, 0.09, 0.01, 0, 0.045, 0.1);
-      part(house, geo.box, 0x8adcff, 0.04, 0.04, 0.01, 0.07, 0.1, 0.101, { emissive: 0x3a8aff, emissiveIntensity: 0.4 });
-      part(house, geo.box, 0x9a7a6a, 0.04, 0.09, 0.04, -0.07, 0.27, 0.03);
+      part(house, geo.box, 0xb79a7a, 0.26, 0.03, 0.22, 0, 0.015, 0);
+      part(house, geo.box, 0xfff3dc, 0.24, 0.15, 0.19, 0, 0.105, 0);
+      const gable = part(house, geo.prism, 0xfff3dc, 0.24, 0.16, 0.19, 0, 0.18, 0);
+      gable.rotation.y = Math.PI / 2; gable.scale.set(0.19, 0.16, 0.24);
+      for (const side of [1, -1]) {
+        const slope = part(house, geo.box, 0xd9472e, 0.3, 0.022, 0.145, 0, 0.222, side * 0.052, { flatShading: true });
+        slope.rotation.x = side * 0.76;
+      }
+      part(house, geo.box, 0xa8341f, 0.31, 0.02, 0.02, 0, 0.262, 0);
+      part(house, geo.box, 0x9a8476, 0.04, 0.1, 0.04, -0.07, 0.27, -0.035);
+      part(house, geo.box, 0x7a5a3a, 0.055, 0.09, 0.012, 0.03, 0.075, 0.096);
+      part(house, geo.box, 0xffe08a, 0.045, 0.045, 0.012, -0.065, 0.11, 0.096, { emissive: 0xffb94a, emissiveIntensity: 0.55 });
+      part(house, geo.box, 0xffe08a, 0.012, 0.045, 0.045, 0.121, 0.11, 0, { emissive: 0xffb94a, emissiveIntensity: 0.55 });
+      part(house, geo.cyl, 0xd8cdb8, 0.05, 0.012, 0.05, 0.03, 0.006, 0.15);
       g.add(house);
     }
     if (t.spring) {
@@ -1092,6 +1103,12 @@
       const r = 0.2;
       const fly = a.kind === 'bird', swim = a.kind === 'fish';
       const y = h + (fly ? 0.3 : swim ? 0.02 : 0);
+      m.scale.setScalar(1.2);
+      if (!swim) {
+        const shadow = new THREE.Mesh(geo.circle, mats.shadow);
+        shadow.rotation.x = -Math.PI / 2; shadow.scale.set(0.24, 0.18, 1);
+        shadow.position.y = (fly ? -0.3 : 0) / 1.2 + 0.006; shadow.renderOrder = 1; m.add(shadow);
+      }
       m.position.set(Math.cos(ang) * r, y, Math.sin(ang) * r);
       m.rotation.y = -ang - Math.PI / 2;
       g.add(m);
