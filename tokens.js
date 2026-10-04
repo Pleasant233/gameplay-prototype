@@ -66,7 +66,7 @@
     function enqueue(events) {
       const cells=new Map(),now=performance.now();
       events.forEach(e=> {
-        if(['achievement','purify','cancer','infection','meteor','shield','predation','upgrade'].includes(e.kind))return;
+        if(['achievement','purify','cancer','infection','meteor','shield','predation','upgrade','guardianMerge','guardianMove','guardian'].includes(e.kind))return;
         if(!cells.has(e.cell))cells.set(e.cell,cells.size);
         const count=e.n==null?1:e.n,color=COLORS[e.el]||'#ffe14a';
         let target='score',delta=e.score||0,icon='✦';

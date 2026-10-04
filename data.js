@@ -85,6 +85,7 @@
     spiritCrystalEvery: 3,   // 元素灵每 3 轮产 1 结晶
     beastCrystalEvery: 2,    // 元素兽每 2 轮产 1 大结晶
     mergeCount: 3,           // 3 个同元素灵合成元素兽
+    guardianMergeCount: 5,   // 同一地块任意 5 个元素兽，保留配比
     maxPlants: 5,
     maxAnimals: 3,
     maxOres: 2,

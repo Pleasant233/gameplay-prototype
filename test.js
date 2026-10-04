@@ -56,6 +56,60 @@ test('无库存/无效元素/结束/封顶拒绝且不扣资源', () => {
   s.inv.crystal.water = 1; s.cells['3,3'].attrs[2] = G.attrCap(s, '3,3'); rejected(s, { type: 'useCrystal', cell: '3,3', el: 'water' });
   s.over = true; rejected(s, { type: 'useCrystal', cell: '2,3', el: 'water' });
 });
+const guardianFixture = () => {
+  const s=prepare(); s.visions=[];
+  Object.values(s.cells).forEach(t=>{t.type='ruin_town';t.attrs=[0,0,0,0,0];t.beasts=[];t.cancers=[];t.animals=[];t.plants=[];});
+  s.cells['3,3'].beasts=['wood','wood','wood','water','water','fire'].map((el,i)=>({id:900+i,el,age:0}));return s;
+};
+test('同格任意5兽免费合成守护灵，精确保留木3水2且不立即加属性',()=>{
+  const s=guardianFixture();s.ap=0;s.interactionUsed['beast:900']=true;
+  const before=G.score(s).base;receipt(s,()=>assert.ok(G.act(s,{type:'mergeGuardian',cell:'3,3',beastIds:[900,901,902,903,904]}).ok));
+  assert.equal(s.ap,0);assert.equal(s.round,1);assert.equal(s.cells['3,3'].beasts.length,1);assert.equal(s.cells['3,3'].beasts[0].id,905);
+  assert.deepEqual(s.cells['3,3'].guardians[0].power,{metal:0,wood:3,water:2,fire:0,earth:0});assert.equal(G.score(s).base,before-15);
+  assert.deepEqual(s.cells['3,3'].attrs,[0,0,0,0,0]);assert.equal(s.events.filter(e=>e.kind==='guardianMerge').length,1);
+});
+test('守护灵合成拒绝不足、超量、重复、异格或失效ID，失败无消耗',()=>{
+  const s=guardianFixture();s.cells['2,3'].beasts=[{id:999,el:'wood',age:0}];
+  for(const ids of [null,[],[900,901,902,903],[900,901,902,903,904,905],[900,900,902,903,904],[900,901,902,903,999],[900,901,902,903,123]])rejected(s,{type:'mergeGuardian',cell:'3,3',beastIds:ids});
+  rejected(s,{type:'mergeGuardian',cell:'0,0',beastIds:[900,901,902,903,904]});
+});
+test('守护灵轮末五格按配比滋养一次且不会自动移动或产大结晶',()=>{
+  const s=guardianFixture();s.cells['3,3'].beasts.pop();G.act(s,{type:'mergeGuardian',cell:'3,3',beastIds:[900,901,902,903,904]});
+  const guardian=s.cells['3,3'].guardians[0],area=G.guardianArea(s,'3,3');assert.equal(area.length,5);
+  for(let i=1;i<=2;i++){
+    s.placed=1;receipt(s,()=>assert.ok(G.endRound(s).ok));
+    for(const k of area)assert.deepEqual(s.cells[k].attrs,[0,i*3,i*2,0,0]);
+    assert.equal(s.events.filter(e=>e.kind==='guardian').length,1);assert.equal(s.cells['3,3'].guardians[0],guardian);
+    assert.equal(total(Object.values(s.inv.bigCrystal)),0);
+  }
+});
+test('守护灵只滋养已放置四邻，不影响空格或对角，属性封顶并按实际值记账',()=>{
+  const s=game();s.visions=[];s.placed=1;s.cells={'3,3':G.makeTile('ruin_town'),'4,3':G.makeTile('desert'),'4,4':G.makeTile('ruin_town')};
+  Object.values(s.cells).forEach(t=>t.attrs=[0,0,0,0,0]);s.cells['4,3'].attrs[1]=8;s.cells['4,3'].attrs[2]=-2;
+  s.cells['3,3'].guardians=[{id:800,power:{metal:0,wood:3,water:2,fire:0,earth:0}}];
+  receipt(s,()=>assert.ok(G.endRound(s).ok));assert.deepEqual(s.cells['4,3'].attrs,[0,9,0,0,0]);assert.deepEqual(s.cells['4,4'].attrs,[0,0,0,0,0]);
+  assert.equal(Object.keys(s.cells).length,3);assert.deepEqual(s.events.find(e=>e.kind==='guardian').targets,['3,3','4,3']);
+  assert.ok(s.events.some(e=>e.kind==='attr'&&e.cell==='4,3'&&e.el==='wood'&&e.n===1));
+});
+test('同格多守护灵叠加且同轮可多次合成，不增加独立单位分',()=>{
+  const s=guardianFixture();s.cells['3,3'].beasts=Array.from({length:10},(_,i)=>({id:1000+i,el:'metal',age:0}));
+  for(let n=0;n<2;n++)assert.ok(G.act(s,{type:'mergeGuardian',cell:'3,3',beastIds:Array.from({length:5},(_,i)=>1000+n*5+i)}).ok);
+  assert.equal(s.cells['3,3'].guardians.length,2);assert.equal(s.ap,2);assert.equal(G.score(s).base,0);
+  receipt(s,()=>assert.ok(G.endRound(s).ok));for(const k of G.guardianArea(s,'3,3'))assert.equal(s.cells[k].attrs[0],10);
+  assert.equal(s.events.filter(e=>e.kind==='guardian').length,2);
+});
+test('守护灵移动每次耗1行动、同轮可往返，目标无属性门槛，无效目标不扣行动',()=>{
+  const s=guardianFixture();G.act(s,{type:'mergeGuardian',cell:'3,3',beastIds:[900,901,902,903,904]});const g=s.cells['3,3'].guardians[0];s.cells['3,3'].beasts=[];s.ap=3;
+  const move=(from,to)=>G.act(s,{type:'moveGuardian',from,to,guardianId:g.id});
+  receipt(s,()=>assert.ok(move('3,3','2,3').ok));assert.equal(s.ap,2);assert.equal(s.round,1);assert.equal(s.cells['2,3'].guardians[0],g);
+  receipt(s,()=>assert.ok(move('2,3','3,3').ok));assert.equal(s.ap,1);assert.equal(s.round,1);assert.ok(!s.interactionUsed['guardian:'+g.id]);
+  for(const to of ['3,3','4,4','0,0'])rejected(s,{type:'moveGuardian',from:'3,3',to,guardianId:g.id});
+  rejected(s,{type:'moveGuardian',from:'3,3',to:'2,3',guardianId:9999});
+  receipt(s,()=>assert.ok(move('3,3','4,3').ok));assert.equal(s.round,2);assert.equal(s.cells['4,3'].guardians[0],g);
+  const event=s.events.find(e=>e.kind==='guardian');assert.equal(event.cell,'4,3');assert.ok(!event.targets.includes('2,3'));assert.equal(s.cells['2,3'].attrs[1],0);
+  s.ap=0;rejected(s,{type:'moveGuardian',from:'4,3',to:'3,3',guardianId:g.id});
+  s.ap=3;rejected(s,{type:'moveGuardian',from:'4,3',to:'3,3',guardianId:g.id}); // first placement still required
+});
 test('净化五格负值+5、正值不动、癌元清零、同轮不重复', () => {
   const s = prepare(); for (const k of ['3,3', ...G.neighbors('3,3')]) { s.cells[k].attrs = [-1, -7, 1, 0, 0]; s.cells[k].cancers = [{ id: 1000, el: 'wood', age: 0 }]; }
   receipt(s, () => assert.ok(G.act(s, { type: 'cast', magic: 'purify', cell: '3,3' }).ok));

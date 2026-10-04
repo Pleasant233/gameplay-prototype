@@ -12,6 +12,8 @@ view = view.replace('  root.View = {', `
     point(k,x=0,z=0){const n=tileMap[k],p=wp(k,surfaceHeight(k,x,z)+0.005);p.x+=x;p.z+=z;if(n)p.applyMatrix4(new THREE.Matrix4().makeTranslation(0,n.group.position.y,0));p.project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:(p.x/2+0.5)*r.width+r.left,y:(-p.y/2+0.5)*r.height+r.top};},
     effects(){return {transient:spellFX.length,queued:queuedFX.length,lights:lights.filter(f=>f.t<0.4).length,particles:particles.length,falling:Object.values(tileMap).some(n=>n.rise>0)};},
     region(){return regionPreview?regionPreview.userData.cells:[];},preview(k){hoverK=k;regionPreviewKey='';},cluster:clusterPulse,
+    guardians(k){return tileMap[k].units.children.filter(o=>o.userData.guardianId).map(o=>o.userData.guardianId);},
+    steady(){intro=0;shake=0;Object.values(tileMap).forEach(n=>{n.rise=0;n.pop=0;n.lift=0;n.group.position.y=0;n.group.scale.setScalar(1);});cam.sph.set(baseR(),.9,.78);cam.target.set(0,.2,0);cam.gR=baseR();cam.gP=.9;cam.gT=.78;cam.gx=0;cam.gz=0;camera.position.setFromSpherical(cam.sph).add(cam.target);camera.lookAt(cam.target);camera.updateMatrixWorld();renderer.render(scene,camera);},
     terrain(k){return {look:tileMap[k].look.kind,scenery:tileMap[k].sceneryKey};},memory(){return {...renderer.info.memory};},low:()=>LOW
   };
   root.View = {`);
@@ -24,13 +26,60 @@ const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', mime[path.extname(file)] || 'application/octet-stream'); fs.createReadStream(file).pipe(res);
 });
 function check(name, value) { assert.ok(value, name); report.checks.push(name); console.log('ok - ' + name); }
-async function shot(page, name) { await page.screenshot({ path: path.join(out, name), animations: 'disabled' }); report.screenshots.push(name); }
+async function shot(page, name) { await page.screenshot({ path: path.join(out, name), animations: 'disabled', timeout: 90000 }); report.screenshots.push(name); }
 async function settle(page) {
   await page.waitForFunction(`Number(document.getElementById('score').textContent)===G.score(S).total && Number(document.getElementById('bagCount').textContent)===G.bagCount(S) && !document.querySelector('.token')`, null, { timeout: 30000 });
 }
 async function pointClick(page, cell, mobile) {
   const p = await page.evaluate(k => __viewTest.point(k, 0.08, 0.06), cell);
   if (mobile) await page.touchscreen.tap(p.x, p.y); else await page.mouse.click(p.x, p.y);
+}
+async function guardians(page,mobile,label,installClock=false){
+  if(installClock)await page.clock.install();
+  await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+60000));
+  if(mobile)await page.setViewportSize({width:390,height:844});
+  await page.evaluate(`document.querySelectorAll('dialog[open]').forEach(d=>d.close());start(37);S.visions=[];for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}S.cells['3,3'].beasts=['wood','wood','wood','water','water','fire'].map((el,i)=>({id:1000+i,el,age:0}));S.ap=3;mode=null;selected=null;S.events=[];Tokens.reset();render();__viewTest.steady();`);
+  await pointClick(page,'3,3',mobile);await page.locator('[data-a="mergeGuardian"]').click();
+  check(label+' guardian composer selects exactly five with wood3 water2',await page.evaluate(`document.querySelector('#dlgGuardian').open&&guardianChoice.size===5&&document.querySelector('#guardianPreview').textContent.includes('木 +3 · 水 +2')&&!document.querySelector('#btnMergeGuardian').disabled`));
+  check(label+' sixth candidate disabled until another is deselected',await page.locator('[data-beast="1005"]').isDisabled());
+  await page.locator('[data-beast="1004"]').uncheck();check(label+' four candidates cannot merge',await page.locator('#btnMergeGuardian').isDisabled());
+  await page.locator('[data-beast="1005"]').check();check(label+' mixed selection preview follows chosen beasts',await page.evaluate(`document.querySelector('#guardianPreview').textContent.includes('水 +1 · 火 +1')`));
+  await page.locator('[data-beast="1005"]').uncheck();await page.locator('[data-beast="1004"]').check();
+  await shot(page,`guardian-${label}-composer.png`);
+  check(label+' composer fits viewport and keeps close and confirm accessible',await page.evaluate(`(()=>{const r=document.querySelector('#dlgGuardian .dlg').getBoundingClientRect(),buttons=[document.querySelector('#dlgGuardian [data-close]'),document.querySelector('#btnMergeGuardian')];return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1&&buttons.every(b=>{const r=b.getBoundingClientRect();return b.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));});})()`));
+  await page.locator('#btnMergeGuardian').click();
+  check(label+' real confirm merges five for zero AP and renders attached guardian',await page.evaluate(`S.ap===3&&S.round===1&&S.cells['3,3'].beasts.length===1&&S.cells['3,3'].beasts[0].el==='fire'&&S.cells['3,3'].guardians.length===1&&__viewTest.guardians('3,3').length===1&&!document.querySelector('#dlgGuardian').open`));
+  await page.clock.fastForward(120);await shot(page,`guardian-${label}-merge.png`);
+  // Leave no incidental beast movement in the aura assertion.
+  await page.evaluate(`S.cells['3,3'].beasts=[];render();`);
+  const id=await page.evaluate(`S.cells['3,3'].guardians[0].id`);
+  await page.locator('[data-a="moveGuardian"]').click();await page.evaluate(`__viewTest.preview('2,3')`);await page.clock.fastForward(50);
+  check(label+' movement previews future cross-shaped aura',await page.evaluate(`mode.kind==='moveGuardian'&&JSON.stringify(__viewTest.region().slice().sort())===JSON.stringify(G.guardianArea(S,'2,3').slice().sort())`));
+  await shot(page,`guardian-${label}-move-preview.png`);
+  await pointClick(page,'4,3',mobile);check(label+' move spends one AP and follows new tile selection',await page.evaluate(id=>S.ap===2&&S.round===1&&selected==='4,3'&&S.cells['4,3'].guardians[0].id===id&&__viewTest.guardians('4,3').includes(id),id));
+  await page.locator('[data-a="moveGuardian"]').click();await pointClick(page,'3,3',mobile);
+  check(label+' same guardian can move again in the same round',await page.evaluate(id=>S.ap===1&&S.round===1&&S.cells['3,3'].guardians[0].id===id,id));
+  await page.locator('#btnEnd').click();
+  check(label+' round aura gives wood3 water2 to center and four neighbors only once',await page.evaluate(`G.guardianArea(S,'3,3').every(k=>S.cells[k].attrs[1]===3&&S.cells[k].attrs[2]===2)&&S.events.filter(e=>e.kind==='guardian').length===1&&S.round===2&&S.cells['3,3'].guardians.length===1`));
+  check(label+' new round guardian movement waits for required placement',await page.locator('[data-a="moveGuardian"]').isDisabled());
+  await page.clock.fastForward(150);await shot(page,`guardian-${label}-aura.png`);
+  for(let i=0;i<12;i++)await page.clock.fastForward(250);
+  check(label+' guardian effects and HUD receipts settle and clean up',await page.evaluate(`__viewTest.effects().transient===0&&__viewTest.effects().queued===0&&!document.querySelector('.token')&&Number(document.querySelector('#score').textContent)===G.score(S).total`));
+  await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(`eventEffects([{kind:'guardian',cell:'3,3',guardianId:S.cells['3,3'].guardians[0].id,power:S.cells['3,3'].guardians[0].power,targets:G.guardianArea(S,'3,3')}]);`);
+  check(label+' reduced motion guardian uses static outline with no delayed particles',await page.evaluate('__viewTest.effects().queued===0&&__viewTest.effects().transient===1'));
+  await page.clock.fastForward(600);
+  check(label+' reduced guardian cue expires',await page.evaluate('__viewTest.effects().transient===0'));
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(`eventEffects([{kind:'guardianMerge',cell:'3,3',guardianId:S.cells['3,3'].guardians[0].id,power:S.cells['3,3'].guardians[0].power}]);start(9);`);
+  check(label+' restart cancels guardian delayed effects and removes model',await page.evaluate(`__viewTest.effects().transient===0&&__viewTest.effects().queued===0&&Object.values(S.cells).every(t=>!t.guardians.length)&&__viewTest.guardians('3,3').length===0`));
+  if(mobile){
+    await page.setViewportSize({width:320,height:700});await page.evaluate(`S.cells['3,3'].beasts=Array.from({length:30},(_,i)=>({id:2000+i,el:EL[i%5].key,age:0}));selected='3,3';render();`);await page.locator('[data-a="mergeGuardian"]').click();
+    await page.evaluate(`document.querySelector('#guardianBody').scrollTop=9999`);
+    await shot(page,'guardian-phone-small-composer.png');
+    check('320px guardian composer scrolls and keeps confirm reachable',await page.evaluate(`(()=>{const d=document.querySelector('#dlgGuardian .dlg'),r=d.getBoundingClientRect(),b=document.querySelector('#btnMergeGuardian'),q=b.getBoundingClientRect(),s=document.querySelector('#guardianBody');return r.left>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&s.scrollHeight>s.clientHeight&&b.contains(document.elementFromPoint(q.left+q.width/2,q.top+q.height/2));})()`));
+    await page.locator('#dlgGuardian [data-close]').click();
+  }
+  await page.clock.resume();
 }
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -47,11 +96,15 @@ async function pointClick(page, cell, mobile) {
       const label = mobile ? 'phone' : 'desktop';
       const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' } : { viewport: { width: 1440, height: 900 } });
       const page = await context.newPage();
+      // Software WebGL may share a busy host. These are operation deadlines,
+      // not relaxed rule, layout or effect-lifecycle assertions.
+      page.setDefaultTimeout(90000);page.setDefaultNavigationTimeout(90000);
       page.on('pageerror', e => report.errors.push(label + ': ' + e.message));
       page.on('console', msg => { if (msg.type() === 'error') report.errors.push(label + ': ' + msg.text()); });
       await page.route('**/view.js', route => route.fulfill({ body: view, contentType: 'application/javascript' }));
       await page.goto(targetURL);
       await page.waitForFunction('typeof S!=="undefined" && S && document.querySelector("#world canvas")');
+      if(process.env.GUARDIAN_UI_ONLY==='1'){await guardians(page,mobile,label,true);await context.close();continue;}
       await page.evaluate('start(37)'); await page.waitForTimeout(1100);
       check(label + ' initial magics locked and 3 offers', await page.evaluate(`document.querySelector('[data-magic="mine"]').disabled && document.querySelectorAll('[data-offer]').length===3`));
       await shot(page, `v1-${label}-initial.png`);
@@ -115,10 +168,15 @@ async function pointClick(page, cell, mobile) {
       await page.waitForTimeout(1100);
       await page.locator('[data-offer="0"]').click();const linked=await page.evaluate('G.legalPlacements(S)[0]');await page.evaluate(k=>__viewTest.preview(k),linked);
       await page.waitForFunction('__viewTest.region().length===6');check(label+' placement previews six-cell connected terrain',true);
+      await page.evaluate('__viewTest.steady()');
       await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+100));
       await pointClick(page,linked,mobile);check(label+' linked placement succeeds through real input',await page.evaluate(k=>!!S.cells[k]&&S.placed===1,linked));
-      for(let i=0;i<14;i++)await page.clock.fastForward(50);
-      check(label+' landing starts connected terrain wave',await page.evaluate('__viewTest.effects().transient>0&&!!document.querySelector(".float")'));
+      let landedWave=false;
+      for(let i=0;i<40&&!landedWave;i++){
+        await page.clock.runFor(50);
+        landedWave=await page.evaluate('!__viewTest.effects().falling&&__viewTest.effects().transient>0&&!!document.querySelector(".float")');
+      }
+      check(label+' landing starts connected terrain wave',landedWave);
       await shot(page,`v1-${label}-cluster.png`);for(let i=0;i<12;i++)await page.clock.fastForward(250);
       check(label+' linked terrain wave and queue expire',await page.evaluate('__viewTest.effects().transient===0&&__viewTest.effects().queued===0'));await page.clock.resume();
       await settle(page);
@@ -156,7 +214,7 @@ async function pointClick(page, cell, mobile) {
         check('320px phone achievement content fits and scrolls',await page.evaluate(`(()=>{const p=document.querySelector('#dlgAchievements .dlg'),r=p.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&p.scrollHeight>p.clientHeight;})()`));
       }
       if (mobile) check('phone retains low rendering quality', await page.evaluate('__viewTest.low()'));
-      await context.close();
+      await guardians(page,mobile,label);await context.close();
     }
     check('No console, JS or WebGL errors', report.errors.length === 0);
   } finally {
