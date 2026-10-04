@@ -77,6 +77,11 @@
     if (!matCache[key]) matCache[key] = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.75, metalness: 0 }, extra || {}));
     return matCache[key];
   }
+  function glow(color, opacity) {
+    const key='glow|'+color+'|'+opacity;
+    if(!matCache[key])matCache[key]=new THREE.SpriteMaterial({map:mats.glowMap,color,transparent:true,opacity,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
+    return matCache[key];
+  }
   // 地块独占材质（颜色随属性变化），移除时销毁
   function ownMat(color, extra) {
     const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.8, metalness: 0 }, extra || {}));
@@ -326,6 +331,8 @@
     geo.pad = padSlab(T, 0.06);
     geo.hill = new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
     geo.disk = new THREE.CircleGeometry(160, 48);
+    geo.sprite=new THREE.Sprite().geometry;
+    mats.glowMap=dotTexture();
     mats.landMap=landTexture();
     mats.ground = new THREE.MeshStandardMaterial({ color: 0x879f65, roughness: 1, map:mats.landMap });
     mats.pad = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors:true, map:mats.landMap, roughness: 0.9 });
@@ -1039,8 +1046,9 @@
     });
     t.spirits.slice(0,18).forEach((s, i) => {
       const sg = new THREE.Group();
-      const core = new THREE.Mesh(geo.octa, M(ELC[s.el], { emissive: ELC[s.el], emissiveIntensity: 0.18,metalness:0.2,roughness:0.45 }));
-      core.scale.set(0.055,0.075,0.055);sg.add(core);
+      const core = new THREE.Mesh(geo.octa, M(ELC[s.el], { emissive: ELC[s.el], emissiveIntensity: 0.45,metalness:0.2,roughness:0.35,flatShading:true }));
+      core.scale.set(0.055,0.08,0.055);sg.add(core);
+      if(i<8){const halo=new THREE.Sprite(glow(ELC[s.el],LOW?0.45:0.6));halo.scale.setScalar(0.24);sg.add(halo);}
       const y = h + 0.28 + (i % 3) * 0.055;
       g.add(sg);
       bobs.push({ m: sg, y, p: i * 2.1, a: 0.04, orbit: 0.2 + (i % 2) * 0.06, sp: 0.8 + (i % 3) * 0.2, spin: 2 });
@@ -1054,7 +1062,8 @@
       inner.scale.setScalar(0.1);
       const ring = new THREE.Mesh(geo.halo, M(ELC[b.el], { emissive: ELC[b.el], emissiveIntensity: 1 }));
       ring.rotation.x = Math.PI / 2; ring.scale.setScalar(0.3);
-      bg.add(crystal, inner, ring);
+      const aura = new THREE.Sprite(glow(ELC[b.el], 0.28)); aura.scale.setScalar(0.5);
+      bg.add(crystal, inner, ring, aura);
       const y = h + 0.75 + i * 0.2;
       bg.position.set(0, y, 0);
       g.add(bg);
