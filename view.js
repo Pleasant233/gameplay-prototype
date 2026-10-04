@@ -1420,6 +1420,8 @@
       if(n&&n.rise>0)return;
       spawnBurst(pos,0xc9b896,12,0.65,0.7,0.18,'dust');
       spawnBurst(pos,0x8d7150,8,0.8,0.55,0.3,'shard');shake=Math.max(shake,0.045);
+      // Landing read: a quick ground shockwave and a soft warm flash under the new tile.
+      spawnRing(pos,0xfff2c0,1.6);spellOpening(pos,0xffe7a0,0.7);
       clusterPulse(cell);
       G.neighbors(cell).forEach((k,i)=>{const other=tileMap[k];if(other)other.impactDelay=0.04*(i+1);});return;
     }
