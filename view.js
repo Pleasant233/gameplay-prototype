@@ -1324,6 +1324,8 @@
       const ring=new THREE.Mesh(geo.ring,fxMaterial(blocked?0xb4f4ff:color,.8));ring.position.copy(pos);ring.rotation.x=-Math.PI/2;
       transient(ring,.6,u=>{ring.scale.setScalar(.2+u*1.5);ring.material.opacity=(1-u)*.7;});
       shake=Math.max(shake,LOW?.045:.10);flashLight(pos,color);if(tileMap[cell])tileMap[cell].impact=.4;
+      spellOpening(pos,blocked?0xc6faff:color,blocked?.8:1.15);
+      if(index===0&&cb.onFlash)cb.onFlash(0.25);
     }
     if(cb.onImpact&&index%3===0)cb.onImpact(blocked);
   }
@@ -1346,6 +1348,8 @@
         vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
         fragmentShader:'varying vec2 vUv;uniform vec3 tint;void main(){gl_FragColor=vec4(tint*1.25,pow(1.-vUv.y,1.4)*.7);}'
       }));tail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
+      const corona=new THREE.Sprite(new THREE.SpriteMaterial({map:mats.glowMap,color,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
+      transient(corona,.72,u=>{corona.position.copy(start).lerp(pos,u*u);corona.scale.setScalar(.9+u*.4);corona.material.opacity=.55+u*.3;},delay);
       for(const [m,isTail] of [[head,false],[core,false],[tail,true]])transient(m,.72,u=>{
         const t=u*u;m.position.copy(start).lerp(pos,t);
         if(isTail){m.position.addScaledVector(direction,.6);m.scale.set(.7,1.25,.7);m.material.opacity=.6+u*.2;}else if(m===head)m.rotation.set(u*4,u*7,0);
@@ -1366,7 +1370,8 @@
     const edge=regionMesh(cells,0xffd873,.8);transient(edge,quiet?.4:event.kind==='guardianMerge'?1.4:.9,u=>{edge.material.opacity=(1-u)*.7;});
     if(quiet)return;
     if(event.kind==='guardianMerge'){
-      rune(pos,0xffd873);flashLight(pos,0xffe8a5);
+      rune(pos,0xffd873);flashLight(pos,0xffe8a5);spellOpening(pos,0xffd873,1.4);spawnBeam(pos,0xffe8a5);
+      if(cb.onFlash)cb.onFlash(0.25);shake=Math.max(shake,.12);
       for(let i=0;i<5;i++){const color=EL.flatMap(e=>Array(power[e.key]||0).fill(ELC[e.key]))[i],m=new THREE.Mesh(geo.octa,fxMaterial(color,.8));
         transient(m,1,u=>{const r=(1-u)*.7,a=i*Math.PI*2/5+u*4;m.position.set(pos.x+Math.cos(a)*r,pos.y+.2+u*.65,pos.z+Math.sin(a)*r);m.scale.setScalar(.12*(1-u)+.035);m.rotation.y=u*8;});}
     }else if(event.kind==='guardianMove'&&event.from){
