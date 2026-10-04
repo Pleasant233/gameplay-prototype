@@ -216,6 +216,18 @@
   /* 帮助 / 日志 / 结算弹窗 */
   dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, calc(100vw - 32px)); overflow: visible; }
   dialog::backdrop { background: rgba(10, 30, 60, .5); }
+  #dlgGuardian .dlg { display:flex;flex-direction:column;max-height:min(84dvh,calc(100dvh - 48px));padding:22px 16px 16px;overflow:hidden; }
+  #dlgGuardian h2 { flex:none;margin-right:28px;font-size:20px; }
+  #dlgGuardian .close { right:6px;top:6px;width:30px;height:30px; }
+  #guardianBody { min-height:0;overflow:auto;touch-action:pan-y; }
+  #guardianOptions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px 2px; }
+  .guardian-choice { display:flex;align-items:center;gap:7px;padding:9px;background:#fff7df;border:2px solid #d6c79f;border-radius:10px;cursor:pointer; }
+  .guardian-choice:has(input:checked) { border-color:#dca52b;background:#fff0b8; }
+  .guardian-choice input { width:20px;height:20px;accent-color:#dca52b;flex:none; }
+  .guardian-choice small { display:block;color:var(--muted);font-size:10px; }
+  #guardianPreview { background:#efe6c8;border-radius:10px;padding:10px;margin:6px 0;line-height:1.7; }
+  #btnMergeGuardian { flex:none;margin-top:10px; }
+  @media(max-width:360px){#guardianOptions{grid-template-columns:1fr;}}
   dialog[open] .panel { animation: dlg .45s cubic-bezier(.3,1.6,.5,1); }
   @keyframes dlg { from { transform: scale(.5) translateY(40px); opacity: 0; } }
   .dlg { position: relative; padding: 26px 22px 20px; color: var(--ink2); }
@@ -285,7 +297,7 @@
   #stageHud { position:fixed;top:calc(57px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:12px;max-width:calc(100vw - 16px);font-size:11px;padding:4px 12px;border-radius:16px;background:rgba(28,47,64,.6);white-space:nowrap;pointer-events:none; }
   #achievementToast { position:fixed;top:calc(92px + var(--safe-t));left:50%;transform:translate(-50%,-16px);z-index:18;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 24px); }
   #achievementToast.show { opacity:1;transform:translate(-50%,0); }
-  #dlgAchievements,#dlgShield { width:min(440px,calc(100vw - 32px)); }
+  #dlgAchievements,#dlgShield,#dlgGuardian { width:min(440px,calc(100vw - 32px)); }
   #dlgShield .dlg { max-height:84dvh;overflow:hidden;padding:22px 16px 16px;display:flex;flex-direction:column; }
   #shieldBody { overflow:auto;min-height:0;overscroll-behavior:contain; }
   #dlgShield .close { right:6px;top:6px; }
@@ -386,7 +398,8 @@
   <p>④ 同类连片提高属性上限；灵力每达到 500 的倍数增加 2 点行动，上限 9。免费升级保留现有属性。</p>
   <p>⑤ 每 10 轮陨石雨使约三分之一地块的某元素−3。用普通结晶调配盾，选地块部署；盾的防护总量在覆盖区共享。</p>
   <p>⑥ 负属性孕育癌元，癌元移动会感染原地元素灵，每 3 轮吸收属性并产逆结晶。净化或焚尽可清除。</p>
-  <p>⑦ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新开始新对局。</p>
+  <p>⑦ 同一地块选择 5 个任意元素兽免费合成守护灵。每轮结束时，按合成配比提升自身及已放置四邻的属性。守护灵不会自动移动；先放置本轮地块后，可耗 1 行动点移至四邻已放置地块，同轮可多次移动。</p>
+  <p>⑧ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新开始新对局。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
   手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
   <p class="muted" id="scoreDetail"></p>
@@ -430,6 +443,14 @@
   <button class="btn green" id="btnCraftShield">制造元素盾</button>
 </div></dialog>
 <div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
+<dialog id="dlgGuardian"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭守护灵合成">✕</button>
+  <h2>✦ 唤醒守护灵</h2><div id="guardianBody">
+    <p class="muted">选择本格 5 个元素兽，合成不消耗行动点。</p>
+    <div id="guardianOptions"></div><div id="guardianPreview" aria-live="polite"></div>
+    <p class="muted" style="font-size:11px">所选元素兽会被消耗，守护灵不单独计分；每轮滋养效果受连片属性上限约束。</p>
+  </div><button class="btn gold" id="btnMergeGuardian">免费合成</button>
+</div></dialog>
 
 <script src="lib/three.min.js"></script>
 <script src="data.js"></script>
@@ -443,6 +464,9 @@
 <script>
 const D = GameData, G = Game;
 const EL = D.ELEMENTS;
+const guardianText = power => EL.filter(e=>power[e.key]).map(e=>`${e.name} +${power[e.key]}`).join(' · ');
+const guardianName = power => EL.filter(e=>power[e.key]).map(e=>e.name).join('')+'守护灵';
+let guardianCell=null,guardianChoice=new Set();
 let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, landscapeTimer = 0, offersKey = '';   // mode: {kind:'place'|'cast'|'crystal'|'moveSpirit'|'moveAnimal'|'shelter', ...}
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -509,6 +533,7 @@ function start(seed) {
   $('landscapeNotice').classList.remove('show');
   clearTimeout(landscapeTimer);
   mode = null; selected = null; hint('');
+  guardianCell=null;guardianChoice.clear();$('dlgGuardian').close();
   lastScore = G.score(S).total; lastRound = 1; offersKey = '';
   render();
   banner('第 1 轮', '放下地块，唤醒灵地');
@@ -552,6 +577,7 @@ function fxOf(a) {
     case 'place': return ['place', a.cell];
     case 'cast': return [a.magic, a.cell];
     case 'merge': return ['merge', a.cell, a.el];
+    case 'mergeGuardian': case 'moveGuardian': return null; // Dedicated, composition-aware effects.
     case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
     case 'upgrade': return ['upgrade',a.cell];
     case 'pour': return ['spring',a.cell];
@@ -641,6 +667,8 @@ function renderDetail() {
   const shield=S.shields.filter(sh=>sh.cells.includes(selected));
   if(shield.length)h+=row('🛡 元素盾',`<span class="muted">${shield.map(sh=>EL.filter(e=>sh.defense[e.key]).map(e=>e.name+sh.defense[e.key]).join(' ')).join(' / ')} · 共享</span>`);
   for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, `<button class="btn sm" data-a="moveBeast" data-id="${b.id}">移动</button><span class="muted">每 2 轮产大结晶</span>`);
+  if(t.beasts.length)h+=row(`✦ 本格元素兽 ${t.beasts.length} 个`,`<button class="btn sm gold" data-a="mergeGuardian" ${t.beasts.length<D.RULES.guardianMergeCount?'disabled':''}>选 5 兽合成守护灵</button>`);
+  for(const guardian of t.guardians||[])h+=row(`✦ ${guardianName(guardian.power)}<small class="muted" style="display:block">每轮五格 ${guardianText(guardian.power)}</small>`,`<button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${!S.placed||S.ap<1?'disabled':''} title="${!S.placed?'先放置本轮地块':'四邻已放置地块，每次消耗 1 行动点，可重复移动'}">移动 · 1行动</button>`);
   for (const p of t.plants) {
     const choppable = p.kind === 'tree' || p.kind === 'shrub';
     h += row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,
@@ -748,6 +776,7 @@ function onCell(k) {
     else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big, inverse:m.inverse });
     else if (m.kind==='deployShield') doAct({type:'deployShield',cell:k,shieldId:m.id});
     else if (m.kind==='moveBeast') {if(doAct({type:'moveBeast',from:m.from,beastId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind==='moveGuardian') {if(doAct({type:'moveGuardian',from:m.from,guardianId:m.id,to:k})){selected=k;render();}}
     else if (m.kind==='movePlant') {if(doAct({type:'movePlant',from:m.from,plantId:m.id,to:k})){selected=k;render();}}
     else if (m.kind === 'shelter') doAct({ type: 'craft', recipe: 'shelter', cell: k });
     else if (m.kind === 'moveSpirit') { if (doAct({ type: 'moveSpirit', from: m.from, spiritId: m.id, to: k })) { selected = k; render(); } }
@@ -767,6 +796,7 @@ function onHover(k, x, y) {
     const s = t.attrs.reduce((a, b) => a + b, 0);
     tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('')+`<br>连片 ×${G.cluster(S,k).length} · 上限 ${G.attrCap(S,k)}`;
     if(mode&&mode.kind==='deployShield'){const sh=S.inv.shields.find(sh=>sh.id===mode.id);if(sh)tip.innerHTML+=`<br>🛡 覆盖 ${G.region(S,k,sh.coverage).length} 格 · 点击部署`;}
+    if(mode&&mode.kind==='moveGuardian'){const g=(S.cells[mode.from].guardians||[]).find(g=>g.id===mode.id);tip.innerHTML+=G.neighbors(mode.from).includes(k)&&g?`<br>✦ 移动 · 1行动 · 轮末滋养 ${G.guardianArea(S,k).length} 格<br>${guardianText(g.power)}`:'<br>需选择四邻已放置地块';}
   } else {
     const ok = G.legalPlacements(S).includes(k);
     if(ok){const type=S.offers[mode.offer],preview={...S,cells:{...S.cells,[k]:G.makeTile(type)}},n=G.cluster(preview,k).length;tip.innerHTML=`放置 <b>${esc(G.TYPE[type].name)}</b>${n>1?`<br>连成 ${n} 格 · 上限 ${G.attrCap(preview,k)}`:''}`;}else tip.innerHTML='需与已有地块相邻';
@@ -825,6 +855,8 @@ $('detail').addEventListener('click', e => {
     case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
     case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
     case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
+    case 'mergeGuardian':openGuardian(k);break;
+    case 'moveGuardian':setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
     case 'movePlant':setMode({kind:'movePlant',from:k,id},'移植：点击相邻地块');break;
     case 'moveAnimal': setMode({ kind: 'moveAnimal', from: k, id }, '移动动物：点击相邻地块'); break;
     case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
@@ -840,10 +872,26 @@ $('detail').addEventListener('click', e => {
   }
 });
 function eventEffects(events){
+  events.filter(e=>['guardianMerge','guardianMove','guardian'].includes(e.kind)).forEach(e=>{View.guardianFX(e);if(e.kind==='guardianMerge')Sfx.guard();});
   const meteors=events.filter(e=>e.kind==='meteor');
   if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.damage<3).length} 格获护盾拦截`);}
   events.filter(e=>['purify','infection'].includes(e.kind)||(!meteors.length&&e.kind==='shield')).forEach(e=>View.fx(e.kind,e.cell,e.el));
 }
+function guardianPreview(){
+  const beasts=S.cells[guardianCell]?.beasts||[],chosen=beasts.filter(b=>guardianChoice.has(b.id));
+  const power=Object.fromEntries(EL.map(e=>[e.key,chosen.filter(b=>b.el===e.key).length]));
+  const count=chosen.length,valid=count===D.RULES.guardianMergeCount&&!S.over;
+  $('guardianOptions').querySelectorAll('input').forEach(b=>{b.checked=guardianChoice.has(+b.dataset.beast);b.disabled=!b.checked&&count>=D.RULES.guardianMergeCount;});
+  $('guardianPreview').innerHTML=`<b>已选 ${count}/5 · ${count?guardianName(power):'选择元素兽'}</b><div>${guardianText(power)||'可混合任意属性'}</div><small>每轮结束：所在地块及已放置四邻，共 ${G.guardianArea(S,guardianCell).length} 格 · 不自动移动</small>`;
+  $('btnMergeGuardian').disabled=!valid;$('btnMergeGuardian').textContent=valid?'✦ 免费合成守护灵':`还需选择 ${D.RULES.guardianMergeCount-count} 个`;
+}
+function openGuardian(k){
+  guardianCell=k;const beasts=S.cells[k]?.beasts||[];guardianChoice=new Set(beasts.slice(0,D.RULES.guardianMergeCount).map(b=>b.id));
+  $('guardianOptions').innerHTML=beasts.map((b,i)=>`<label class="guardian-choice"><input type="checkbox" data-beast="${b.id}" aria-label="选择${elName(b.el)}元素兽 ${i+1}"><span><i class="dot" style="background:${ELC[b.el]}"></i>${elName(b.el)}元素兽<small>本格第 ${i+1} 个</small></span></label>`).join('');
+  guardianPreview();$('dlgGuardian').showModal();$('guardianBody').scrollTop=0;Sfx.pick();
+}
+$('guardianOptions').onchange=e=>{if(!e.target.dataset.beast)return;const id=+e.target.dataset.beast;e.target.checked?guardianChoice.add(id):guardianChoice.delete(id);guardianPreview();Sfx.tap();};
+$('btnMergeGuardian').onclick=()=>{if(doAct({type:'mergeGuardian',cell:guardianCell,beastIds:[...guardianChoice]})){$('dlgGuardian').close();guardianChoice.clear();}};
 function renderProgress() {
   const values=G.metrics(S), fresh=achievementBook.observe(S,values), archive=achievementBook.snapshot();
   for(const id of fresh)achievementQueue.push(D.ACHIEVEMENTS.find(a=>a.id===id));
