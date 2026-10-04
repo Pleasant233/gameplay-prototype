@@ -36,4 +36,13 @@
 
 合成/滋养截图在反馈途中采样，包含合成消耗五兽产生的 −15 单位分飞行与 +3/+2 属性收益；数字全部到达后的 HUD 与规则分数一致，由 UI 断言验证。
 
-截图是构造的测试场景，手机为浏览器模拟，不代表实体设备性能。本次版本为本地更新，正式环境仍为 0.2.2。
+截图是构造的测试场景，手机为浏览器模拟，不代表实体设备性能。
+
+## 正式发布
+
+按用户“别检查了，推到正式环境吧”的要求，停止剩余检查并使用 Vercel CLI 发布 0.3.0。源码提交 `9a847ed`，含守护灵和 0.2.3 地块闪烁修复。CLI 返回 `READY`、`target: production` 并绑定正式域名；没有再运行正式站点测试。
+
+- 正式站点：https://element-habitat.vercel.app
+- 部署地址：https://element-habitat-8b7jxt573-pleasant234.vercel.app
+- 部署 ID：`dpl_GaMvb5agdKLHYAGbjVbBKbc4GB4s`
+- 项目：`pleasant234/element-habitat`
