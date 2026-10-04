@@ -20,7 +20,7 @@
 | Bloom 与光圈景深参考《林间小世界》 | `postfx.js` 柔和泛光、真实深度虚化、聚焦目标跟随、轻暗角；菜单开关保存偏好，DOM UI 保持清晰 |
 | 手机与降级体验 | 手机降低渲染质量；无深度纹理时保留 Bloom；减少动态效果偏好不生成飞行节点 |
 | 连片越多，地貌模型越丰富，扩张更有爽感 | `landscape.js` 四向地貌区域与共享山脊；整片湖岸、跨边界树群、3／6／10 格细节升阶与成长反馈；验证见 [连片地貌说明](CONNECTED-LANDSCAPE.md) |
-| GitHub 与正式发布 | 公开仓库 `Pleasant233/gameplay-prototype`，正式站点 `https://gameplay-prototype.vercel.app` |
+| GitHub 与正式发布 | 公开仓库 `Pleasant233/gameplay-prototype`；Vercel 项目 `element-habitat` 已关联 main，正式站点 `https://element-habitat.vercel.app` |
 
 ## 旧计划与当前实现的区别
 
@@ -29,6 +29,8 @@
 地形、选择和特效主要在 `view.js`，收益飞行拆成独立 `tokens.js`，后处理拆成 `postfx.js`。浏览器测试的内部探针只在测试请求中注入。
 
 连片区域分析、外围距离场及山脊采样位于 `landscape.js`，只影响视觉。装饰数量与游戏里的植物、生物、资源库存分开；连片提示不代表增加规则奖励。
+
+2026-10-04，连片景观已通过 Git 自动部署发布到 `element-habitat.vercel.app`。旧的 `gameplay-prototype.vercel.app` 不属于当前关联项目，仍保留旧版本；后续 main 的发布与验证使用新正式地址。历史发布记录保留原地址。
 
 ## 验证材料
 

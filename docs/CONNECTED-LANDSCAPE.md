@@ -22,7 +22,7 @@
 
 `npm test` 检查规则、共享地表以及连片拓扑、桥接、移除、重复同步、山脉／湖泊／溪流的实际模型接缝和细节增长。`npm run test:landscape` 运行浏览器检查，并生成同一地图的修改前后截图、桌面与手机成长过程及满图森林截图。原有 UI、结晶和氛围专项继续使用 `npm run test:browser`。
 
-软件 WebGL 和手机模拟只验证功能、渲染与资源回收；实际设备的流畅度仍需实机观察。未发布到正式站点。
+软件 WebGL 和手机模拟只验证功能、渲染与资源回收；实际设备的流畅度仍需实机观察。正式发布信息见下文。
 
 ## 画面对比
 
@@ -45,3 +45,19 @@
 - 同一混合地图连续重建三次，桌面几何数为 158／158／158，手机为 148／148／148，没有递增。
 
 详细检查和测量数据保存在 [本次验证报告](connected-landscape-validation.json)。浏览器截图在真实 WebGL 帧完成后暂缓绘制，以便软件 GPU 排空截图队列；此控制只注入测试请求，正式代码没有调试接口。
+
+## 正式发布
+
+2026-10-04，用户将 Vercel 项目 `element-habitat` 与 `Pleasant233/gameplay-prototype` 关联后，main 的发布触发提交 `390364a` 自动部署成功。该提交与实现提交 `9bf016a` 使用完全相同的源文件树。
+
+- 正式地址：[element-habitat.vercel.app](https://element-habitat.vercel.app)。
+- 部署 `dpl_8GSJKLVL62cXefBB2vzLKHK8heuT`：`READY`，目标 `production`，来源 `git`，分支 `main`；构建约 2.3 秒。
+- 正式域名的页面、规则、数据、连片规划、视图、后处理、收益飞行、Three.js 和应用清单共 9 个核心文件均返回 HTTP 200，并逐字节匹配 main。见 [线上文件报告](connected-production-files.json)。
+- 在正式站点的原始应用中完成桌面／手机 15 项检查：真实选择卡片与地图放置、行动点、收益结算、可见的连片详情、HUD 布局、氛围开关及重载偏好恢复；没有注入或替换运行脚本，无 JavaScript、Shader 或 WebGL 错误。见 [线上浏览器报告](connected-production-browser.json)。
+- 当前项目未配置 Drains。以上错误检查来自浏览器运行验证，不代表持续监控或实机性能测试。
+
+旧地址 `gameplay-prototype.vercel.app` 不属于当前关联项目，仍保留旧版本；本次上线使用上面的正式地址。历史报告中的旧地址保持原记录。
+
+| 线上桌面操作 | 线上手机操作 |
+| --- | --- |
+| ![线上桌面](screenshots/connected-production-desktop.png) | ![线上手机](screenshots/connected-production-phone.png) |

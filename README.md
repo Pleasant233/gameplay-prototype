@@ -2,7 +2,7 @@
 
 五行地块回合制网页原型。使用 Three.js 绘制地图，规则引擎可独立在 Node.js 运行，无需构建或联网加载依赖。
 
-[打开正式版](https://gameplay-prototype.vercel.app) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
+[打开正式版](https://element-habitat.vercel.app) · [连片景观与上线验证](docs/CONNECTED-LANDSCAPE.md) · [验证记录与手机截图](docs/VALIDATION.md) · [Codex 云端开发配置](docs/CODEX-CLOUD.md)
 
 ![连片森林、山脉与湖泊（固定测试地图）](docs/screenshots/connected-desktop.png)
 

@@ -1,0 +1,22 @@
+{
+  "url": "https://element-habitat.vercel.app",
+  "commit": "390364ac2643e5db5ecf6ec108767ba29b80e617",
+  "checks": [
+    "desktop: production WebGL and connected-landscape module initialize",
+    "desktop: real card and board input place a tile with correct AP",
+    "desktop: score and space counters settle to authoritative state",
+    "desktop: real tile selection exposes visible connected-region details",
+    "desktop: HUD and controls fit viewport",
+    "desktop: real atmosphere switch persists its preference",
+    "desktop: reload restores saved atmosphere preference",
+    "phone: production WebGL and connected-landscape module initialize",
+    "phone: real card and board input place a tile with correct AP",
+    "phone: score and space counters settle to authoritative state",
+    "phone: real tile selection exposes visible connected-region details",
+    "phone: HUD and controls fit viewport",
+    "phone: real atmosphere switch persists its preference",
+    "phone: reload restores saved atmosphere preference",
+    "No production JavaScript, shader or WebGL errors"
+  ],
+  "errors": []
+}

@@ -1,0 +1,62 @@
+{
+  "url": "https://element-habitat.vercel.app",
+  "deployment": "dpl_8GSJKLVL62cXefBB2vzLKHK8heuT",
+  "commit": "390364ac2643e5db5ecf6ec108767ba29b80e617",
+  "files": [
+    {
+      "file": "index.html",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "d59b1140a9b06970274ec6891f387a3c277a4699a9afebe79cb895b9ced8e289"
+    },
+    {
+      "file": "data.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "613dfc71ad68ad50ec6e9ef92ed482c241afafa9b8efb296b63db11e212f526a"
+    },
+    {
+      "file": "game.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "670f72c61363698b2b7f067ef659f60f6b6608a1d23edd3a12064db775598acf"
+    },
+    {
+      "file": "landscape.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "206007626009c2fadf02e7b13f922b480e7e9d56e754be53755f46f4d91a1eca"
+    },
+    {
+      "file": "view.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "624b4f6900768a48201803e1f7a531a4dd8472e09e7e9073f01311f8b1d077d7"
+    },
+    {
+      "file": "postfx.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "163723151fa3e9e9cb3b0fcbf49af14a6a882e4b81b469ba2ef61832bcceba15"
+    },
+    {
+      "file": "tokens.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "b656e2ce681549a83382d959a0324b947edd9ae7319f9b41badf722cd728de8a"
+    },
+    {
+      "file": "lib/three.min.js",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2"
+    },
+    {
+      "file": "manifest.webmanifest",
+      "status": 200,
+      "matchesLocal": true,
+      "sha256": "2d1833d06202fafc0cb0d991b1d9a18f31ce8c49f8ab2cce47095ed58b9da5cb"
+    }
+  ],
+  "passed": true
+}
