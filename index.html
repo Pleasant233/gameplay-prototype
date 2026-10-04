@@ -135,6 +135,12 @@
 
   .mg small { white-space:nowrap; }
   .mg.locked::after { content:"🔒";position:absolute;right:-3px;top:-6px;font-size:11px; }
+  /* Unlock progress: a thin bar filling as the matching global attribute approaches 20. */
+  .mg .prog { position:absolute;left:6px;right:6px;bottom:4px;height:4px;border-radius:2px;background:rgba(0,0,0,.28);overflow:hidden;pointer-events:none; }
+  .mg .prog i { display:block;height:100%;width:calc(var(--p)*1%);background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(255,255,255,.8); }
+  .mg.locked { filter:saturate(.4) brightness(1.04); } .mg.locked .gl, .mg.locked small { opacity:.7; }
+  .mg.ready { animation: ready 1.6s ease-in-out infinite; }
+  @keyframes ready { 50% { box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 4px 0 var(--d), 0 0 14px 2px color-mix(in srgb, var(--c) 70%, #fff); } }
   #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
   #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
   #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
@@ -642,14 +648,17 @@ function renderOffers() {
     return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
       <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
       <span class="iso">${isoTile(c[0], '#8a6440')}</span><span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
-  }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
+  }).join('') || '<span class="muted" style="padding:20px 8px;min-width:250px;text-align:center">已放置 · 可以施法或交互</span>';
 }
 
 function renderMagics() {
   $('magics').innerHTML = D.MAGICS.map(m => {
     const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
     const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
-    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+    const ready=!used&&!locked&&S.placed&&S.ap>0&&!S.over;
+    const have=m.unlock?Math.max(0,G.globalAttrs(S)[EL.findIndex(e=>e.key===m.unlock)]):0,pct=Math.min(100,Math.round(have/D.RULES.magicUnlock*100));
+    const prog=locked&&m.unlock?`<span class="prog" style="--p:${pct}"><i></i></span>`:'';
+    return `<button class="btn mg toon ${on} ${ready&&!on?'ready':''} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc + (locked&&m.unlock?` · 全图${EL.find(e=>e.key===m.unlock).name} ${Math.min(have,D.RULES.magicUnlock)}/${D.RULES.magicUnlock} 解锁`:''))}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small>${prog}</button>`;
   }).join('');
 }
 
