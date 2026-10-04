@@ -559,9 +559,22 @@
       batches.get(key).matrices.push(new THREE.Matrix4().multiplyMatrices(inverse,o.matrixWorld));
     });
     group.clear();
+    const leafy=new Set([geo.foliage,geo.ecologyFoliage,geo.coneL]),at=new THREE.Vector3(),tint=new THREE.Color();
     for(const b of batches.values()){
       const mesh=new THREE.InstancedMesh(b.geometry,b.material,b.matrices.length);
-      b.matrices.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
+      b.matrices.forEach((matrix,i)=>{
+        mesh.setMatrixAt(i,matrix);
+        if(!leafy.has(b.geometry))return;
+        // Canopy variation in world space: broad sunlit/shaded patches plus per-crown jitter,
+        // so a large forest reads as layered woodland rather than one flat green.
+        at.setFromMatrixPosition(matrix).applyMatrix4(group.matrixWorld);
+        const patch=Math.sin(at.x*0.55+1.3)*Math.cos(at.z*0.47-0.4)*0.5+0.5;
+        const jitter=Math.abs(Math.sin(at.x*12.9898+at.z*78.233)*43758.5453)%1;
+        const light=0.74+patch*0.2+jitter*0.1;
+        tint.setRGB(light*(1.02+patch*0.05),light,light*(0.94-patch*0.06));
+        mesh.setColorAt(i,tint);
+      });
+      if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
       mesh.castShadow=b.castShadow&&b.geometry!==geo.trunk;mesh.receiveShadow=true;mesh.userData.landscape=true;group.add(mesh);
     }
   }
