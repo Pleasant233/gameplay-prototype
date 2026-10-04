@@ -344,6 +344,21 @@
     mats.sel = new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
     mats.tgt = new THREE.MeshBasicMaterial({ color: 0x5ad0ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
     mats.water = new THREE.MeshStandardMaterial({ color: 0x2fb0ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.88, emissive: 0x0a4a8a, emissiveIntensity: 0.25 });
+    // Stylised caustic shimmer in world space so connected lakes share one continuous pattern.
+    mats.waterTime={value:0};
+    mats.water.onBeforeCompile=shader=>{
+      shader.uniforms.waterTime=mats.waterTime;
+      shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWaterWorld;')
+        .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+      shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float waterTime;varying vec3 vWaterWorld;')
+        .replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+          vec2 wq=vWaterWorld.xz*2.3;
+          float c1=sin(wq.x*1.7+waterTime*1.1+sin(wq.y*1.3+waterTime*.7)*1.4);
+          float c2=sin(wq.y*1.9-waterTime*.9+sin(wq.x*1.1-waterTime*.6)*1.5);
+          float caustic=pow(clamp(1.0-abs(c1+c2)*.5,0.0,1.0),6.0);
+          totalEmissiveRadiance+=vec3(.55,.82,1.0)*caustic*.32;`);
+    };
+    mats.water.customProgramCacheKey=()=>'cartoon-water-caustic';
     mats.dirtyW = new THREE.MeshStandardMaterial({ color: 0x6a8a3a, roughness: 0.3, transparent: true, opacity: 0.92 });
     mats.lava = new THREE.MeshStandardMaterial({ color: 0xff6a10, roughness: 0.4, emissive: 0xff4a00, emissiveIntensity: 1.2 });
     mats.shadow = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
@@ -1639,6 +1654,7 @@
     const lv = 1 + Math.sin(time * 3.2) * 0.35;
     lavas.forEach(m => { m.material.emissiveIntensity = lv; });
     mats.water.emissiveIntensity = 0.22 + Math.sin(time * 2) * 0.08;
+    mats.waterTime.value = reducedMotion() ? 0 : time;
     bobs.forEach(b => {
       const m = b.m;
       if(b.guardian&&reduced()){m.position.y=b.y;return;}
