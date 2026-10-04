@@ -340,7 +340,7 @@
     mats.padLegal = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors:true, map:mats.landMap, roughness: 0.9, emissive: 0x67813b, emissiveIntensity: 0.2 });
     mats.hill = new THREE.MeshStandardMaterial({ color: 0x5cb440, roughness: 1, flatShading: true });
     mats.hill2 = new THREE.MeshStandardMaterial({ color: 0x4ea838, roughness: 1, flatShading: true });
-    mats.ghost = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false, roughness: 0.5, emissive: 0x88ff66, emissiveIntensity: 0.4 });
+    mats.ghost = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.72, depthWrite: false, roughness: 0.5, emissive: 0x88ff66, emissiveIntensity: 0.4 });
     mats.sel = new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false });
     mats.tgt = new THREE.MeshBasicMaterial({ color: 0x5ad0ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
     mats.water = new THREE.MeshStandardMaterial({ color: 0x2fb0ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.88, emissive: 0x0a4a8a, emissiveIntensity: 0.25 });
@@ -1740,7 +1740,10 @@
     if(ghost) {
       const show=modeRef&&modeRef.kind==='place'&&hoverK&&legal.has(hoverK); ghost.visible=!!show;
       if(show) {
-        const p=wp(hoverK);ghost.position.set(p.x,0.09,p.z);
+        // Preview the offered terrain colour and let it hover, so the player sees what lands where.
+        const offer=stateRef.offers[modeRef.offer],look=offer&&LOOK[G.TYPE[offer].look];
+        if(look)mats.ghost.color.setHex(look.top);mats.ghost.emissive.setHex(look?look.top:0x88ff66);mats.ghost.emissiveIntensity=0.35;
+        const p=wp(hoverK);ghost.position.set(p.x,0.09+(reducedMotion()?0:0.05+Math.sin(time*4)*0.025),p.z);
         if(!ghost.userData.frame) {ghost.userData.frame=dashedFrame(0xffffff);scene.add(ghost.userData.frame);}
         const f=ghost.userData.frame;f.visible=true;f.position.set(p.x,PAD_H+0.14,p.z);f.userData.band.material.uniforms.time.value=time;
       }
