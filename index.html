@@ -103,7 +103,13 @@
   @keyframes deal { from { transform: translateY(80px) rotate(12deg) scale(.6); opacity: 0; } }
   .card .art { position: absolute; inset: 0; }
   .card .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%, rgba(0,0,0,.35)); }
-  .card .emb { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); }
+  .card .emb { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 30px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); z-index: 1; }
+  .card .iso { position: absolute; left: 50%; top: 26px; width: 74px; transform: translateX(-50%); filter: drop-shadow(0 4px 3px rgba(0,0,0,.28)); }
+  .card .iso svg { display: block; width: 100%; height: auto; }
+  .card::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); transform: translateX(-120%); }
+  .card.on::after { animation: shine 1.8s ease-in-out infinite; }
+  @keyframes shine { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
   .card .nm { position: relative; font-size: 14px; font-weight: 900; text-align: center; padding: 2px 0; }
   .card .gems { position: relative; display: flex; justify-content: center; gap: 2px; padding: 3px 4px 6px; background: rgba(0,0,0,.3); }
   .gem { min-width: 15px; height: 17px; border-radius: 5px; font-size: 11px; line-height: 15px; text-align: center; font-weight: 900;
@@ -129,6 +135,12 @@
 
   .mg small { white-space:nowrap; }
   .mg.locked::after { content:"🔒";position:absolute;right:-3px;top:-6px;font-size:11px; }
+  /* Unlock progress: a thin bar filling as the matching global attribute approaches 20. */
+  .mg .prog { position:absolute;left:6px;right:6px;bottom:4px;height:4px;border-radius:2px;background:rgba(0,0,0,.28);overflow:hidden;pointer-events:none; }
+  .mg .prog i { display:block;height:100%;width:calc(var(--p)*1%);background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(255,255,255,.8); }
+  .mg.locked { filter:saturate(.4) brightness(1.04); } .mg.locked .gl, .mg.locked small { opacity:.7; }
+  .mg.ready { animation: ready 1.6s ease-in-out infinite; }
+  @keyframes ready { 50% { box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 4px 0 var(--d), 0 0 14px 2px color-mix(in srgb, var(--c) 70%, #fff); } }
   #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
   #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
   #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
@@ -264,7 +276,7 @@
     #dock .row2 { display: flex; gap: 10px; align-items: flex-end; justify-content: space-between; }
     .tray { padding: 16px 8px 8px; }
     #offers { gap: 6px; justify-content: center; }
-    .card { flex: 1; width: auto; max-width: 110px; height: 96px; } .card .emb { font-size: 26px; top: 8px; }
+    .card { flex: 1; width: auto; max-width: 110px; height: 96px; } .card .emb { font-size: 22px; top: 4px; } .card .iso { width: 56px; top: 18px; }
     #magics { gap: 5px; } .mg { width: auto; flex: 1; height: 56px; } .mg .gl { font-size: 20px; }
     #magicTray { flex: 1; }
 
@@ -276,7 +288,7 @@
   }
   @media (min-width: 761px) { #dock .row2 { display: contents; } }
   @media (max-height: 520px) and (orientation: landscape) {
-    .card { height: 84px; width: 80px; } .card .emb { font-size: 22px; top: 6px; }
+    .card { height: 84px; width: 80px; } .card .emb { font-size: 20px; top: 4px; } .card .iso { width: 50px; top: 16px; }
     .mg { height: 52px; width: 50px; }
     #detail { max-height: calc(100vh - 80px); }
   }
@@ -337,10 +349,13 @@
 </style>
 <style>
   #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
-  .token { position:absolute; left:0; top:0; color:var(--token-color); font-size:25px; will-change:transform;
-    filter:drop-shadow(0 0 7px var(--token-color)); white-space:nowrap; }
-  .token i { font-style:normal; }
-  .token small { font-size:12px; color:#fff; margin-left:2px; }
+  /* Resource tokens read as glossy coins: element-coloured disc, white rim, soft glow. */
+  .token { position:absolute; left:0; top:0; display:flex; align-items:center; will-change:transform; white-space:nowrap;
+    filter:drop-shadow(0 0 6px var(--token-color)) drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+  .token i { font-style:normal; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; font-size:15px; color:#fff;
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.85) 0 12%, var(--token-color) 45%, color-mix(in srgb, var(--token-color) 65%, #000) 100%);
+    border:2px solid #fff; box-shadow:inset 0 -2px 0 rgba(0,0,0,.18); }
+  .token small { font-size:12px; color:#fff; margin-left:3px; font-weight:900; }
   #bagCount { position:absolute; right:-8px; top:-8px; min-width:21px; padding:2px 4px; border-radius:12px;
     background:#ec5845; color:#fff; font-size:11px; border:2px solid #fff; line-height:14px; }
   #btnBag { overflow:visible !important; }
@@ -488,6 +503,14 @@ const CARD = {
   fertile: ['#8ac048', '#4a7a20', '🌾'], creek: ['#6ad0a0', '#2a8a6a', '🏕'],
 };
 
+// Isometric land block for offer cards: lit top, two shaded soil faces.
+function isoTile(top, side) {
+  return `<svg viewBox="0 0 100 70" aria-hidden="true"><polygon points="50,6 94,28 50,50 6,28" fill="${top}"/>
+    <polygon points="6,28 50,50 50,66 6,44" fill="${side}" opacity=".95"/><polygon points="50,50 94,28 94,44 50,66" fill="${side}" opacity=".75"/>
+    <polygon points="50,6 94,28 50,50 6,28" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+    <polyline points="6,28 50,50 94,28" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="1.2"/></svg>`;
+}
+
 // ---------- 音效（WebAudio 合成，无外部文件） ----------
 const Sfx = (() => {
   let ctx = null, on = true;
@@ -627,15 +650,18 @@ function renderOffers() {
     const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
     return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
       <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
-      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
-  }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
+      <span class="iso">${isoTile(c[0], '#8a6440')}</span><span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+  }).join('') || '<span class="muted" style="padding:20px 8px;min-width:250px;text-align:center">已放置 · 可以施法或交互</span>';
 }
 
 function renderMagics() {
   $('magics').innerHTML = D.MAGICS.map(m => {
     const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
     const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
-    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+    const ready=!used&&!locked&&S.placed&&S.ap>0&&!S.over;
+    const have=m.unlock?Math.max(0,G.globalAttrs(S)[EL.findIndex(e=>e.key===m.unlock)]):0,pct=Math.min(100,Math.round(have/D.RULES.magicUnlock*100));
+    const prog=locked&&m.unlock?`<span class="prog" style="--p:${pct}"><i></i></span>`:'';
+    return `<button class="btn mg toon ${on} ${ready&&!on?'ready':''} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc + (locked&&m.unlock?` · 全图${EL.find(e=>e.key===m.unlock).name} ${Math.min(have,D.RULES.magicUnlock)}/${D.RULES.magicUnlock} 解锁`:''))}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small>${prog}</button>`;
   }).join('');
 }
 
