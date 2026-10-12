@@ -34,6 +34,8 @@
     { id: 'creek_plain',    name: '溪原',     attrs: [0, 3, 1, 0, 1],  look: 'creek' },
   ];
 
+  const TERRAIN = typeof module !== "undefined" && module.exports ? require("./terrain.js") : root.TerrainCatalog;
+  TILE_TYPES.push(...TERRAIN.nodes);
   const MAGICS = [
     { id: 'purify', name: '净化', glyph: '✦', unlock: null, desc: '选中及四邻地块负属性 +5，清除癌元' },
     { id: 'mine',   name: '生矿', glyph: '◈', unlock: 'metal', desc: '生成矿脉，金 +5；全图金≥20解锁' },
@@ -68,12 +70,7 @@
     iron:   { name: '铁矿', weight: 4 },
   };
 
-  // 配方：cost 从背包扣除；target=true 表示需要选一个地块
-  const RECIPES = [
-    { id: 'bucket',  name: '桶',     cost: { wood: 1 }, desc: '舀水、倒水免费；倒水 +1 并生成小湖，沙漠变绿洲' },
-    { id: 'charm',   name: '净化符', cost: { silver: 1, gold: 1 }, desc: '对地块释放一次净化，不占魔法' },
-    { id: 'shelter', name: '庇护所', cost: { wood: 4, iron: 2 }, target: true, desc: '元素灵容量 +4（每块一次）' },
-  ];
+  const RECIPES = []; // 元素盾使用独立配比，普通物品配方已移除。
 
   const RULES = {
     apPerRound: 3,
@@ -87,7 +84,7 @@
     mergeCount: 3,           // 3 个同元素灵合成元素兽
     guardianMergeCount: 5,   // 同一地块任意 5 个元素兽，保留配比
     maxPlants: 5,
-    maxAnimals: 3,
+    maxAnimals: Infinity,
     maxOres: 2,
     spawnChance: 1 / 3,
     meteorEvery: 10,
@@ -98,8 +95,8 @@
     elemAnimalEvery: 3,
   };
 
-  // 用户确认第七节：属性和 + 元素兽×3 + 元素动物×1 + 植物×1；愿景奖励另列
-  const SCORE = { spirit: 0, beast: 3, elemAnimal: 1, plant: 1 };
+  // 用户确认第七节：属性和 + 元素兽×3 + 动物不计分 + 植物×1；愿景奖励另列
+  const SCORE = { spirit: 0, beast: 3, elemAnimal: 0, plant: 1 };
 
   const FARM_TYPES = ['barren', 'grassland', 'wetland', 'valley', 'fertile', 'creek_plain'];
   const ORE_TYPES = ['rockland', 'rock_mount', 'mine'];
@@ -110,21 +107,22 @@
     { id: 'cluster', name: '连绵生境', icon: '🏞', desc: '连接 5 块同种地形', metric: 'cluster', target: 5 },
     { id: 'upgrade', name: '大地蜕变', icon: '⬆', desc: '升级一块地形', metric: 'upgrades', target: 1 },
     { id: 'beast', name: '贤者的伙伴', icon: '◆', desc: '合成一只元素兽', metric: 'merges', target: 1 },
-    { id: 'animal', name: '元素共生', icon: '🐾', desc: '培养一只元素动物', metric: 'feeds', target: 1 },
-    { id: 'shelter', name: '温暖归处', icon: '🏠', desc: '搭建一座庇护所', metric: 'shelters', target: 1 },
+    { id: 'animal', name: '元素共生', icon: '🐾', desc: '见证一只动物自动元素化', metric: 'feeds', target: 1 },
+    { id: 'shelter', name: '灵性生境', icon: '🐾', desc: '见证3只动物元素化', metric: 'feeds', target: 3 },
     { id: 'shield', name: '星雨守护者', icon: '🛡', desc: '使用元素盾抵挡一次陨石伤害', metric: 'blocked', target: 1 },
     { id: 'stage', name: '灵脉苏醒', icon: '✨', desc: '灵力达到 500', metric: 'peakScore', target: 500 },
     { id: 'variety', name: '五行归位', icon: '🌈', desc: '拥有五种元素兽', metric: 'beastElements', target: 5 },
     { id: 'world', name: '生境重建', icon: '🌍', desc: '铺满 85 格地图', metric: 'tiles', target: 85 },
     { id: 'vision', name: '愿景成真', icon: '⭐', desc: '完成本局的全部愿景', metric: 'visions', target: 2 },
   ];
+  ACHIEVEMENTS.push({id:'guardian',name:'五兽同誓',icon:'✦',desc:'合成首个守护灵',metric:'guardians',target:1});
   const VISIONS = [
     { id: 'wake_beast', name: '唤醒伙伴', desc: '合成一只元素兽', metric: 'merges', target: 1, bonus: 30 },
     { id: 'clean_world', name: '澄澈大地', desc: '施放净化后使全图无负值且无癌元', metric: 'clean', target: 1, bonus: 30 },
     { id: 'green_world', name: '绿意归巢', desc: '同时拥有 20 株植物', metric: 'plants', target: 20, bonus: 30 },
-    { id: 'settlement', name: '安居之所', desc: '搭建一座庇护所', metric: 'shelters', target: 1, bonus: 30 },
+    { id: 'settlement', name: '灵性共生', desc: '见证3只动物元素化', metric: 'feeds', target: 3, bonus: 30 },
   ];
-  const Data = { FARM_TYPES, ORE_TYPES, WATER_TYPES, ACHIEVEMENTS, VISIONS, ELEMENTS, TILE_TYPES, MAGICS, PLANTS, ANIMALS, ORES, RECIPES, RULES, SCORE, IDX: { M, W, A, F, E } };
+  const Data = { TERRAIN, FARM_TYPES, ORE_TYPES, WATER_TYPES, ACHIEVEMENTS, VISIONS, ELEMENTS, TILE_TYPES, MAGICS, PLANTS, ANIMALS, ORES, RECIPES, RULES, SCORE, IDX: { M, W, A, F, E } };
   if (typeof module !== 'undefined' && module.exports) module.exports = Data;
   else root.GameData = Data;
 })(this);

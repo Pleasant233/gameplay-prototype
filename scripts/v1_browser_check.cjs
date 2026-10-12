@@ -38,7 +38,8 @@ async function guardians(page,mobile,label,installClock=false){
   if(installClock)await page.clock.install();
   await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+60000));
   if(mobile)await page.setViewportSize({width:390,height:844});
-  await page.evaluate(`document.querySelectorAll('dialog[open]').forEach(d=>d.close());start(37);S.visions=[];for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}S.cells['3,3'].beasts=['wood','wood','wood','water','water','fire'].map((el,i)=>({id:1000+i,el,age:0}));S.ap=3;mode=null;selected=null;S.events=[];Tokens.reset();render();__viewTest.steady();`);
+  await page.evaluate(`document.querySelectorAll('dialog[open]').forEach(d=>d.close());document.querySelector('#scenario').value='standard';start(37);S.visions=[];for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});for(const t of Object.values(S.cells)){t.type='ruin_town';t.attrs=[0,0,0,0,0];}S.cells['3,3'].beasts=['wood','wood','wood','water','water','fire'].map((el,i)=>({id:1000+i,el,age:0}));S.ap=3;mode=null;selected=null;S.events=[];Tokens.reset();render();__viewTest.steady();`);
+  await page.evaluate(`document.querySelector('#detail').getAnimations().forEach(a=>a.finish());View.resize();__viewTest.steady();`);
   await pointClick(page,'3,3',mobile);await page.locator('[data-a="mergeGuardian"]').click();
   check(label+' guardian composer selects exactly five with wood3 water2',await page.evaluate(`document.querySelector('#dlgGuardian').open&&guardianChoice.size===5&&document.querySelector('#guardianPreview').textContent.includes('木 +3 · 水 +2')&&!document.querySelector('#btnMergeGuardian').disabled`));
   check(label+' sixth candidate disabled until another is deselected',await page.locator('[data-beast="1005"]').isDisabled());
@@ -184,13 +185,14 @@ async function guardians(page,mobile,label,installClock=false){
       await page.evaluate(`for(let i=0;i<12;i++){G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});G.endRound(S);}S.cells['3,3'].vein=true;S.cells['3,3'].farm=true;S.cells['3,3'].pond=true;S.cells['3,3'].shelter=true;S.cells['3,3'].plants=[{id:700,kind:'tree'},{id:701,kind:'crop'}];S.cells['2,3'].cancers=[{id:702,el:'wood',age:0}];mode=null;selected=null;Tokens.reset();render();`);
       await page.waitForTimeout(1300); await shot(page, `v1-${label}-habitat.png`);
       await page.locator('#btnMenu').click(); await page.locator('#btnAchievements').click();
-      check(label + ' achievement book and two visions visible', await page.evaluate(`document.querySelectorAll('#achievementList .progress-card').length===12&&document.querySelectorAll('#visions .progress-card').length===2&&document.querySelector('[data-achievement="first_place"]').classList.contains('done')`));
+      check(label + ' achievement book and two visions visible', await page.evaluate(`document.querySelectorAll('#achievementList .progress-card').length===D.ACHIEVEMENTS.length&&document.querySelectorAll('#visions .progress-card').length===2&&document.querySelector('[data-achievement="first_place"]').classList.contains('done')`));
       await shot(page, `v1-${label}-achievements.png`);
       const dialogRect=await page.evaluate(`(()=>{const r=document.querySelector('#dlgAchievements .dlg').getBoundingClientRect();return {width:r.width,height:r.height,left:r.left,right:r.right,bottom:r.bottom,viewport:innerWidth};})()`);
       check(label+' achievement dialog content fits viewport',dialogRect.width>200&&dialogRect.height>100&&dialogRect.left>=0&&dialogRect.right<=dialogRect.viewport+1&&dialogRect.bottom<=(mobile?844:900)+1);
  await page.locator('#dlgAchievements [data-close]').click();
+      const savedProgress=await page.evaluate('JSON.stringify({round:S.round,placements:S.stats.placements})');
       await page.reload(); await page.waitForFunction('typeof S!=="undefined"&&S');
-      check(label + ' persisted achievement survives reload with fresh game', await page.evaluate(`achievementBook.snapshot().unlocked.includes('first_place')&&S.stats.placements===undefined`));
+      check(label + ' persisted achievement and game progress survive reload', await page.evaluate(`achievementBook.snapshot().unlocked.includes('first_place')`) && await page.evaluate('JSON.stringify({round:S.round,placements:S.stats.placements})')===savedProgress);
       // Restart cancels delayed game-over and old-session achievement toast.
       await page.evaluate(`S.over=true;gameSession++;const session=gameSession;overTimer=setTimeout(()=>{if(gameSession===session&&S.over)showOver();},900);start(99);`);
       await page.waitForTimeout(1100); check(label + ' restart cancels old settlement and effects', await page.evaluate(`!document.getElementById('over').open&&!document.querySelector('.token')&&__viewTest.effects().transient===0`));
@@ -214,6 +216,15 @@ async function guardians(page,mobile,label,installClock=false){
         check('320px phone achievement content fits and scrolls',await page.evaluate(`(()=>{const p=document.querySelector('#dlgAchievements .dlg'),r=p.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&p.scrollHeight>p.clientHeight;})()`));
       }
       if (mobile) check('phone retains low rendering quality', await page.evaluate('__viewTest.low()'));
+      await page.evaluate(`document.querySelectorAll('dialog[open]').forEach(d=>d.close());document.querySelector('#scenario').value='standard';start(73);for(const t of Object.values(S.cells)){t.attrs=[0,0,0,0,0];t.spirits=[];}S.cells['3,3'].attrs=[0,3,0,0,0];S.cells['3,3'].spirits=[{id:9001,el:'wood',age:2},{id:9002,el:'wood',age:2}];S.placed=1;selected='3,3';mode=null;render();`);
+      await page.locator('#btnEnd').click();
+      check(label+' end button auto-merges three same-element spirits and unlocks story',await page.evaluate(`S.round===2&&S.cells['3,3'].spirits.length===0&&S.cells['3,3'].beasts.length===1&&S.cells['3,3'].beasts[0].age===0&&S.inv.crystal.wood===2&&S.stats.merges===1&&S.story.memories.includes('beast')&&S.events.some(e=>e.kind==='autoMerge')&&document.querySelector('#detail').textContent.includes('木元素兽')`));
+      await shot(page,`auto-merge-${label}.png`);
+      await page.evaluate(`document.querySelectorAll('dialog[open]').forEach(d=>d.close());start(74);S.placed=1;S.cells['3,3'].attrs=[1,1,1,1,1];S.cells['3,3'].animals=Array.from({length:60},(_,i)=>({id:10000+i,kind:'rabbit',el:'metal',age:0}));S.cells['3,3'].plants=[{id:20000,kind:'tree',age:2}];S.cells['3,3'].ores=['iron'];selected='3,3';render();`);
+      check(label+' animal, plant, ore and recipe manual controls removed',await page.evaluate(`!document.querySelector('[data-a="feed"],[data-a="pair"],[data-a="moveAnimal"],[data-a="compostAnimal"],[data-a="movePlant"],[data-a="chop"],[data-a="mineOre"],[data-recipe]')&&!document.querySelector('#recipes')&&D.RECIPES.length===0`));
+      await page.locator('#btnEnd').click();
+      check(label+' unlimited animals and ground resources automatically nourish tile',await page.evaluate(`S.cells['3,3'].animals.length>=60&&S.cells['3,3'].attrs[0]===G.attrCap(S,'3,3')&&S.cells['3,3'].attrs[1]===2&&S.inv.ore.iron===1&&D.SCORE.elemAnimal===0`));
+      await shot(page,`auto-ecology-${label}.png`);
       await guardians(page,mobile,label);await context.close();
     }
     check('No console, JS or WebGL errors', report.errors.length === 0);

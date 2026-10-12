@@ -327,7 +327,8 @@
     #detail { bottom:calc(250px + var(--safe-b)); }
     #achievementToast { font-size:12px;top:calc(100px + var(--safe-t)); }
   }
-</style>
+
+ </style>
 <style>
   #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
   .token { position:absolute; left:0; top:0; color:var(--token-color); font-size:25px; will-change:transform;
@@ -339,13 +340,21 @@
   #btnBag { overflow:visible !important; }
   #btnBag .ripple { display:none; }
   .pill.bump, #btnBag.bump { filter:drop-shadow(0 0 8px #ffe14a); }
-</style>
+
+ #journey{position:fixed;top:110px;left:18px;width:280px;z-index:12;border:1px solid #c2c49f;border-radius:16px;background:rgba(255,251,230,.95);box-shadow:0 8px 28px #243d2426;padding:14px;color:#364d39;font-size:13px;line-height:1.65}
+ .journey-title{border:0;background:none;color:#315342;font-family:inherit;font-weight:700;font-size:16px;width:100%;text-align:left;cursor:pointer}.journey-title small{float:right}.journey-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.journey-controls .btn{white-space:normal}#journey p{margin:6px 0}#journey>small{font-size:10px;color:#637363}
+ .terrain-info{padding:12px;background:#f3f5df;font-size:12px;line-height:1.65}.terrain-info p{margin:5px 0}.terrain-info select{max-width:100%;padding:5px}.branch-card{border-left:3px solid #91b670;padding:7px 9px;margin:7px 0;background:#fff9}.terrain-info button{margin:4px}#echoBody{line-height:1.8;padding-top:20px}#echoBody article{margin:14px 0;padding:14px;background:#f6f3e4;border-radius:12px}#echoBody h3{margin:3px 0}#echoBody p{white-space:normal}
+ body:has(#detail.open) #journey{display:none}
+ @media(max-width:650px){#journey{top:103px;left:10px;width:calc(100% - 20px);padding:9px 12px;font-size:11px;max-height:170px;overflow:auto}#journey p{max-height:48px;overflow:auto}.journey-title{font-size:13px}.journey-controls .btn{font-size:11px;padding:5px 8px}body:has(#bag.open) #journey{display:none}}
+ </style>
 </head>
 <body>
 <div id="world" aria-label="三维地图：点击地块选择，拖拽旋转，双指或滚轮缩放"></div>
 <div id="flash"></div>
 <div id="tokens" aria-hidden="true"></div>
 
+<aside id="journey" aria-live="polite"></aside>
+<dialog id="dlgEcho"><div class="panel dlg"><button class="btn round red close" id="closeEcho" aria-label="关闭回声册">✕</button><div id="echoBody"></div></div></dialog>
 <div id="cornerL">
   <button class="btn round" id="btnHelp" title="玩法说明" aria-label="玩法说明"><span class="t">?</span></button>
 </div>
@@ -364,7 +373,7 @@
 <aside id="bag" class="panel"><span class="tag toon">背包</span>
   <div class="sec">元素结晶 · 不耗行动 · 每轮不限次数 · 点击后选地块使用</div><div id="crystals"></div>
   <div class="sec">材料</div><div class="mats" id="mats"></div>
-  <div class="sec">制造 · 免费 · 每个配方每轮一次</div><div id="recipes"></div>
+
   <div class="sec">元素盾</div><div id="shieldStock"></div><button class="btn sm" id="btnShield">🛡 调配元素盾</button>
 </aside>
 
@@ -387,12 +396,12 @@
   <h2>怎么玩</h2>
   <p>① 每轮先选一张<b>地块</b>放置，每轮仅放一块。可用 3 颗普通结晶重投。</p>
   <p>② 魔法消耗 1 点行动；生物与其他物品交互免费，同一生物或同类物品每轮一次。使用普通或大型元素结晶不消耗行动点；普通、大型及逆结晶每轮不限次数，仍消耗库存，正向属性受连片上限约束。</p>
-  <p>③ 点地块可移动、合成、采集、喂养和升级。净化影响选中与四邻；其余魔法需全图对应属性≥20。</p>
-  <p>④ 同类连片提高属性上限；灵力每达到 500 的倍数增加 2 点行动，上限 9。免费升级保留现有属性。</p>
+  <p>③ 元素灵与元素兽保留移动和合成；动物无数量上限，自动元素化后每轮对应属性+1，不计分。植物每3轮滋养，矿物轮末自动采集。净化影响选中与四邻；其余魔法需全图对应属性≥20。</p>
+  <p>④ 同系列连片提高属性上限；灵力每达到 500 的倍数增加 2 点行动，上限 9。免费升级保留现有属性。</p>
   <p>⑤ 每 10 轮陨石雨使约三分之一地块的某元素−3。用普通结晶调配盾，选地块部署；盾的防护总量在覆盖区共享。</p>
   <p>⑥ 负属性孕育癌元，癌元移动会感染原地元素灵，每 3 轮吸收属性并产逆结晶。净化或焚尽可清除。</p>
   <p>⑦ 同一地块选择 5 个任意元素兽免费合成守护灵。每轮结束时，按合成配比提升自身及已放置四邻的属性。守护灵不会自动移动；先放置本轮地块后，可耗 1 行动点移至四邻已放置地块，同轮可多次移动。</p>
-  <p>⑧ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新开始新对局。</p>
+  <p>⑧ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新自动继续当前对局。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
   手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
   <p class="muted" id="scoreDetail"></p>
@@ -400,7 +409,7 @@
 
 <dialog id="dlgMenu"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
-  <h2>菜单</h2>
+  <h2>元素生境 v1.3</h2><div class="journey-controls"><button class="btn" id="btnEcho">✦ 回声册</button><button class="btn" id="btnAtlas">地脉图鉴 · 80种</button></div>
   <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">
     <button class="btn gold" id="btnAchievements">🏆 成就与愿景</button>
     <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
@@ -408,7 +417,7 @@
     <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
     <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
   </div>
-  <div class="sec">下局剧本</div><select id="scenario" aria-label="下局剧本"><option value="standard">荒芜初醒</option><option value="fire">火脉躁动</option><option value="water">水泽污浊</option></select>
+  <div class="sec">下局剧本</div><select id="scenario" aria-label="下局剧本"><option value="tutorial">初醒之旅 · 剧情教学</option><option value="standard">自由生境 · 80地块</option></select>
   <div class="sec">日志</div><ul id="log"></ul>
 </div></dialog>
 
@@ -446,6 +455,7 @@
 </div></dialog>
 
 <script src="lib/three.min.js"></script>
+<script src="terrain.js"></script>
 <script src="data.js"></script>
 <script src="game.js"></script>
 <script src="achievements.js"></script>
@@ -518,7 +528,8 @@ const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.b
 function start(seed) {
   Tokens.reset();
   document.querySelectorAll('.float').forEach(el=>el.remove());
-  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{scenario:$('scenario').value});
+  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{scenario:$('scenario').value,tutorial:$('scenario').value==='tutorial'});
+  if(seed==null&&!window.habitatSaveTried){window.habitatSaveTried=true;try{const raw=localStorage.getItem('element-habitat-save-v13');if(raw){const saved=G.restore(raw);if(saved)S=saved;}}catch(_){}}
   gameSession++;clearTimeout(overTimer);clearTimeout(achievementTimer);achievementTimer=0;achievementQueue=[];$('achievementToast').classList.remove('show');
   mode = null; selected = null; hint('');
   guardianCell=null;guardianChoice.clear();$('dlgGuardian').close();
@@ -615,7 +626,7 @@ function renderOffers() {
     const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
     return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
       <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
-      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}${t.level?` · T${t.level}`:""}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
   }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
 }
 
@@ -636,7 +647,7 @@ function renderDetail() {
   const cap = G.spiritCap(t), attrCap=G.attrCap(S,selected);
   let h = `<div class="dh toon" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})">
     <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
-    <h3>${c[2]} ${esc(t.oasis?"沙漠绿洲":ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : t.pond ? '💧小湖 · ' : ''}${t.vein?"⛏矿脉 · ":""}${t.farm?"🌾耕田 · ":""}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}<br>连片 ${G.cluster(S,selected).length} 格 · 属性上限 ${attrCap}</div></div>`;
+    <h3>${c[2]} ${esc(t.oasis?"沙漠绿洲":ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : t.pond ? '💧小湖 · ' : ''}${t.vein?"⛏矿脉 · ":""}${t.farm?"🌾耕田 · ":""}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}<br>同属性3灵轮末自动合兽 · 免费<br>连片 ${G.cluster(S,selected).length} 格 · 属性上限 ${attrCap}</div></div>`;
   h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / attrCap * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
   let n = 0;
   const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
@@ -647,6 +658,7 @@ function renderDetail() {
       `<button class="btn sm" data-a="moveSpirit" data-id="${list[0].id}">移动</button>
        <button class="btn sm gold" data-a="merge" data-el="${e.key}" ${list.length < D.RULES.mergeCount ? 'disabled' : ''}>合成兽</button>`);
   }
+  if(typeof terrainPanel==='function')h+=terrainPanel(t,selected);
   const availableUpgrades=G.upgrades(S,selected);
   if(availableUpgrades.length)h+=row('⬆ 免费升级',availableUpgrades.map(ty=>`<button class="btn sm green" data-a="upgrade" data-type="${ty.id}">${ty.name}</button>`).join(''));
   if(t.cancers.length)h+=row(`☣ 癌元 ×${t.cancers.length}`,'<span class="muted">净化 / 焚尽可消灭</span>');
@@ -655,21 +667,14 @@ function renderDetail() {
   for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, `<button class="btn sm" data-a="moveBeast" data-id="${b.id}">移动</button><span class="muted">每 2 轮产大结晶</span>`);
   if(t.beasts.length)h+=row(`✦ 本格元素兽 ${t.beasts.length} 个`,`<button class="btn sm gold" data-a="mergeGuardian" ${t.beasts.length<D.RULES.guardianMergeCount?'disabled':''}>选 5 兽合成守护灵</button>`);
   for(const guardian of t.guardians||[])h+=row(`✦ ${guardianName(guardian.power)}<small class="muted" style="display:block">每轮五格 ${guardianText(guardian.power)}</small>`,`<button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${!S.placed||S.ap<1?'disabled':''} title="${!S.placed?'先放置本轮地块':'四邻已放置地块，每次消耗 1 行动点，可重复移动'}">移动 · 1行动</button>`);
-  for (const p of t.plants) {
-    const choppable = p.kind === 'tree' || p.kind === 'shrub';
-    h += row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,
-      `<button class="btn sm" data-a="movePlant" data-id="${p.id}">移植</button>${choppable ? `<button class="btn sm green" data-a="chop" data-id="${p.id}">砍伐</button>` : ''}<button class="btn sm" data-a="compostPlant" data-id="${p.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>`);
-  }
-  const hasCrystal = EL.filter(e => S.inv.crystal[e.key] > 0);
-  for (const a of t.animals) {
+  for (const p of t.plants) h+=row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,`<span class="muted">每3轮自动滋养 · ${3-(p.age||0)%3}轮后</span>`);
+  const animalGroups=new Map();
+  for(const a of t.animals){const key=a.kind+':'+(a.el||'');const group=animalGroups.get(key)||{...a,count:0};group.count++;animalGroups.set(key,group);}
+  for (const a of animalGroups.values()) {
     const nm = (a.el ? elName(a.el) + '元素' : '') + D.ANIMALS[a.kind].name;
-    h += row(`${D.ANIMALS[a.kind].icon} ${nm}${a.cd ? ` <span class="muted">冷却${a.cd}</span>` : ''}`,
-      `<button class="btn sm" data-a="moveAnimal" data-id="${a.id}">移动</button>
-       <button class="btn sm" data-a="pair" data-id="${a.id}" style="--c:#ff7ab0;--d:#b83a70">配对</button>
-       <button class="btn sm" data-a="compostAnimal" data-id="${a.id}" style="--c:#c09060;--d:#7a5a30">堆肥</button>
-       ${!a.el ? hasCrystal.map(e => `<button class="btn sm" data-a="feed" data-id="${a.id}" data-el="${e.key}" style="--c:${ELC[e.key]};--d:${ELD[e.key]}">喂${e.name}</button>`).join('') : ''}`);
+    h += row(`${D.ANIMALS[a.kind].icon} ${nm} ×${a.count}`, `<span class="muted">${a.el?'每轮 '+elName(a.el)+' +1/只':'随机吸收灵力'} · 不计分</span>`);
   }
-  t.ores.forEach((o, i) => { h += row(`⛏ ${D.ORES[o].name}`, `<button class="btn sm gold" data-a="mineOre" data-i="${i}">采集</button>`); });
+  if(t.ores.length)h+=row('⛏ 矿物 ×'+t.ores.length,'<span class="muted">轮末自动采集，金属性 +1/份</span>');
   if (S.inv.bucket || S.inv.water) h += row(`🪣 桶 空${S.inv.bucket - S.inv.bucketFull}/满${S.inv.bucketFull} / 产水${S.inv.water}`, '<button class="btn sm" data-a="scoop">舀水</button><button class="btn sm" data-a="pour">倒水</button>');
   if (S.inv.charm) h += row(`📜 净化符 ×${S.inv.charm}`, '<button class="btn sm" data-a="useCharm" style="--c:#8fd8ff;--d:#3a8ab8">使用</button>');
   if (!n) h += '<div class="muted" style="padding:6px 14px">这块地还很安静。结束本轮后会孕育元素灵和生灵。</div>';
@@ -701,12 +706,6 @@ function renderInv() {
   $('btnBag').dataset.n = total;
   $('mats').innerHTML = `<span>🪵 木<b>${inv.wood}</b></span>` + Object.entries(D.ORES).map(([k, v]) => `<span>${v.name}<b>${inv.ore[k]}</b></span>`).join('') +
     `<span>🪣 桶<b>${inv.bucket}</b></span><span>💧 产水<b>${inv.water}</b></span><span>📜 符<b>${inv.charm}</b></span>`;
-  $('recipes').innerHTML = D.RECIPES.map(r => {
-    const cost = Object.entries(r.cost).map(([k, n]) => (k === 'wood' ? '木' : D.ORES[k].name.slice(0, 1)) + n).join(' ');
-    const can = !S.over&&!S.interactionUsed["craft:"+r.id]&&Object.entries(r.cost).every(([k, n]) => (k === 'wood' ? inv.wood : inv.ore[k]) >= n);
-    const on = mode && mode.kind === 'shelter' && r.id === 'shelter' ? 'on' : '';
-    return `<button class="btn sm ${can ? 'green' : ''} toon ${on}" data-recipe="${r.id}" title="${esc(r.desc)}" ${can ? '' : 'disabled'}>${r.name}<small>${cost}</small></button>`;
-  }).join('');
   $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
   $('btnShield').disabled=S.over||!!S.interactionUsed['craft:shield'];
 }
@@ -721,7 +720,7 @@ function render() {
   const sc = G.score(S);
   Tokens.numbers(S);
   lastScore = sc.total;
-  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 元素动物 ${sc.elemAnimals}×${D.SCORE.elemAnimal} + 植物 ${sc.plants} + 愿景 ${sc.bonus}`;
+  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 植物 ${sc.plants} + 愿景 ${sc.bonus}`;
   const be = $('btnEnd');
   be.disabled = S.over || S.placed === 0;
   be.classList.toggle('ready', !be.disabled && S.ap > 0);
@@ -729,6 +728,7 @@ function render() {
   $('log').innerHTML = S.log.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join('');
   View.sync(S, { mode, selected });
   renderProgress();
+  if(typeof renderJourney==='function')renderJourney();
   if (S.round !== lastRound) {
     lastRound = S.round;
     bump($('pillRound'));
@@ -742,8 +742,8 @@ function showOver() {
   const sc = G.score(S);
   const stars = sc.total >= 220 ? 3 : sc.total >= 150 ? 2 : 1;
   $('stars').innerHTML = [1, 2, 3].map(i => `<span class="${i > stars ? 'off' : ''}" style="animation-delay:${300 + i * 200}ms">⭐</span>`).join('');
-  $('overSum').innerHTML = [['属性', sc.attrs], ['元素兽×3', sc.beasts*3], ['元素动物', sc.elemAnimals], ['植物',sc.plants],['愿景奖励',sc.bonus],['基础灵力',sc.base]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
-  $('overText').textContent = `${S.round} 轮铺满了整片灵地`;
+  $('overSum').innerHTML = [['属性', sc.attrs], ['元素兽×3', sc.beasts*3], ['植物',sc.plants],['愿景奖励',sc.bonus],['基础灵力',sc.base]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
+  $('overText').textContent = `${S.round} 轮铺满了整片灵地。你终于记起：你是五贤之师。五贤者没有归来，但他们的老师回来了。`;
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());$('over').showModal();
   Sfx.win();
   // 分数滚动
@@ -770,7 +770,7 @@ function onCell(k) {
     return;
   }
   selected = t && selected !== k ? k : null;
-  if (selected) Sfx.tap();
+  if (selected) {Sfx.tap();if(S.journey?.step===1&&selected==='3,2')G.act(S,{type:'tutorial',cell:selected});}
   render();
 }
 
@@ -825,13 +825,7 @@ $('bag').addEventListener('click', e => {
     setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '使用结晶（不消耗行动点）：点击目标地块');
     return;
   }
-  const r = e.target.closest('[data-recipe]');
-  if (r) {
-    if (r.dataset.recipe === 'shelter') {
-      if (!mode && selected) { doAct({ type: 'craft', recipe: 'shelter', cell: selected }); return; }
-      setMode(mode && mode.kind === 'shelter' ? null : { kind: 'shelter' }, '搭建庇护所：点击目标地块');
-    } else doAct({ type: 'craft', recipe: r.dataset.recipe });
-  }
+
 });
 $('detail').addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
@@ -858,6 +852,7 @@ $('detail').addEventListener('click', e => {
   }
 });
 function eventEffects(events){
+  events.filter(e=>['autoMerge','animalAwaken'].includes(e.kind)).slice(0,12).forEach(e=>View.fx('merge',e.cell,e.el));
   events.filter(e=>['guardianMerge','guardianMove','guardian'].includes(e.kind)).forEach(e=>{View.guardianFX(e);if(e.kind==='guardianMerge')Sfx.guard();});
   const meteors=events.filter(e=>e.kind==='meteor');
   if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.damage<3).length} 格获护盾拦截`);}
@@ -964,5 +959,6 @@ if (!View.supported || View.supported()) {
   $('nogl').style.display = 'grid';
 }
 </script>
+<script src="journey-ui.js"></script>
 </body>
 </html>

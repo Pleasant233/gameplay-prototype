@@ -168,31 +168,22 @@ test('三灵合兽免费，兽移动给新格+1，重复移动拒绝', () => {
   s.cells['2,3'].attrs[1] = 1; const b = t.beasts[0]; assert.ok(G.act(s, { type: 'moveBeast', from: '3,3', to: '2,3', beastId: b.id }).ok); assert.equal(s.cells['2,3'].attrs[1], 2);
   rejected(s, { type: 'moveBeast', from: '2,3', to: '3,3', beastId: b.id });
 });
-test('生物移动移植堆肥共享每对象一轮一次；下轮可再交互', () => {
-  const s = game(); s.cells['3,3'].plants = [{ id: 700, kind: 'tree' }]; assert.ok(G.act(s, { type: 'movePlant', from: '3,3', to: '2,3', plantId: 700 }).ok);
-  rejected(s, { type: 'chop', cell: '2,3', plantId: 700 }); assert.equal(s.ap, 3); end(s); assert.ok(G.act(s, { type: 'chop', cell: '2,3', plantId: 700 }).ok); assert.equal(s.inv.wood, 2);
+test('地表植物和矿物取消手动操作',()=>{
+ const s=game();s.cells['3,3'].plants=[{id:700,kind:'tree'}];s.cells['3,3'].ores=['iron'];
+ for(const type of ['movePlant','chop','mineOre','compost'])rejected(s,{type,cell:'3,3',from:'3,3',to:'2,3',plantId:700,what:'plant',targetId:700,index:0});
 });
-test('配对标记两个亲本，容量3，喂养不耗AP', () => {
-  const s = game(), t = s.cells['3,3']; t.animals = [710, 711].map(id => ({ id, kind: 'rabbit', el: null, cd: 0, age: 0 }));
-  assert.ok(G.act(s, { type: 'pair', cell: '3,3', animalId: 710 }).ok); assert.equal(t.animals.length, 3); assert.ok(s.interactionUsed['animal:710'] && s.interactionUsed['animal:711']);
-  s.inv.crystal.water = 1; rejected(s, { type: 'feed', cell: '3,3', animalId: 711, el: 'water' }); assert.ok(G.act(s, { type: 'feed', cell: '3,3', animalId: t.animals[2].id, el: 'water' }).ok);
+test('动物无数量上限，禁止手动配对喂养移动和堆肥',()=>{
+ const s=game();s.cells['3,3'].animals=Array.from({length:30},(_,id)=>({id,kind:'rabbit',el:null,age:0}));assert.equal(G.animalCap(s.cells['3,3']),Infinity);
+ for(const type of ['pair','feed','moveAnimal','compost'])rejected(s,{type,cell:'3,3',from:'3,3',to:'2,3',animalId:0,el:'water',what:'animal',targetId:0});assert.equal(s.cells['3,3'].animals.length,30);
 });
-test('元素动物三轮各产矿物/作物/水/火+1/土+1', () => {
-  for (const el of D.ELEMENTS.map(e => e.key)) {
-    const s = prepare(); Object.values(s.cells).forEach(t => { t.attrs = [0, 0, 0, 0, 0]; t.plants = []; }); const t = s.cells['3,3']; t.animals = [{ id: 900, kind: 'rabbit', el, cd: 0, age: 2 }];
-    receipt(s, () => assert.ok(G.endRound(s).ok));
-    if (el === 'metal') assert.equal(total(Object.values(s.inv.ore)), 1); if (el === 'wood') assert.equal(t.plants.length, 1); if (el === 'water') assert.equal(s.inv.water, 1);
-    if (el === 'fire') assert.equal(t.attrs[3], 1); if (el === 'earth') assert.equal(t.attrs[4], 1); assert.equal(total(Object.values(s.inv.crystal)), 0);
-  }
+test('元素动物每轮增加对应属性，不再产出物品',()=>{
+ for(const [i,e] of D.ELEMENTS.entries()){const s=prepare();for(const t of Object.values(s.cells)){t.attrs=[0,0,0,0,0];t.plants=[];}const t=s.cells['3,3'];t.animals=[{id:900,kind:'rabbit',el:e.key,age:0}];receipt(s,()=>G.endRound(s));assert.equal(t.attrs[i],1);assert.equal(G.bagCount(s),0);}
 });
-test('桶仅木1、火山不耗水、沙漠成绿洲、舀倒同轮不能重复', () => {
-  const s = game(); s.inv.wood = 1; assert.ok(G.act(s, { type: 'craft', recipe: 'bucket' }).ok); assert.equal(s.inv.wood, 0); assert.equal(s.inv.bucket, 1); assert.equal(s.ap, 3);
-  s.inv.bucketFull = 1; s.cells['3,3'] = G.makeTile('volcano'); rejected(s, { type: 'pour', cell: '3,3' }); s.cells['3,3'] = G.makeTile('desert');
-  assert.ok(G.act(s, { type: 'pour', cell: '3,3' }).ok); assert.ok(s.cells['3,3'].pond && s.cells['3,3'].oasis); assert.equal(s.inv.bucketFull, 0); rejected(s, { type: 'scoop', cell: '3,3' });
+test('物品制作配方删除，已有桶仍可使用',()=>{
+ const s=game();assert.deepEqual(D.RECIPES,[]);s.inv.wood=10;rejected(s,{type:'craft',recipe:'bucket'});s.inv.bucket=1;s.inv.bucketFull=1;s.cells['3,3']=G.makeTile('desert');assert.ok(G.act(s,{type:'pour',cell:'3,3'}).ok);assert.ok(s.cells['3,3'].oasis);rejected(s,{type:'scoop',cell:'3,3'});
 });
-test('庇护所木4铁2，容量+4且属性不变', () => {
-  const s = game(), before = G.spiritCap(s.cells['3,3']), attrs = s.cells['3,3'].attrs.slice(); s.inv.wood = 4; s.inv.ore.iron = 2;
-  assert.ok(G.act(s, { type: 'craft', recipe: 'shelter', cell: '3,3' }).ok); assert.equal(G.spiritCap(s.cells['3,3']), before + 4); assert.deepEqual(s.cells['3,3'].attrs, attrs); assert.equal(s.inv.wood + s.inv.ore.iron, 0);
+test('保留旧存档庇护所效果，取消新制作',()=>{
+ const s=game(),t=s.cells['3,3'],before=G.spiritCap(t);t.shelter=true;assert.equal(G.spiritCap(t),before+4);s.inv.wood=4;s.inv.ore.iron=2;rejected(s,{type:'craft',recipe:'shelter',cell:'3,3'});
 });
 test('癌元负属性生成、三轮吸收产逆晶、移邻感染原地灵', () => {
   const s = prepare(); Object.values(s.cells).forEach(t => { t.attrs = [0, 0, 0, 0, 0]; t.spirits = []; }); const t = s.cells['3,3'];
@@ -221,9 +212,8 @@ test('盾配比5的倍数、整数、库存、覆盖、共享防护正确', () =
 });
 test('确认公式不计元素灵、植物×1，愿景奖励单列不重复', () => {
   const s = game(); Object.values(s.cells).forEach(t => { t.attrs = [0, 0, 0, 0, 0]; }); const t = s.cells['3,3']; t.attrs = [1, 2, 3, 4, 5];
-  t.spirits = [{ id: 1, el: 'wood', age: 0 }]; t.beasts = [{ id: 2, el: 'wood', age: 0 }]; t.animals = [{ id: 3, kind: 'rabbit', el: 'earth' }]; t.plants = [{ id: 4, kind: 'grass' }]; assert.equal(G.score(s).base, 20);
-  s.visions = [{ id: 'settlement', done: false }]; s.inv.wood = 4; s.inv.ore.iron = 2;
-  receipt(s, () => assert.ok(G.act(s, { type: 'craft', recipe: 'shelter', cell: '3,3' }).ok)); assert.equal(G.score(s).bonus, 30); rejected(s, { type: 'craft', recipe: 'shelter', cell: '2,3' }); assert.equal(G.score(s).bonus, 30);
+  t.spirits = [{ id: 1, el: 'wood', age: 0 }]; t.beasts = [{ id: 2, el: 'wood', age: 0 }]; t.animals = [{ id: 3, kind: 'rabbit', el: 'earth' }]; t.plants = [{ id: 4, kind: 'grass' }]; assert.equal(G.score(s).base, 19);
+  s.visions=[{id:'settlement',done:false}];s.stats.feeds=3;receipt(s,()=>place(s));assert.equal(G.score(s).bonus,30);receipt(s,()=>G.endRound(s));assert.equal(G.score(s).bonus,30);
 });
 test('成就不重复、本机持久化、损坏或禁用存储降级', () => {
   const s = game(); place(s); const map = new Map(), storage = { getItem: k => map.get(k), setItem: (k, v) => map.set(k, v) }, book = Book.create(storage);
@@ -242,7 +232,7 @@ test('30局含灾变交互完整打到终局，资源容量上限与账目始终
       if (pollution) receipt(s, () => G.act(s, { type: 'cast', magic: 'purify', cell: pollution }));
       for (const e of D.ELEMENTS) if (s.inv.crystal[e.key]) { const k = Object.keys(s.cells).find(k => s.cells[k].attrs[D.ELEMENTS.indexOf(e)] < G.attrCap(s, k)); if (k) receipt(s, () => crystal(s, k, e.key)); }
       if (s.placed) receipt(s, () => assert.ok(G.endRound(s).ok));
-      for (const [k, t] of Object.entries(s.cells)) { assert.ok(t.spirits.length <= G.spiritCap(t)); assert.ok(t.attrs.every(Number.isFinite)); assert.ok(t.attrs.every(v => v <= G.attrCap(s, k))); assert.ok(t.plants.length <= 5 && t.animals.length <= 3 && t.ores.length <= 2); }
+      for (const [k, t] of Object.entries(s.cells)) { assert.ok(t.spirits.length <= G.spiritCap(t)); assert.ok(t.attrs.every(Number.isFinite)); assert.ok(t.attrs.every(v => v <= G.attrCap(s, k))); assert.ok(t.plants.length <= 5 && t.animals.every(a=>D.ANIMALS[a.kind]) && t.ores.length <= 2); }
     }
     assert.ok(s.over); assert.equal(G.emptyKeys(s).length, 0); assert.equal(s.stats.placements, 80); assert.ok(s.achievements.includes('world')); assert.ok(Number.isFinite(G.score(s).total));
   }

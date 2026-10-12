@@ -28,6 +28,7 @@ async function shot(page,name){await page.evaluate('__feedback.draw()');await pa
     browser=await chromium.launch(options);report.browser=browser.version();
     for(const mobile of [false,true]){
       const label=mobile?'phone':'desktop',context=await browser.newContext(mobile?{viewport:{width:390,height:844},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'}:{viewport:{width:1440,height:900}}),page=await context.newPage();
+      page.setDefaultTimeout(90000);page.setDefaultNavigationTimeout(90000);
       page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});
       await page.route('**/view.js',r=>r.fulfill({body:view,contentType:'application/javascript'}));
       await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction('typeof S!=="undefined"&&S&&document.querySelector("#world canvas")');

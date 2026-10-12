@@ -503,6 +503,14 @@
     return w;
   }
 
+  function terrainLandmark(group,t,h){
+    const def=G.TYPE[t.type];if(!def.level||def.level<3)return;
+    const color=def.branchKey==='A'?0xffcd70:0x85d9cf;
+    for(let i=0;i<def.level-2;i++){
+      const m=new THREE.Mesh(new THREE.ConeGeometry(.075,.18+i*.07,5),M(color,{flatShading:true,roughness:.8}));
+      m.position.set(.27-i*.13,h+.1+i*.035,-.31);group.add(m);
+    }
+  }
   function buildScenery(group, look, k, h) {
     const rnd = hashk(k);
     const kind = look.kind;
@@ -813,9 +821,9 @@
       });
       g.add(cl);
     });
-    t.animals.forEach((a, i) => {
+    t.animals.slice(0,LOW?6:12).forEach((a, i) => {
       const m = makeAnimal(a.kind, a.el);
-      const ang = (i / Math.max(1, t.animals.length)) * Math.PI * 2 + 0.3;
+      const ang = (i / Math.max(1, Math.min(t.animals.length,LOW?6:12))) * Math.PI * 2 + 0.3;
       const r = 0.2;
       const fly = a.kind === 'bird', swim = a.kind === 'fish';
       const y = h + (fly ? 0.3 : swim ? 0.02 : 0);
@@ -875,7 +883,7 @@
     group.add(edgeLine);
     const scenery = new THREE.Group();
     group.add(scenery);
-    buildScenery(scenery, look, k, h);
+    buildScenery(scenery, look, k, h); terrainLandmark(scenery,t,h);
     scenery.traverse(o => { if (o.isMesh && !o.material.transparent && o.geometry !== geo.circle) o.castShadow = true; });
     const units = new THREE.Group();
     group.add(units);
@@ -910,7 +918,7 @@
     const sceneryKey=t.type+':'+t.attrs.some(v=>v<0);
     if(sceneryKey!==n.sceneryKey){
       releaseLocalGeometry(n.scenery);while(n.scenery.children.length)n.scenery.remove(n.scenery.children[0]);
-      buildScenery(n.scenery,look,n.k,look.h);anchorChildren(n.scenery,n.k,look.h);n.sceneryKey=sceneryKey;
+      buildScenery(n.scenery,look,n.k,look.h);terrainLandmark(n.scenery,t,look.h);anchorChildren(n.scenery,n.k,look.h);n.sceneryKey=sceneryKey;
     }
     n.look=look;
     n.previousColor = new THREE.Color(0x797554);
