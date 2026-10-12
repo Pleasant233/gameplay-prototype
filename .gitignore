@@ -9,3 +9,35 @@ __pycache__/
 *.log
 .DS_Store
 .env*
+
+# Unity: SpotlightGamejam generated files
+# Keep Assets (including .meta), Packages, and ProjectSettings in version control.
+/SpotlightGamejam/[Ll]ibrary/
+/SpotlightGamejam/[Tt]emp/
+/SpotlightGamejam/[Oo]bj/
+/SpotlightGamejam/[Bb]uild/
+/SpotlightGamejam/[Bb]uilds/
+/SpotlightGamejam/[Ll]ogs/
+/SpotlightGamejam/[Uu]ser[Ss]ettings/
+/SpotlightGamejam/[Mm]emoryCaptures/
+/SpotlightGamejam/[Rr]ecordings/
+/SpotlightGamejam/.utmp/
+
+# Unity IDE caches and generated solution/project files
+/SpotlightGamejam/.vs/
+/SpotlightGamejam/.idea/
+/SpotlightGamejam/.gradle/
+/SpotlightGamejam/ExportedObj/
+/SpotlightGamejam/.consulo/
+/SpotlightGamejam/*.csproj
+/SpotlightGamejam/*.unityproj
+/SpotlightGamejam/*.sln
+/SpotlightGamejam/*.slnx
+/SpotlightGamejam/*.suo
+/SpotlightGamejam/*.user
+/SpotlightGamejam/*.userprefs
+/SpotlightGamejam/*.DotSettings.user
+
+# Unity crash reports
+/SpotlightGamejam/sysinfo.txt
+/SpotlightGamejam/mono_crash.*
