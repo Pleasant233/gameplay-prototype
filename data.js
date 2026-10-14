@@ -59,6 +59,8 @@
     stageTargets: [{round:10,score:80},{round:20,score:220},{round:30,score:450},{round:40,score:800}],
     maxAP: 9,
     magicUnlock: 20,
+    pureCrystalRangeStep: 4,
+    purifyInitialRange: 5,
     pairCooldown: 3,
     elemAnimalEvery: 3,
   };

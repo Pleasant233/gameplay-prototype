@@ -93,7 +93,7 @@
   const checkpoint = s => RULES.stageTargets.find(t=>t.round>=s.round);
   const restoration = s => Math.min(1,Math.max(0,score(s).total)/RULES.stageTargets.at(-1).score);
   const meteorStrength = s => ({damage:1+2*Math.ceil(s.round/RULES.meteorEvery),count:Math.max(1,Math.floor(placedKeys(s).length*Math.min(.7,.25+.05*Math.ceil(s.round/RULES.meteorEvery))))});
-  const magicArea = (s,cell,magic) => region(s,cell,s.magicRange[magic]);
+  const magicArea = (s,cell,magic) => magic==='purify'&&s.magicRange[magic]===RULES.purifyInitialRange?guardianArea(s,cell):region(s,cell,s.magicRange[magic]);
   function autoGuardians(s){
     for(const cell of placedKeys(s))while(s.cells[cell].beasts.length>=RULES.guardianMergeCount){
       handlers.mergeGuardian(s,{cell,beastIds:s.cells[cell].beasts.slice(0,RULES.guardianMergeCount).map(b=>b.id)});
@@ -157,7 +157,7 @@
   }
   function newGame(seed, options = {}) {
     const s = {
-      mode: options.mode==='endless'?'endless':'challenge',magicRange:Object.fromEntries(D.MAGICS.map(m=>[m.id,1])),completedMap:false,result:null,
+      mode: options.mode==='endless'?'endless':'challenge',magicRange:Object.fromEntries(D.MAGICS.map(m=>[m.id,m.id==='purify'?RULES.purifyInitialRange:1])),completedMap:false,result:null,
       edition: 'v13', progress:{t2:false,t3:false,natural:0},
       seed: seed >>> 0, rng: seed | 0, round: 1, ap: RULES.apPerRound, roundAP: RULES.apPerRound,
       placed: 0, unlockedMagics: ['purify'], magicUsed: {}, interactionUsed: {}, offers: [], cells: {}, nextId: 1,
@@ -304,9 +304,8 @@
     usePureCrystal(s,a){
       const m=D.MAGICS.find(m=>m.id===a.magic);
       if(!m)return fail('请选择魔法');
-      if(s.magicRange[m.id]>=5)return fail('魔法覆盖已达到 5 格');
       if(s.inv.pureCrystal[m.element]<1)return fail('没有对应至纯元素结晶');
-      s.inv.pureCrystal[m.element]--;s.magicRange[m.id]++;
+      s.inv.pureCrystal[m.element]--;s.magicRange[m.id]+=RULES.pureCrystalRangeStep;
       emit(s,{cell:a.cell||'3,3',kind:'range',magic:m.id});
       return success(m.name+'覆盖提升到 '+s.magicRange[m.id]+' 格');
     },
@@ -567,11 +566,12 @@
       for(const t of Object.values(s.cells))if(!TYPE[t.type]||!Array.isArray(t.attrs)||t.attrs.length!==5||t.attrs.some(n=>!Number.isFinite(n))||['spirits','cancers','beasts','guardians','animals','plants'].some(k=>!Array.isArray(t[k])))return null;
       if(s.offers.some(k=>!TYPE[k])||['crystal','bigCrystal','inverseCrystal'].some(k=>!s.inv[k]||EL.some(e=>!Number.isInteger(s.inv[k][e])||s.inv[k][e]<0)))return null;
       if(!s.unlockedMagics||!s.interactionUsed||!s.magicUsed||!Array.isArray(s.log)||!Array.isArray(s.achievements))return null;
-      s.mode ||= s.round>RULES.maxRounds?'endless':'challenge';s.magicRange ||= Object.fromEntries(D.MAGICS.map(m=>[m.id,1]));s.inv.pureCrystal ||= emptyEl();
+      s.mode ||= s.round>RULES.maxRounds?'endless':'challenge';s.magicRange ||= Object.fromEntries(D.MAGICS.map(m=>[m.id,m.id==='purify'?RULES.purifyInitialRange:1]));s.inv.pureCrystal ||= emptyEl();
       for(const k of ['ore','wood','bucket','bucketFull','water','charm'])delete s.inv[k];
       for(const t of Object.values(s.cells)){delete t.ores;delete t.vein;}
       for(const shield of [...s.shields,...s.inv.shields])delete shield.initialDefense;
-      if(D.MAGICS.some(m=>!Number.isInteger(s.magicRange[m.id])||s.magicRange[m.id]<1||s.magicRange[m.id]>5)||EL.some(e=>!Number.isInteger(s.inv.pureCrystal[e])||s.inv.pureCrystal[e]<0))return null;
+      if(D.MAGICS.some(m=>!Number.isInteger(s.magicRange[m.id])||s.magicRange[m.id]<1)||EL.some(e=>!Number.isInteger(s.inv.pureCrystal[e])||s.inv.pureCrystal[e]<0))return null;
+      s.magicRange.purify=Math.max(RULES.purifyInitialRange,s.magicRange.purify);
       s.completedMap ||= SHAPE.every(([x,y])=>s.cells[key(x,y)]);
       if(s.over&&!s.result&&s.completedMap){s.result='won';s.endReason='初始地图已铺满，可继续无尽模式';}
       s.events=[];return s;

@@ -396,7 +396,7 @@
   <p>③ 同系列连片提高属性上限。点选地块，在详情选择升级方向，自动扣除所需普通／大型元素结晶。T4需合兽经历，T5需守护灵覆盖。</p>
   <p>④ 地块材料及制造系统已删除。每种地块都能和四邻对应系列互作；详情显示实际邻居与轮末属性增量。</p>
   <p>⑤ 同属性三灵轮末自动合兽，同格五兽自动合守护灵。动物自动元素化，植物与元素动物滋养地块。</p>
-  <p>⑥ 每10轮触发一种元素星雨，伤害逐次为3/5/7/9点，无尽模式继续增加。星雨带来对应至纯元素结晶，背包中使用可永久扩大对应魔法覆盖，每颗+1格，上限5格。</p>
+  <p>⑥ 每10轮触发一种元素星雨，伤害逐次为3/5/7/9点，无尽模式继续增加。每颗对应至纯元素结晶永久增加4格魔法覆盖，可连续扩展。净化第一轮即可覆盖目标及周围四邻；其他魔法初始1格。</p>
   <p>⑦ 属性不足会沿升级路线退化；五项属性全部为负时地块消散。净化、结晶与元素盾可保护生境。</p>
   <p>⑧ 初始85格铺满后可保存完整地图、摄影或检视，并继续无尽模式。也可开局选择无尽模式：轮次和可铺设边界无限制，星雨持续变强。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消 · <kbd>1</kbd>～<kbd>3</kbd> 选地块 · <kbd>B</kbd> 背包 · <kbd>Enter</kbd> 结束本轮 · <kbd>P</kbd> 摄影 · <kbd>Ctrl+S</kbd> 保存完整地图<br>
@@ -621,7 +621,7 @@ function renderMagics() {
   $('magics').innerHTML = D.MAGICS.map(m => {
     const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
     const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
-    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used||locked||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc + ' · 覆盖 '+S.magicRange[m.id]+' 格')}" ${used||locked||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
   }).join('');
 }
 
@@ -682,7 +682,7 @@ function renderInv() {
   }
   $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
   $('btnBag').dataset.n = total;
-  $('pureCrystals').innerHTML=D.MAGICS.map(m=>`<button class="btn sm pure-stock" data-pure="${m.id}" ${S.over||!inv.pureCrystal[m.element]||S.magicRange[m.id]>=5?'disabled':''} style="--c:${ELC[m.element]};--d:${ELD[m.element]}">✧ 至纯${elName(m.element)} ×${inv.pureCrystal[m.element]}<small>${m.name} ${S.magicRange[m.id]} → ${Math.min(5,S.magicRange[m.id]+1)} 格</small></button>`).join('');
+  $('pureCrystals').innerHTML=D.MAGICS.map(m=>`<button class="btn sm pure-stock" data-pure="${m.id}" ${S.over||!inv.pureCrystal[m.element]?'disabled':''} style="--c:${ELC[m.element]};--d:${ELD[m.element]}">✧ 至纯${elName(m.element)} ×${inv.pureCrystal[m.element]}<small>${m.name} ${S.magicRange[m.id]} → ${S.magicRange[m.id]+D.RULES.pureCrystalRangeStep} 格</small></button>`).join('');
   $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
   $('btnShield').disabled=S.over;
 }

@@ -24,7 +24,7 @@
       const node=document.createElement('span');node.className='token toon'+(f.hero?' pure-hero':'');node.style.setProperty('--token-color',f.color);
       const icon=document.createElement('i');icon.textContent=f.icon;node.appendChild(icon);
       const count=document.createElement('small');count.textContent=Math.abs(f.count)>1?'×'+Math.abs(f.count):'';node.appendChild(count);
-      if(f.hero){const label=document.createElement('b');label.textContent='至纯'+GameData.ELEMENTS.find(e=>e.key===f.el).name+'元素结晶';node.appendChild(label);count.textContent='对应魔法覆盖 +1 格 · 上限 5 格';}layer.appendChild(node);f.node=node;return node;
+      if(f.hero){const label=document.createElement('b');label.textContent='至纯'+GameData.ELEMENTS.find(e=>e.key===f.el).name+'元素结晶';node.appendChild(label);count.textContent='对应魔法覆盖 +'+GameData.RULES.pureCrystalRangeStep+' 格 · 可连续扩展';}layer.appendChild(node);f.node=node;return node;
     }
     function tick(now) {
       raf=0;
