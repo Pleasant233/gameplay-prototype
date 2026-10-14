@@ -33,7 +33,7 @@ async function shot(page,name){await page.evaluate('__feedback.draw()');await pa
       await page.route('**/view.js',r=>r.fulfill({body:view,contentType:'application/javascript'}));
       await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction('typeof S!=="undefined"&&S&&document.querySelector("#world canvas")');
       if(!shieldOnly){
-      await page.evaluate(`start(43);for(const k of ['2,2','3,2','4,2','2,3','3,3','4,3','2,4','3,4','4,4'])S.cells[k]=G.makeTile('forest');S={...S,cells:{...S.cells}};mode=null;selected=null;render();__feedback.frame();`);
+      await page.evaluate(`start(43);for(const k of ['2,2','3,2','4,2','2,3','3,3','4,3','2,4','3,4','4,4'])S.cells[k]=G.makeTile('woodland_t2');S={...S,cells:{...S.cells}};mode=null;selected=null;render();__feedback.frame();`);
       await page.waitForTimeout(1200);await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+1000));
       await shot(page,`feedback-${label}-before.png`);await page.evaluate('__feedback.cluster("3,3")');await advance(page,330);
       check(label+' connected terrain wave is active',await page.evaluate('__feedback.stats().transient>0'));

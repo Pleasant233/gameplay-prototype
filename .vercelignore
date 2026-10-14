@@ -12,5 +12,7 @@ AGENTS.md
 requirements.txt
 .nvmrc
 .gitattributes
+SpotlightGamejam/
+*.log
 package.json
 package-lock.json

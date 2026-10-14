@@ -31,8 +31,9 @@ post_source=(ROOT/'postfx.js').read_text(encoding='utf-8').replace(
     'const api={enabled:true,depthSupported,resize,render,dispose};',
     'const api={enabled:true,depthSupported,resize,render,dispose,_test:{sceneTarget,bright,blurA,blurB,combine}};')
 view_source=(ROOT/'view.js').read_text(encoding='utf-8')
-view_source=view_source.replace('const dt = Math.max(0,Math.min(0.05, clock.getDelta()));','const dt = root.__freezeAtmosphere?0:Math.max(0,Math.min(0.05, clock.getDelta()));')
+view_source=view_source.replace('const elapsed=Math.max(0,clock.getDelta()),dt=Math.min(.05,elapsed);','const elapsed=root.__freezeAtmosphere?0:Math.max(0,clock.getDelta()),dt=Math.min(.05,elapsed);')
 view_source=view_source.replace('const time = clock.elapsedTime;','const time = root.__freezeAtmosphere||clock.elapsedTime;')
+view_source=view_source.replace('}else renderer.render(scene,camera);','}else renderer.render(scene,camera);root.__atmosphereFrame=(root.__atmosphereFrame||0)+1;')
 view_source=view_source.replace('  root.View = {','''
   root.__atmosphere={
     freeze(){root.__freezeAtmosphere=clock.elapsedTime;},
@@ -44,6 +45,7 @@ view_source=view_source.replace('  root.View = {','''
   root.View = {''')
 SETUP='''() => {
   start(37);
+  S.mode='endless';if(S.journey)S.journey.skipped=true;
   for(let r=0;r<14;r++){
     const f=k=>G.parse(k).reduce((n,v)=>n+Math.abs(v-3),0);
     const cell=G.legalPlacements(S).sort((a,b)=>f(a)-f(b))[0];
@@ -127,11 +129,16 @@ try:
         page.wait_for_function('typeof S!="undefined" && S && window.__atmosphere')
         check('Reload preserves the atmosphere preference',page.evaluate('!__atmosphere.status().enabled'))
         page.locator('#btnMenu').click();page.locator('#btnAtmosphere').click();page.locator('#dlgMenu [data-close]').click()
-        page.wait_for_timeout(300)
+        frame=page.evaluate('window.__atmosphereFrame||0')
+        page.wait_for_function('(before)=>(window.__atmosphereFrame||0)>before && __atmosphere.status().enabled',arg=frame,timeout=60000)
         memory=page.evaluate('__atmosphere.status().memory')
         for width,height in [(1000,760),(1200,800),(1440,900)]:
-            page.set_viewport_size({'width':width,'height':height});page.wait_for_timeout(350)
+            frame=page.evaluate('window.__atmosphereFrame||0')
+            page.set_viewport_size({'width':width,'height':height})
+            page.wait_for_function('p=>(window.__atmosphereFrame||0)>p.frame && __atmosphere.status().size[0]===p.width && __atmosphere.status().size[1]===p.height',arg={'frame':frame,'width':width,'height':height},timeout=60000)
         status=page.evaluate('__atmosphere.status()')
+        report['resizeMemoryBefore']=memory
+        report['resizeMemoryAfter']=status['memory']
         check('Resize updates the render targets without growing the texture count',status['size']==[1440,900] and status['memory']['textures']==memory['textures'])
         page.close()
 

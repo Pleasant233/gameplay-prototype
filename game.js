@@ -1,13 +1,11 @@
 // 确定性规则引擎：所有规则与进度都在这里；DOM、存储、动画在表现层。
 (function (root) {
   const D = typeof module !== 'undefined' && module.exports ? require('./data.js') : root.GameData;
-  const { TILE_TYPES, RULES, SCORE, ORES, RECIPES } = D;
+  const { TILE_TYPES, RULES, SCORE } = D;
   const EL = D.ELEMENTS.map(e => e.key);
   const TYPE = Object.fromEntries(TILE_TYPES.map(t => [t.id, t]));
   const sum = a => a.reduce((x, y) => x + y, 0);
-  const tier = t => t.level || sum(t.attrs);
-  const branch = t => TYPE[t.type].passiveId;
-  const power = t => Math.max(0,(TYPE[t.type].level || 2)-2);
+  const tier = t => t.level;
   const animalCap = () => Infinity;
   const emptyEl = () => Object.fromEntries(EL.map(e => [e, 0]));
   const key = (x, y) => x + ',' + y;
@@ -21,7 +19,7 @@
   const BOUNDS = { minX: -3, maxX: 9, minY: -3, maxY: 9 };
   function neighbors(k) {
     const [x, y] = parse(k);
-    return [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].map(([a, b]) => key(a, b)).filter(n => SHAPE_KEYS.has(n));
+    return [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].map(([a, b]) => key(a, b));
   }
   function rand(s) {
     s.rng = (s.rng + 0x6D2B79F5) | 0;
@@ -48,23 +46,23 @@
   const fail = msg => ({ ok: false, msg });
   const success = msg => ({ ok: true, msg });
   const placedKeys = s => Object.keys(s.cells);
-  const emptyKeys = s => SHAPE.map(([x, y]) => key(x, y)).filter(k => !s.cells[k]);
+  const boardKeys = s => s.mode==='endless' ? [...new Set([...SHAPE_KEYS,...placedKeys(s),...placedKeys(s).flatMap(neighbors)])] : [...SHAPE_KEYS];
+  const emptyKeys = s => boardKeys(s).filter(k => !s.cells[k]);
   const spiritCap = t => Math.max(0, sum(t.attrs)) + (t.shelter ? 4 : 0);
   const cancerCap = t => -sum(t.attrs.filter(v => v < 0));
-  const legalPlacements = s => s.placed || s.over ? [] : emptyKeys(s).filter(k => neighbors(k).some(n => s.cells[n]));
+  const legalPlacements = s => s.ap < 1 || s.over ? [] : emptyKeys(s).filter(k => neighbors(k).some(n => s.cells[n]));
   const globalAttrs = s => EL.map((_, i) => sum(Object.values(s.cells).map(t => t.attrs[i])));
   const totalAttrs = s => sum(globalAttrs(s));
-  const hasWater = t => t.attrs[2] > 0 && (t.spring || t.pond || (D.WATER_TYPES.includes(t.type) || (TYPE[t.type].tag || "").split(/[；、，]/).includes("水域")));
-  const isFarm = t => t.farm || (D.FARM_TYPES.includes(t.type) || (TYPE[t.type].tag || "").includes("可耕地"));
-  const hasOre = t => t.vein || (D.ORE_TYPES.includes(t.type) || (TYPE[t.type].tag || "").includes("可产矿"));
+  const hasWater = t => t.attrs[2] > 0 && (t.spring || t.pond || TYPE[t.type].tag.split(/[；、，]/).includes("水域"));
+  const isFarm = t => t.farm || TYPE[t.type].tag.includes("可耕地");
   function makeTile(typeId) {
-    return { type: typeId, attrs: TYPE[typeId].attrs.slice(), spirits: [], cancers: [], beasts: [], guardians: [], plants: [], animals: [], ores: [], spring: false, pond: false, farm: false, vein: false, shelter: false, oasis: false };
+    return { type: typeId, attrs: TYPE[typeId].attrs.slice(), spirits: [], cancers: [], beasts: [], guardians: [], plants: [], animals: [], spring: false, pond: false, farm: false, shelter: false, oasis: false };
   }
   function cluster(s, cell) {
     if (!s.cells[cell]) return [];
     const found = new Set([cell]), todo = [cell], type = s.cells[cell].type;
     for (let i = 0; i < todo.length; i++) for (const n of neighbors(todo[i])) {
-      if (!found.has(n) && s.cells[n] && (TYPE[type].family ? TYPE[s.cells[n].type].family === TYPE[type].family : s.cells[n].type === type)) { found.add(n); todo.push(n); }
+      if (!found.has(n) && s.cells[n] && TYPE[s.cells[n].type].family === TYPE[type].family) { found.add(n); todo.push(n); }
     }
     return todo;
   }
@@ -75,16 +73,65 @@
   function upgrades(s, cell) {
     const t = s.cells[cell];
     if (!t) return [];
-    const def=TYPE[t.type];
-    return TILE_TYPES.filter(ty => def.family ? ty.parent===t.type && upgradeReasons(s,cell,ty).length===0 : !ty.family && tier(ty)>tier(def) && ty.attrs.every((v,i)=>t.attrs[i]>=v));
+    return TILE_TYPES.filter(ty => ty.parent===t.type && upgradeReasons(s,cell,ty).length===0);
   }
   function upgradeReasons(s,cell,ty){
     const t=s.cells[cell], reasons=[];
-    ty.attrs.forEach((v,i)=>{if(t.attrs[i]<v)reasons.push(D.ELEMENTS[i].name+'还需'+(v-t.attrs[i]));});
+    const cost=upgradeCost(s,cell,ty);
+    EL.forEach((e,i)=>{if(cost.normal[e]>s.inv.crystal[e]||cost.big[e]>s.inv.bigCrystal[e])reasons.push(D.ELEMENTS[i].name+'结晶不足（缺属性 '+cost.deficit[i]+'）');if(ty.attrs[i]>attrCap(s,cell))reasons.push(D.ELEMENTS[i].name+'需求超过连片上限');});
     if(cluster(s,cell).length<ty.requiredN)reasons.push('同系列需'+ty.requiredN+'格');
     if(ty.level>=4 && !(s.stats.merges>0))reasons.push('先合成元素兽');
     if(ty.level===5 && !placedKeys(s).some(k=>(s.cells[k].guardians||[]).length && guardianArea(s,k).includes(cell)))reasons.push('需守护灵覆盖');
     return reasons;
+  }
+  function upgradeCost(s,cell,ty){
+    const deficit=ty.attrs.map((v,i)=>Math.max(0,v-s.cells[cell].attrs[i]));
+    const normal=emptyEl(),big=emptyEl();
+    EL.forEach((e,i)=>{normal[e]=Math.min(deficit[i],s.inv.crystal[e]);big[e]=Math.ceil((deficit[i]-normal[e])/2);});
+    return {deficit,normal,big};
+  }
+  const checkpoint = s => RULES.stageTargets.find(t=>t.round>=s.round);
+  const restoration = s => Math.min(1,Math.max(0,score(s).total)/RULES.stageTargets.at(-1).score);
+  const meteorStrength = s => ({damage:1+2*Math.ceil(s.round/RULES.meteorEvery),count:Math.max(1,Math.floor(placedKeys(s).length*Math.min(.7,.25+.05*Math.ceil(s.round/RULES.meteorEvery))))});
+  const magicArea = (s,cell,magic) => region(s,cell,s.magicRange[magic]);
+  function autoGuardians(s){
+    for(const cell of placedKeys(s))while(s.cells[cell].beasts.length>=RULES.guardianMergeCount){
+      handlers.mergeGuardian(s,{cell,beastIds:s.cells[cell].beasts.slice(0,RULES.guardianMergeCount).map(b=>b.id)});
+      unlockMemory(s,'guardian');
+    }
+  }
+  function degrade(s){
+    for(const cell of placedKeys(s)){
+      const t=s.cells[cell];
+      if(t.attrs.every(v=>v<0)){delete s.cells[cell];emit(s,{cell,kind:'vanish'});log(s,'地块全属性为负，消散：'+cell);continue;}
+      let def=TYPE[t.type];
+      while(def.parent && def.attrs.some((v,i)=>v>0&&t.attrs[i]<v))def=TYPE[def.parent];
+      if(def.id!==t.type){t.type=def.id;emit(s,{cell,kind:'degrade'});log(s,'地形退化为'+def.name);}
+    }
+    capTerrain(s);
+  }
+  // Directed four-neighbor relationships; every family has a partner, all 80 nodes inherit it.
+  const RELATIONS = {
+    desert: {targets:['ocean','river'],el:'water',name:'水源润沙'},
+    woodland: {targets:['wetland','river'],el:'wood',name:'活水育林'},
+    ice: {targets:['volcano'],el:'water',name:'地热融雪'},
+    ocean: {targets:['ice','river'],el:'water',name:'汇流入海'},
+    grassland: {targets:['woodland','river'],el:'earth',name:'林岸沃野'},
+    wetland: {targets:['ocean','grassland'],el:'wood',name:'水草净泽'},
+    river: {targets:['ice','woodland'],el:'water',name:'涵养溪流'},
+    mine: {targets:['volcano','ice'],el:'metal',name:'冷热凝脉'},
+    volcano: {targets:['mine','desert'],el:'fire',name:'岩砂蓄火'},
+    ruins: {targets:['mine','woodland'],el:'earth',name:'林岩护址'}
+  };
+  function tileRelations(s,cell){
+    const t=s.cells[cell],rule=RELATIONS[TYPE[t.type].family];
+    return rule?neighbors(cell).filter(k=>s.cells[k]&&rule.targets.includes(TYPE[s.cells[k].type].family)).map(k=>({...rule,neighbor:k,n:Math.max(1,tier(TYPE[t.type])-2)})):[];
+  }
+  function settleRelations(s){
+    for(const cell of placedKeys(s))for(const r of tileRelations(s,cell)){
+      const i=EL.indexOf(r.el),before=s.cells[cell].attrs[i];addAttr(s,cell,i,r.n);
+      const n=s.cells[cell].attrs[i]-before;if(n)emit(s,{cell,kind:'relation',el:r.el,n,neighbor:r.neighbor});
+    }
   }
   function supplyLevel(s){return s.progress && s.progress.t3 && s.stats.merges>0 ? 3 : s.progress && (s.progress.t2 || s.progress.natural>=5) ? 2 : 1;}
   function score(s) {
@@ -97,14 +144,9 @@
   }
   const stage = s => Math.min(4, 1 + Math.floor(Math.max(0, s.peakScore || 0) / RULES.stageEvery));
   const apLimit = s => Math.min(RULES.maxAP, RULES.apPerRound + (stage(s) - 1) * 2);
-  function offerPool(s, unrestricted) {
-    if(s.edition==='v13')return TILE_TYPES.filter(t=>t.family && t.level<=supplyLevel(s) && t.level<=3);
-    const st = stage(s);
-    return unrestricted ? TILE_TYPES.filter(t=>!t.family) : TILE_TYPES.filter(t => !t.family && (st === 1 ? tier(t) === 1 : Math.abs(tier(t) - st) <= 1));
-  }
+  function offerPool(s) {return TILE_TYPES.filter(t=>t.level<=supplyLevel(s)&&t.level<=3);}
   function rollOffers(s, unrestricted = false) {
     const pool=offerPool(s,unrestricted);
-    if(s.edition!=='v13'){s.offers=shuffle(s,pool).slice(0,3).map(t=>t.id);return;}
     const groups=shuffle(s,placedKeys(s)).sort((a,b)=>cluster(s,b).length-cluster(s,a).length),family=TYPE[s.cells[groups[0]].type].family;
     const first=pool.find(t=>t.family===family && t.level===Math.min(2,supplyLevel(s))) || pool[0];
     const others=pool.filter(t=>t.family!==first.family && t.level===supplyLevel(s));
@@ -115,24 +157,16 @@
   }
   function newGame(seed, options = {}) {
     const s = {
-      edition: options.edition || 'v13', progress:{t2:false,t3:false,natural:0},
+      mode: options.mode==='endless'?'endless':'challenge',magicRange:Object.fromEntries(D.MAGICS.map(m=>[m.id,1])),completedMap:false,result:null,
+      edition: 'v13', progress:{t2:false,t3:false,natural:0},
       seed: seed >>> 0, rng: seed | 0, round: 1, ap: RULES.apPerRound, roundAP: RULES.apPerRound,
       placed: 0, unlockedMagics: ['purify'], magicUsed: {}, interactionUsed: {}, offers: [], cells: {}, nextId: 1,
-      inv: { crystal: emptyEl(), bigCrystal: emptyEl(), inverseCrystal: emptyEl(), ore: Object.fromEntries(Object.keys(ORES).map(k => [k, 0])), wood: 0, bucket: 0, bucketFull: 0, water: 0, charm: 0, shields: [] },
-      shields: [], scenario: ['standard', 'fire', 'water'].includes(options.scenario) ? options.scenario : 'standard',
+      inv: { crystal: emptyEl(), bigCrystal: emptyEl(), inverseCrystal: emptyEl(), pureCrystal:emptyEl(), shields: [] },
+      shields: [],
       log: [], events: [], over: false, peakScore: 0, stats: {}, achievements: [], visions: [], lastMeteor: null,
     };
-    let types;
-    if(s.edition==='v13'){
-      types=['grassland_t2','ocean_t1','mine_t1','woodland_t1','volcano_t1'];
-      if(options.tutorial)s.journey={step:0,skipped:false,memories:[],done:[],read:[],waterUses:0,version:1,grants:{water:true}};
-      if(options.tutorial)s.inv.crystal.water=3;
-    }
-    else
-    if (s.scenario === 'fire') types = ['desert', 'desert', 'barren', 'bare_mount', 'ruin_town'];
-    else if (s.scenario === 'water') types = ['polluted_lake', 'polluted_lake', 'lake', 'lake', 'ruin_town'];
-    else types = [1, 2, 2, 2, 2].map(n => pick(s, TILE_TYPES.filter(t => !t.family && tier(t) === n)).id);
-    if(s.edition!=='v13')types = shuffle(s, types);
+    const types=['grassland_t2','ocean_t1','mine_t1','woodland_t1','volcano_t1'];
+    if(options.tutorial){s.journey={step:0,skipped:false,memories:[],done:[],read:[],waterUses:0,version:1,grants:{water:true}};s.inv.crystal.water=3;}
     ['3,3', '2,3', '4,3', '3,2', '3,4'].forEach((k, i) => { s.cells[k] = makeTile(types[i]); });
     s.visions = shuffle(s, D.VISIONS).slice(0, 2).map(v => ({ id: v.id, done: false }));
     rollOffers(s); s.peakScore = score(s).total;
@@ -143,10 +177,10 @@
     const m = D.MAGICS.find(m => m.id === magic);
     return !!m && (!m.unlock || s.unlockedMagics.includes(m.id) || globalAttrs(s)[EL.indexOf(m.unlock)] >= RULES.magicUnlock);
   }
-  function canPurify(s, cell) { return [cell, ...neighbors(cell)].some(k => s.cells[k] && (s.cells[k].attrs.some(v => v < 0) || (s.cells[k].cancers || []).length)); }
+  function canPurify(s, cell) { return magicArea(s,cell,'purify').some(k=>s.cells[k]&&(s.cells[k].attrs.some(v=>v<0)||s.cells[k].cancers.length)); }
   function metrics(s) {
     const ts = Object.values(s.cells);
-    return { ...s.stats, tiles: ts.length, cluster: Math.max(...placedKeys(s).map(k => cluster(s, k).length)),
+    return { ...s.stats, tiles: ts.length, cluster: Math.max(0,...placedKeys(s).map(k => cluster(s, k).length)),
       peakScore: s.peakScore, beastElements: new Set(ts.flatMap(t => t.beasts.map(b => b.el))).size,
       plants: sum(ts.map(t => t.plants.length)), clean: s.stats.purified > 0 && ts.every(t => t.attrs.every(v => v >= 0) && t.cancers.length === 0) ? 1 : 0,
       visions: s.visions.filter(v => v.done).length };
@@ -169,7 +203,7 @@
   }
   const countStat = (s, name, n = 1) => { s.stats[name] = (s.stats[name] || 0) + n; };
   function purify(s, cell, area) {
-    for (const k of area ? [cell, ...neighbors(cell)] : [cell]) {
+    for (const k of area) {
       const t = s.cells[k]; if (!t) continue;
       if (t.attrs.some(v => v < 0) || t.cancers.length) countStat(s, 'purified');
       t.attrs = t.attrs.map(v => v < 0 ? Math.min(attrCap(s, k), v + 5) : v);
@@ -209,59 +243,13 @@
       }
     }
   }
-  function applyTerrainAfter(s,a){
-    const t=s.cells[a.cell];if(!t)return;const b=branch(t),q=power(t),lock='passive:'+a.cell+':'+a.type;
-    if(b==='volcano_a'&&a.type==='cast'&&a.magic==='burn')addAttr(s,a.cell,3,q);
-    if(s.interactionUsed[lock])return;
-    if(b==='woodland_a'&&a.type==='chop'){s.inv.wood+=q;emit(s,{cell:a.cell,kind:'wood',n:q});s.interactionUsed[lock]=true;}
-    if(b==='desert_b'&&a.type==='pour')addAttr(s,a.cell,2,q);
-    if(b==='river_a'&&a.type==='pour')neighbors(a.cell).filter(k=>s.cells[k]&&isFarm(s.cells[k])).slice(0,q).forEach(k=>addAttr(s,k,2,1));
-    if(b==='river_b'&&a.type==='compost'){neighbors(a.cell).filter(k=>s.cells[k]&&(isFarm(s.cells[k])||TYPE[s.cells[k].type].family==='woodland')).slice(0,q).forEach(k=>addAttr(s,k,4,1));s.interactionUsed[lock]=true;}
-    if(b==='volcano_b'&&a.type==='useCrystal'&&a.inverse&&a.el==='fire'&&t.attrs[3]>=0){addAttr(s,a.cell,4,q);s.interactionUsed[lock]=true;}
-  }
-  function terrainAction(s,a){
-    const t=s.cells[a.cell];if(!t)return fail('请选择地块');const b=branch(t),q=power(t),n=a.count===undefined?1:a.count;
-    if(!Number.isInteger(n)||n<1||n>q)return fail('超过本地形每轮额度');
-    if(b==='ocean_a'&&a.kind==='harvest'){
-      const fish=t.animals.find(v=>v.id===a.targetId&&v.kind==='fish'&&!v.el&&!s.interactionUsed['animal:'+v.id]);
-      if(!fish)return fail('需要未交互的普通鱼');t.animals=t.animals.filter(v=>v!==fish);s.inv.water+=q;
-    }else if(b==='ocean_b'&&a.kind==='sail'){
-      const fish=t.animals.find(v=>v.id===a.targetId&&v.kind==='fish'&&!s.interactionUsed['animal:'+v.id]);const target=s.cells[a.to];
-      if(!fish||!target||target===t||!hasWater(t)||!hasWater(target)||target.animals.length>=animalCap(target))return fail('需要鱼、活水航道及空余容量');
-      const dist={[a.cell]:0},todo=[a.cell];for(let i=0;i<todo.length;i++)for(const k of neighbors(todo[i]))if(dist[k]===undefined&&s.cells[k]&&TYPE[s.cells[k].type].family==='ocean'&&hasWater(s.cells[k])){dist[k]=dist[todo[i]]+1;todo.push(k);}
-      if(dist[a.to]===undefined || dist[a.to]>(q===3?85:q+1))return fail('超出相连活水航道距离');
-      t.animals=t.animals.filter(v=>v!==fish);target.animals.push(fish);
-    }else if(b==='ruins_b'&&a.kind==='repair'){
-      const shield=s.shields.find(v=>v.id===a.shieldId&&v.cells.includes(a.cell));
-      if(!shield||!EL.includes(a.el)||!shield.initialDefense||shield.defense[a.el]>=shield.initialDefense[a.el])return fail('请选择覆盖本格且受损的盾属性');
-      if(s.inv.ore.silver<1)return fail('需要1银矿');s.inv.ore.silver--;shield.defense[a.el]=Math.min(shield.initialDefense[a.el],shield.defense[a.el]+q);
-    }else return fail('该地形没有此项能力');
-    emit(s,{cell:a.to||a.cell,kind:'upgrade'});return success('地形能力已生效');
-  }
-
   function interactionKeys(s, a) {
     const t = s.cells[a.cell || a.from];
-    if(a.type==='terrainAction')return ['terrain:'+a.cell,...(a.kind==='repair'?['terrain:repair']:[]),...(a.kind==='harvest'&&a.targetId?['animal:'+a.targetId]:[]),...(a.kind==='sail'&&a.targetId?['animal:'+a.targetId]:[])];
     if (a.type === 'moveSpirit') return ['spirit:' + a.spiritId];
     if (a.type === 'moveBeast') return ['beast:' + a.beastId];
-    if (a.type === 'moveAnimal' || a.type === 'feed' || a.type === 'pair') {
-      const keys = ['animal:' + a.animalId];
-      if (a.type === 'pair' && t) {
-        const animal = t.animals.find(x => x.id === a.animalId);
-        const mate = animal && t.animals.find(x => x.id !== animal.id && x.kind === animal.kind && !x.cd && !s.interactionUsed['animal:' + x.id]);
-        if (mate) keys.push('animal:' + mate.id);
-      }
-      return keys;
-    }
-    if (a.type === 'chop' || a.type === 'movePlant') return ['plant:' + a.plantId];
-    if (a.type === 'compost') return [a.what + ':' + a.targetId];
     if (a.type === 'merge' && t) return t.spirits.filter(sp => sp.el === a.el && !s.interactionUsed['spirit:' + sp.id]).slice(0, 3).map(sp => 'spirit:' + sp.id);
-    if (a.type === 'mineOre' && t) return ['ore:' + (t.ores[a.index] || '')];
-    if (a.type === 'scoop' || a.type === 'pour') return ['bucket'];
     if (a.type === 'deployShield') return ['shield:' + a.shieldId];
-    if (a.type === 'craft') return ['craft:' + a.recipe];
     if (a.type === 'craftShield') return ['craft:shield'];
-    if (a.type === 'useCharm') return ['charm'];
     return [];
   }
   const handlers = {
@@ -273,13 +261,11 @@
       else if(s.journey.step===1 && a.cell==='3,2')s.journey.step=2;
       return success('继续旅程');
     },
-    terrainAction(s,a){return terrainAction(s,a);},
     place(s, a) {
-      if (s.placed) return fail('每轮只能放置一块地块');
       const typeId = s.offers[a.offer];
       if (!typeId || !Number.isInteger(a.offer)) return fail('无效的待选地块');
       if (!legalPlacements(s).includes(a.cell)) return fail('只能放在已有地块相邻的空位');
-      s.cells[a.cell] = makeTile(typeId); s.offers = []; s.placed = 1;
+      s.cells[a.cell] = makeTile(typeId); s.placed++; rollOffers(s);
       countStat(s, 'placements'); emit(s, { cell: a.cell, kind: 'place' });
       return success(`放置 ${TYPE[typeId].name}`);
     },
@@ -288,35 +274,41 @@
       if (!t || !m) return fail('需要选择地块和有效魔法');
       if (!magicUnlocked(s, a.magic)) return fail(`全图${elName(m.unlock)}属性须达到 20`);
       if (s.magicUsed[a.magic]) return fail('每种魔法每轮只能施放一次');
-      if (a.magic === 'purify') {
-        if (!canPurify(s, a.cell)) return fail('选中及四邻没有污染或癌元');
-        purify(s, a.cell, true);
-      } else if (a.magic === 'mine') { t.vein = true; addAttr(s, a.cell, 0, 5); }
-      else if (a.magic === 'spring') { t.spring = true; addAttr(s, a.cell, 2, 5); }
-      else if (a.magic === 'rich') { t.farm = true; addAttr(s, a.cell, 4, 5); }
-      else {
-        t.attrs[1] = t.attrs[2] = 0; addAttr(s, a.cell, 3, 5);
-        t.cancers = []; t.plants = []; t.animals = t.animals.filter(a => a.kind !== 'fish');
-        t.spirits = t.spirits.filter(sp => sp.el !== 'wood' && sp.el !== 'water');
-        t.spring = t.pond = false;
+      const area=magicArea(s,a.cell,a.magic);
+      if(a.magic==='purify'){
+        if(!canPurify(s,a.cell))return fail('覆盖区域没有污染或癌元');
+        purify(s,a.cell,area);
+      }else for(const cell of area){
+        const target=s.cells[cell];
+        if(a.magic==='mine')addAttr(s,cell,0,5);
+        else if(a.magic==='spring'){target.spring=true;addAttr(s,cell,2,5);}
+        else if(a.magic==='rich'){target.farm=true;addAttr(s,cell,4,5);}
+        else {target.attrs[1]=target.attrs[2]=0;addAttr(s,cell,3,5);target.cancers=[];target.plants=[];target.animals=target.animals.filter(v=>v.kind!=='fish');target.spirits=target.spirits.filter(sp=>sp.el!=='wood'&&sp.el!=='water');target.spring=target.pond=false;}
+        emit(s,{cell,kind:'spell',magic:a.magic,el:m.element});
       }
       s.magicUsed[a.magic] = true;
       return success(`施放${m.name}魔法`);
     },
     upgrade(s, a) {
       const ty = upgrades(s, a.cell).find(t => t.id === a.tileType);
-      if (!ty) return fail('属性未达到该地形的五维门槛');
+      if (!ty) return fail('结晶或升级条件不足');
+      const cost=upgradeCost(s,a.cell,ty);
+      EL.forEach((el,i)=>{s.inv.crystal[el]-=cost.normal[el];s.inv.bigCrystal[el]-=cost.big[el];addAttr(s,a.cell,i,cost.normal[el]+2*cost.big[el]);});
       const oldLevel=TYPE[s.cells[a.cell].type].level;
       if(s.progress){if(oldLevel===1&&ty.level===2)s.progress.t2=true;if(oldLevel===2&&ty.level===3)s.progress.t3=true;}
       s.cells[a.cell].type = ty.id; s.cells[a.cell].oasis = false; capTerrain(s);
       countStat(s, 'upgrades'); emit(s, { cell: a.cell, kind: 'upgrade' });
       return success(`升级为${ty.name}`);
     },
-    reroll(s) {
-      if (s.placed) return fail('地块放置后不能重投');
-      if (sum(Object.values(s.inv.crystal)) < 3) return fail('重投需要 3 颗普通元素结晶');
-      takeCrystals(s, 3); rollOffers(s, true); countStat(s, 'rerolls');
-      return success('消耗 3 颗结晶重投');
+    reroll(s) {rollOffers(s,true);countStat(s,'rerolls');return success('刷新地块 · 消耗 1 行动点');},
+    usePureCrystal(s,a){
+      const m=D.MAGICS.find(m=>m.id===a.magic);
+      if(!m)return fail('请选择魔法');
+      if(s.magicRange[m.id]>=5)return fail('魔法覆盖已达到 5 格');
+      if(s.inv.pureCrystal[m.element]<1)return fail('没有对应至纯元素结晶');
+      s.inv.pureCrystal[m.element]--;s.magicRange[m.id]++;
+      emit(s,{cell:a.cell||'3,3',kind:'range',magic:m.id});
+      return success(m.name+'覆盖提升到 '+s.magicRange[m.id]+' 格');
     },
     moveSpirit(s, a) {
       if (!nearby(s, a.from, a.to)) return fail('只能移到相邻地块');
@@ -359,21 +351,6 @@
       t.spirits = t.spirits.filter(x => !used.has(x.id)); t.beasts.push({ id: id(s), el: a.el, age: 0 });
       countStat(s, 'merges'); return success(`合成${elName(a.el)}元素兽`);
     },
-    scoop(s, a) {
-      const t = s.cells[a.cell]; if (!t) return fail('无效地块');
-      if (s.inv.bucket <= s.inv.bucketFull) return fail('没有空桶');
-      if (!hasWater(t)) return fail('地块没有可取水的水域');
-      if (!t.spring) addAttr(s, a.cell, 2, -1);
-      s.inv.bucketFull++; return success(t.spring ? '从泉眼打水' : '舀水：水 -1');
-    },
-    pour(s, a) {
-      const t = s.cells[a.cell]; if (!t) return fail('无效地块');
-      if ((t.type === 'volcano' || (TYPE[t.type].family==='volcano' && TYPE[t.type].branchKey!=='B'))) return fail('火山无法使用水桶，水未消耗');
-      if (s.inv.bucketFull <= 0 && s.inv.water <= 0) return fail('没有装水的桶');
-      if (s.inv.water > 0) s.inv.water--; else s.inv.bucketFull--;
-      t.pond = true; if ((t.type === 'desert' || TYPE[t.type].family==='desert')) t.oasis = true;
-      addAttr(s, a.cell, 2, 1); return success(t.oasis ? '沙漠绿洲：水 +1' : '生成小湖：水 +1');
-    },
     useCrystal(s, a) {
       const t = s.cells[a.cell]; if (!t || !EL.includes(a.el)) return fail('无效地块或元素');
       const bag = a.inverse ? s.inv.inverseCrystal : a.big ? s.inv.bigCrystal : s.inv.crystal;
@@ -383,17 +360,12 @@
       bag[a.el]--; addAttr(s, a.cell, EL.indexOf(a.el), n);
       return success(`使用${a.inverse ? '逆' : a.big ? '大型' : ''}${elName(a.el)}结晶：${n > 0 ? '+' : ''}${n}`);
     },
-    useCharm(s, a) {
-      const t = s.cells[a.cell]; if (!t || s.inv.charm < 1) return fail('没有净化符或无效地块');
-      if (!t.attrs.some(v => v < 0) && !t.cancers.length) return fail('该地块没有污染');
-      s.inv.charm--; purify(s, a.cell, false); return success('使用净化符');
-    },
     craftShield(s, a) {
       const cost = a.crystals;
       if (!cost || Object.keys(cost).some(e => !EL.includes(e)) || EL.some(e => !Number.isInteger(cost[e] === undefined ? 0 : cost[e]) || (cost[e] || 0) < 0 || (cost[e] || 0) > s.inv.crystal[e])) return fail('无效的结晶配比');
       const n = sum(EL.map(e => cost[e] || 0));
       if (n < 5 || n % 5 !== 0) return fail('元素盾需要 5 颗或 5 的倍数普通结晶');
-      const shield = { id: id(s), initialDefense: Object.fromEntries(EL.map(e => [e, cost[e] || 0])), defense: Object.fromEntries(EL.map(e => [e, cost[e] || 0])), coverage: n / 5 };
+      const shield = { id: id(s), defense: Object.fromEntries(EL.map(e => [e, cost[e] || 0])), coverage: n / 5 };
       for (const e of EL) s.inv.crystal[e] -= cost[e] || 0;
       s.inv.shields.push(shield); return success(`制造元素盾，覆盖 ${shield.coverage} 格`);
     },
@@ -404,9 +376,6 @@
       return success(`部署元素盾，覆盖 ${sh.cells.length} 格`);
     },
   };
-  const invCount = (s, k) => k === 'wood' ? s.inv.wood : s.inv.ore[k];
-  const invTake = (s, k, n) => { if (k === 'wood') s.inv.wood -= n; else s.inv.ore[k] -= n; };
-  function takeCrystals(s, n) { for (const e of EL) { const take = Math.min(n, s.inv.crystal[e]); s.inv.crystal[e] -= take; n -= take; } }
   function reconcile(s, before, cell, eventStart = 0) {
     const actual = score(s).total - before, accounted = sum(s.events.slice(eventStart).map(e => e.score || 0));
     if (actual !== accounted) emit(s, { cell: cell || '3,3', kind: 'attr', n: actual - accounted, score: actual - accounted });
@@ -415,24 +384,22 @@
     s.events = [];
     if (!action || !handlers[action.type]) return fail('未知行动');
     if (s.over) return fail('游戏已结束');
-    if (['moveAnimal','feed','pair','movePlant','chop','mineOre','compost','craft'].includes(action.type) || action.type==='compost'&&action.what==='animal' || action.type==='terrainAction'&&['harvest','sail','smelt','split','recycle'].includes(action.kind)) return fail('动物与地表资源自动管理，物品配方已移除');
-    const cost = ['place', 'cast', 'moveGuardian'].includes(action.type) ? 1 : 0;
+    const cost = ['place', 'cast', 'moveGuardian','reroll'].includes(action.type) ? 1 : 0;
     if (s.ap < cost) return fail('行动点不足');
-    if (['cast', 'moveGuardian'].includes(action.type) && !s.placed) return fail('请先放置本轮地块');
     const used = interactionKeys(s, action);
     if (used.some(k => s.interactionUsed[k])) return fail('该生物或物品本轮已交互');
     const before = score(s).total, beforeBag = bagCount(s);
     const r = handlers[action.type](s, action); if (!r.ok) return r;
     used.forEach(k => { s.interactionUsed[k] = true; }); s.ap -= cost;
-    applyTerrainAfter(s,action); journeyAction(s,action);
+    journeyAction(s,action);autoGuardians(s);degrade(s);
     trimSpirits(s); updateProgress(s); log(s, r.msg);
     const cell = action.cell || action.to || action.from || '3,3';
     const bagDelta = bagCount(s) - beforeBag;
-    const bagAccounted = sum(s.events.filter(e => ['wood', 'ore', 'crystal', 'bigCrystal', 'inverseCrystal', 'item'].includes(e.kind)).map(e => e.n || 1));
+    const bagAccounted = sum(s.events.filter(e => ['crystal', 'bigCrystal', 'inverseCrystal','pureCrystal', 'item'].includes(e.kind)).map(e => e.n || 1));
     if (bagDelta > bagAccounted) emit(s, { cell, kind: 'item', n: bagDelta - bagAccounted });
     reconcile(s, before, cell);
-    if (!emptyKeys(s).length) finish(s);
-    else if (cost && s.ap === 0) endRound(s);
+    checkMap(s);
+    if(!placedKeys(s).length)finish(s,'failed','所有地块已消散');
     return r;
   }
   function eligiblePlants(t) {
@@ -464,22 +431,22 @@
   }
   function meteor(s) {
     const teaching=s.journey&&!s.journey.skipped&&s.round===10;
-    const element = teaching?'earth':pick(s, EL), cells = region(s, teaching?'3,3':pick(s, placedKeys(s)), Math.max(1, Math.floor(placedKeys(s).length / 3)));
+    const element = teaching?'earth':pick(s, EL), cells = region(s, teaching?'3,3':pick(s, placedKeys(s)), meteorStrength(s).count);
+    const strength=meteorStrength(s);
     let blocked = 0;
     for (const cell of cells) {
-      let protection=branch(s.cells[cell])==='ice_a'?Math.min(2,power(s.cells[cell])):0;
-      if(TYPE[s.cells[cell].type].family==='ice' && neighbors(cell).some(k=>s.cells[k]&&branch(s.cells[k])==='ice_a'&&power(s.cells[k])===3))protection=Math.max(1,protection);
-      let damage = 3-protection;
+      let damage = strength.damage;
       for (const shield of s.shields) if (shield.cells.includes(cell)) {
         const n = Math.min(damage, shield.defense[element]); shield.defense[element] -= n; damage -= n; blocked += n;
         if (n) emit(s, { cell, kind: 'shield', el: element });
       }
       if (damage) addAttr(s, cell, EL.indexOf(element), -damage);
-      emit(s, { cell, kind: 'meteor', el: element, damage });
+      emit(s, { cell, kind: 'meteor', el: element, damage, strength:strength.damage });
     }
     s.shields = s.shields.filter(sh => sum(Object.values(sh.defense)) > 0);
     if (blocked) countStat(s, 'blocked');
-    s.lastMeteor = { round: s.round, el: element, cells, blocked };
+    s.lastMeteor = { round: s.round, el: element, cells, blocked,damage:strength.damage };
+    s.inv.pureCrystal[element]++;emit(s,{cell:cells[0],kind:'pureCrystal',el:element,n:1});
     log(s, `${elName(element)}陨石雨影响 ${cells.length} 格，元素盾抵挡 ${blocked} 点`);
   }
   // Settle after production, migration and disasters; newborn beasts act next round.
@@ -496,9 +463,8 @@
   }
   function endRound(s) {
     if (s.over) return fail('游戏已结束');
-    if (!s.placed) return fail('本轮必须先放置一块地块');
     const before = score(s).total, keys = placedKeys(s), eventStart = s.events.length;
-    for(const k of keys){const t=s.cells[k];if(branch(t)==='wetland_a'){t.cleanAge=(t.cleanAge||0)+1;if(t.cleanAge%2===0){const v=Math.min(...t.attrs);if(v<0){const i=t.attrs.indexOf(v);addAttr(s,k,i,Math.min(-v,power(t)));}}}}
+    autoGuardians(s);settleRelations(s);
     // Guardians remain attached: settle each at its current location exactly once.
     // Apply the aura before natural spawning so every tile sees its final boost.
     for (const k of keys) for (const guardian of s.cells[k].guardians || []) {
@@ -524,28 +490,17 @@
       }
       for (const a of t.animals) {
         if (a.el) { a.age=(a.age||0)+1; const i=EL.indexOf(a.el);if(i>=0)addAttr(s,k,i,1); }
-        else if (rand(s)<(branch(t)==='grassland_b'?.35+.1*power(t):.35)) {
+        else if (rand(s)<.35) {
           const available=EL.filter((el,i)=>t.attrs[i]>0);
           if(available.length){a.el=pick(s,available);a.age=0;countStat(s,'feeds');emit(s,{cell:k,kind:'animalAwaken',el:a.el});}
         }
       }
-      if(branch(t)==='desert_a'&&t.attrs[3]>0)addAttr(s,k,0,power(t));
-      if(branch(t)==='ice_b'&&t.attrs[2]>0)addAttr(s,k,2,power(t));
-      if(branch(t)==='wetland_b'&&t.cancers.length)addAttr(s,k,4,power(t));
-      let woodBonus=false,soilPulse=false;
+
       for(const p of t.plants){
         p.age=(p.age||0)+1;if(p.age%3)continue;
         const i=['tree','shrub'].includes(p.kind)?1:p.kind==='weed'?2:4;
         addAttr(s,k,i,1);
-        if(i===1&&branch(t)==='woodland_a'&&!woodBonus){addAttr(s,k,1,power(t));woodBonus=true;}
-        if(i===4)soilPulse=true;
       }
-      if(soilPulse&&branch(t)==='river_b')neighbors(k).filter(n=>s.cells[n]&&(isFarm(s.cells[n])||TYPE[s.cells[n].type].family==='woodland')).slice(0,power(t)).forEach(n=>addAttr(s,n,4,1));
-      if(t.animals.some(a=>a.el==='water'&&a.age>0)){
-        if(branch(t)==='desert_b')addAttr(s,k,2,power(t));
-        if(branch(t)==='river_a')neighbors(k).filter(n=>s.cells[n]&&isFarm(s.cells[n])).slice(0,power(t)).forEach(n=>addAttr(s,n,2,1));
-      }
-      if(branch(t)==='ocean_a'&&t.animals.some(a=>a.kind==='fish'))addAttr(s,k,2,power(t));
     }
     // 先收集移动再应用，防止一轮在多个地块重复移动/感染。
     const moves = [];
@@ -570,54 +525,59 @@
     }
     for (const k of keys) {
       const t = s.cells[k], plants = eligiblePlants(t), animals = eligibleAnimals(t);
-      if (plants.length && t.plants.length < RULES.maxPlants && rand(s) < (branch(t)==='grassland_a'?[.4,.5,.6][power(t)-1]:RULES.spawnChance)) { const kind = branch(t)==='grassland_a'&&plants.includes('crop')?'crop':branch(t)==='woodland_b'?pickWeighted(s,plants.map(p=>[p,p==='tree'?power(t)+1:1])):pick(s, plants); t.plants.push({ id: id(s), kind }); emit(s, { cell: k, kind: 'plant', plant: kind }); }
-      if (animals.length && t.animals.length < animalCap(t) && rand(s) < RULES.spawnChance) { const preferred=branch(t)==='grassland_b'?animals.filter(a=>['rabbit','cow','sheep','deer'].includes(a)):[];const kind = pick(s, preferred.length?preferred:animals); t.animals.push({ id: id(s), kind, el: null, cd: 0, age: 0 }); emit(s, { cell: k, kind: 'animal', animal: kind }); }
-      if (t.attrs[0] > 0 && hasOre(t) && t.ores.length < RULES.maxOres && rand(s) < RULES.spawnChance) { const ore = pickWeighted(s, Object.entries(ORES).map(([o, v]) => [o,v.weight*((branch(t)==='mine_a'&&['copper','iron'].includes(o) || branch(t)==='mine_b'&&['gold','silver'].includes(o))?power(t)+1:1)])); t.ores.push(ore); emit(s, { cell: k, kind: 'oreSpawn', ore }); }
+      if (plants.length && t.plants.length < RULES.maxPlants && rand(s) < RULES.spawnChance) { const kind = pick(s,plants); t.plants.push({ id: id(s), kind }); emit(s, { cell: k, kind: 'plant', plant: kind }); }
+      if (animals.length && t.animals.length < animalCap(t) && rand(s) < RULES.spawnChance) { const kind = pick(s,animals); t.animals.push({ id: id(s), kind, el: null, cd: 0, age: 0 }); emit(s, { cell: k, kind: 'animal', animal: kind }); }
       for (const predator of t.animals.slice()) {
         const preyKinds = { bird: ['fish'], bear: ['rabbit', 'fish'], leopard: ['deer'] }[predator.kind];
         const prey = preyKinds && t.animals.find(a => a !== predator && preyKinds.includes(a.kind));
         if (prey) { t.animals = t.animals.filter(a => a !== prey); emit(s, { cell: k, kind: 'predation' }); }
       }
     }
-    // Harvest all ore deposits automatically, including this round's new deposits.
-    for(const k of keys){const t=s.cells[k];const ores=t.ores.splice(0);
-      for(const ore of ores){s.inv.ore[ore]++;addAttr(s,k,0,1);emit(s,{cell:k,kind:'ore',ore});}
-      if(ores.length&&branch(t)==='ruins_a')addAttr(s,k,0,power(t));
-    }
-    const sailed=new Set();
-    for(const k of keys){const t=s.cells[k];if(branch(t)!=='ocean_b'||!hasWater(t))continue;
-      const fish=t.animals.find(a=>a.kind==='fish'&&!sailed.has(a.id));if(!fish)continue;
-      const dist={[k]:0},todo=[k],q=power(t),range=q===3?85:q+1;
-      for(let i=0;i<todo.length;i++)if(dist[todo[i]]<range)for(const n of neighbors(todo[i]))if(dist[n]===undefined&&s.cells[n]&&TYPE[s.cells[n].type].family==='ocean'&&hasWater(s.cells[n])){dist[n]=dist[todo[i]]+1;todo.push(n);}
-      if(todo.length>1){const to=pick(s,todo.slice(1));t.animals=t.animals.filter(a=>a!==fish);s.cells[to].animals.push(fish);sailed.add(fish.id);}
-    }
     if (s.round % RULES.meteorEvery === 0) meteor(s);
-    trimSpirits(s); autoMergeSpirits(s);
+    degrade(s);trimSpirits(s); autoMergeSpirits(s);autoGuardians(s);checkMap(s);
     journeyRound(s);
     trimSpirits(s); updateProgress(s); reconcile(s, before, '3,3', eventStart);
-    const receipts = s.events.filter(e => ['crystal', 'bigCrystal', 'inverseCrystal', 'wood', 'ore', 'item'].includes(e.kind));
-    if (receipts.length) log(s, `获得：${receipts.length} 份结晶或资源`);
+    const receipts = s.events.filter(e => ['crystal', 'bigCrystal', 'inverseCrystal','pureCrystal', 'item'].includes(e.kind));
+    if (receipts.length) log(s, `获得：${receipts.length} 份元素结晶`);
     log(s, `第 ${s.round} 轮结束，灵力值 ${score(s).total}`);
+    if(!placedKeys(s).length){finish(s,'failed','所有地块已消散');return success('游戏结束');}
+    const goal=checkpoint(s);
+    if(s.mode==='challenge'&&goal&&s.round===goal.round){
+      if(score(s).total<goal.score){finish(s,'failed',`第 ${goal.round} 轮目标 ${goal.score}，当前灵力 ${score(s).total}`);return success('阶段挑战失败');}
+      emit(s,{cell:'3,3',kind:'stageClear',round:s.round});
+    }
+    if(s.mode==='challenge'&&s.round>=RULES.maxRounds){finish(s,'won','完成 40 轮复苏挑战');return success('挑战完成');}
     s.round++; s.roundAP = apLimit(s); s.ap = s.roundAP; s.placed = 0; s.magicUsed = {}; s.interactionUsed = {}; rollOffers(s);
     return success('新一轮');
   }
-  function bagCount(s) {
-    return sum(Object.values(s.inv.crystal)) + sum(Object.values(s.inv.bigCrystal)) + sum(Object.values(s.inv.inverseCrystal)) + sum(Object.values(s.inv.ore)) + s.inv.wood + s.inv.bucket + s.inv.water + s.inv.charm + s.inv.shields.length;
+  function bagCount(s) {return ['crystal','bigCrystal','inverseCrystal','pureCrystal'].reduce((n,k)=>n+sum(Object.values(s.inv[k])),s.inv.shields.length);}
+  function checkMap(s){if(!s.completedMap&&SHAPE.every(([x,y])=>s.cells[key(x,y)])){s.completedMap=true;unlockMemory(s,'ending');emit(s,{cell:'3,3',kind:'mapComplete'});log(s,'初始地图铺满，可保存、摄影、检视或转入无尽模式');}}
+  function finish(s,result,reason){s.over=true;s.result=result;s.endReason=reason;log(s,reason);}
+  function enterEndless(s){
+    if(!s.completedMap||s.result==='failed')return fail('需要先完成初始地图');
+    if(s.result==='won'){s.round++;s.roundAP=apLimit(s);s.ap=s.roundAP;s.placed=0;s.magicUsed={};s.interactionUsed={};rollOffers(s);}
+    s.mode='endless';s.over=false;s.result=null;delete s.endReason;return success('进入无尽模式');
   }
-  function finish(s) { s.over = true; unlockMemory(s,'ending'); log(s, `地图已铺满，最终灵力值 ${score(s).total}`); }
   function endRoundPublic(s) { s.events = []; return endRound(s); }
   function restore(raw){
     try{
       const v=JSON.parse(raw),s=v.state;if(v.version!==1||!s||s.edition!=='v13'||!s.cells||!s.inv||!s.progress||!s.stats||!Array.isArray(s.offers)||!Array.isArray(s.shields)||!Array.isArray(s.visions))return null;
       if(!Number.isInteger(s.round)||s.round<1||!Number.isInteger(s.ap)||s.ap<0||!Number.isInteger(s.nextId)||!Number.isFinite(s.rng))return null;
-      const keys=Object.keys(s.cells);if(keys.length<5||keys.some(k=>!SHAPE_KEYS.has(k)))return null;
-      for(const t of Object.values(s.cells))if(!TYPE[t.type]||!Array.isArray(t.attrs)||t.attrs.length!==5||t.attrs.some(n=>!Number.isFinite(n))||['spirits','cancers','beasts','guardians','animals','plants','ores'].some(k=>!Array.isArray(t[k])))return null;
+      const keys=Object.keys(s.cells);if((keys.length===0&&s.result!=='failed')||keys.some(k=>!/^[-]?\d+,[-]?\d+$/.test(k)||(s.mode!=='endless'&&!SHAPE_KEYS.has(k))))return null;
+      for(const t of Object.values(s.cells))if(!TYPE[t.type]||!Array.isArray(t.attrs)||t.attrs.length!==5||t.attrs.some(n=>!Number.isFinite(n))||['spirits','cancers','beasts','guardians','animals','plants'].some(k=>!Array.isArray(t[k])))return null;
       if(s.offers.some(k=>!TYPE[k])||['crystal','bigCrystal','inverseCrystal'].some(k=>!s.inv[k]||EL.some(e=>!Number.isInteger(s.inv[k][e])||s.inv[k][e]<0)))return null;
       if(!s.unlockedMagics||!s.interactionUsed||!s.magicUsed||!Array.isArray(s.log)||!Array.isArray(s.achievements))return null;
+      s.mode ||= s.round>RULES.maxRounds?'endless':'challenge';s.magicRange ||= Object.fromEntries(D.MAGICS.map(m=>[m.id,1]));s.inv.pureCrystal ||= emptyEl();
+      for(const k of ['ore','wood','bucket','bucketFull','water','charm'])delete s.inv[k];
+      for(const t of Object.values(s.cells)){delete t.ores;delete t.vein;}
+      for(const shield of [...s.shields,...s.inv.shields])delete shield.initialDefense;
+      if(D.MAGICS.some(m=>!Number.isInteger(s.magicRange[m.id])||s.magicRange[m.id]<1||s.magicRange[m.id]>5)||EL.some(e=>!Number.isInteger(s.inv.pureCrystal[e])||s.inv.pureCrystal[e]<0))return null;
+      s.completedMap ||= SHAPE.every(([x,y])=>s.cells[key(x,y)]);
+      if(s.over&&!s.result&&s.completedMap){s.result='won';s.endReason='初始地图已铺满，可继续无尽模式';}
       s.events=[];return s;
     }catch(_){return null;}
   }
-  const Game = { restore, supplyLevel, upgradeReasons, animalCap, newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, guardianArea, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
+  const Game = { boardKeys, checkpoint,restoration,meteorStrength,magicArea,upgradeCost,tileRelations,RELATIONS,enterEndless,restore, supplyLevel, upgradeReasons, animalCap, newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, guardianArea, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
   if (typeof module !== 'undefined' && module.exports) module.exports = Game;
   else root.Game = Game;
 })(this);

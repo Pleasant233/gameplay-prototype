@@ -64,3 +64,13 @@ for(let variant=0;variant<4;variant++){
   g.dispose();
 }
 console.log('ok - four rounded cloud meshes are closed, face outward and fit their clearance bounds');
+const barren=Game.newGame(19);v.setState(barren);
+const purple=v.surfaceColor('0,0',0,0);assert.ok(purple.b>purple.g,'initial empty terrain is purple gray');
+Object.values(barren.cells).forEach(t=>t.attrs=[200,200,200,200,200]);
+const green=v.surfaceColor('0,0',0,0);assert.ok(green.g>green.b,'live vitality restores green terrain');
+const endless=Game.newGame(19,{mode:'endless'});endless.cells['20,3']=Game.makeTile('mine_t1');endless.cells['21,3']=Game.makeTile('ocean_t1');v.setState(endless);
+assert.ok(Math.abs(v.surfaceHeight('20,3',half,0)-v.surfaceHeight('21,3',-half,0))<1e-10);
+for(const c of ['r','g','b'])assert.ok(Math.abs(v.surfaceColor('20,3',half,0)[c]-v.surfaceColor('21,3',-half,0)[c])<1e-10);
+assert.equal(v.cloudDistance((21-3)*1.12,0),0);
+const expanded=v.baseGeometry();expanded.computeBoundingBox();assert.ok(expanded.boundingBox.max.x>(21-3)*1.12);expanded.dispose();
+console.log('ok - live purple-to-green restoration and continuous endless terrain/base/cloud clearance');

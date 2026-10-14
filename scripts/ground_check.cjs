@@ -9,7 +9,7 @@ function instrument(source){return source.replace('  root.View = {',`
     prepare(){
       intro=0;shake=0;hoverK=null;selectedK=null;modeRef=null;
       Object.values(tileMap).forEach(n=>{n.rise=0;n.pop=0;n.lift=0;n.impact=0;n.group.position.y=0;n.group.scale.setScalar(1);});
-      const base=scene.children.find(o=>o.geometry&&o.geometry.type==='ExtrudeGeometry');
+      const base=scene.children.find(o=>o.material&&o.material.color&&o.material.color.getHex()===0x805838);
       base.geometry.computeBoundingBox();
       const minWall=Math.min(...Object.values(pads).map(p=>{p.geometry.computeBoundingBox();return p.geometry.boundingBox.min.y;}));
       return {overlap:Math.max(0,base.geometry.boundingBox.max.y-minWall),bottom:base.geometry.boundingBox.min.y,visiblePads:Object.values(pads).filter(p=>p.visible).length};
@@ -50,10 +50,10 @@ const server=http.createServer((req,res)=>{
       await page.clock.install();await page.goto('http://127.0.0.1:'+server.address().port);
       await page.waitForFunction('typeof S!=="undefined"&&S&&window.__groundTest');
       await page.clock.pauseAt(new Date(await page.evaluate('Date.now()')+60000));
-      await page.evaluate(`start(37);for(let i=0;i<14;i++){G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S)[0]});G.endRound(S);}S.events=[];selected=null;mode=null;Tokens.reset();render();`);
+      await page.evaluate(`start(37);S.mode='endless';for(let i=0;i<14;i++){G.act(S,{type:'place',offer:0,cell:G.legalPlacements(S).find(k=>G.SHAPE_KEYS.has(k))});G.endRound(S);}S.mode='challenge';S.events=[];selected=null;mode=null;Tokens.reset();render();`);
       const state=await page.evaluate('__groundTest.prepare()');report.samples.push({label,...state});
       if(variant==='before')check(label+' reproduces overlapping exterior walls',state.overlap>.3);
-      else{check(label+' base never overlaps terrain side walls',state.overlap<1e-6);check(label+' preserves bottom and empty green cells',Math.abs(state.bottom+.34)<1e-6&&state.visiblePads===66);}
+      else{check(label+' base never overlaps terrain side walls',state.overlap<1e-6);check(label+' preserves bottom and empty cells',Math.abs(state.bottom+.34)<1e-6&&state.visiblePads===66);}
       for(const [angle,theta] of [['front',.78],['rear',3.92]]){
         for(const atmosphere of [false,true]){
           const frames=[];for(const time of [0,.4,.8])frames.push(await page.evaluate(({time,theta,atmosphere})=>__groundTest.draw(time,theta,atmosphere),{time,theta,atmosphere}));
