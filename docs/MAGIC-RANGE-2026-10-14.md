@@ -23,3 +23,9 @@
 ![手机背包范围](screenshots/magic-range-2026-10-14-bag-phone.png)
 
 ![星雨至纯结晶展示](screenshots/magic-range-2026-10-14-spotlight-desktop.png)
+
+## 正式发布
+
+已发布至 https://element-habitat.vercel.app ，部署 `dpl_BgNWJWhgCyLpmSFN6jzKccgiUyXw` 为 READY / production；游戏源码提交 `2560f10e0d61716e50e757e4b0efb350194040b7`。
+
+直接加载正式网址执行同一套桌面／手机19项交互检查，全部通过、浏览器错误0，未替换线上游戏或渲染代码。报告在忽略的 `artifacts/magic-range-production.json`。完整本地检查为27组规则、14组目录／生态，30局模拟全部通关。
