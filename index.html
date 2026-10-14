@@ -438,7 +438,7 @@
 </div></dialog>
 <dialog id="dlgShield"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
-  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗覆盖 1 格 · 点元素名称可集中防御该元素</p>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗普通结晶覆盖 1 格 · 每轮制造 1 次<br>点元素名称可集中防御该元素</p>
   <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
   <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
   <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
@@ -684,7 +684,7 @@ function renderInv() {
   $('btnBag').dataset.n = total;
   $('pureCrystals').innerHTML=D.MAGICS.map(m=>`<button class="btn sm pure-stock" data-pure="${m.id}" ${S.over||!inv.pureCrystal[m.element]||S.magicRange[m.id]>=5?'disabled':''} style="--c:${ELC[m.element]};--d:${ELD[m.element]}">✧ 至纯${elName(m.element)} ×${inv.pureCrystal[m.element]}<small>${m.name} ${S.magicRange[m.id]} → ${Math.min(5,S.magicRange[m.id]+1)} 格</small></button>`).join('');
   $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
-  $('btnShield').disabled=S.over||!!S.interactionUsed['craft:shield'];
+  $('btnShield').disabled=S.over;
 }
 
 function render() {
@@ -865,11 +865,12 @@ function shieldFill(count,primary){
 function shieldPreview(){
   const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0),stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;
   const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
+  const reason=S.over?'本局已结束':S.interactionUsed['craft:shield']?'本轮已制造，下一轮可再次制造':stock<5?'库存不足 5 颗普通结晶，先积攒结晶':missing?`还差 ${missing} 颗普通结晶，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗普通结晶覆盖 1 格';
   for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);if(!row)continue;row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv.crystal[e.key];row.querySelector('[data-shield-focus]').disabled=!S.inv.crystal[e.key];row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv.crystal[e.key];}
   $('shieldPreview').classList.toggle('incomplete',!valid);
-  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${stock<5?'库存不足 5 颗，先积攒结晶':missing?`还差 ${missing} 颗，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗覆盖 1 格'}</small>`;
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${reason}</small>`;
   $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 颗 → ${Math.ceil(Math.max(5,n)/5)} 格`;
-  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗结晶`:stock<5?'库存不足，需 5 颗结晶':'先凑齐 5 颗的倍数';
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗普通结晶`:reason;
   $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&stock<(p==='max'?5:Number(p));});
 }
 $('btnShield').onclick=()=>{

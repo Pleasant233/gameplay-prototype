@@ -71,6 +71,27 @@ async function shot(page,name){await page.evaluate('__feedback.draw()');await pa
       await page.evaluate(`document.getElementById('shieldBody').scrollTop=document.getElementById('shieldBody').scrollHeight`);
       check(label+' scrolled mixer keeps close and craft controls accessible',await page.evaluate(`['#dlgShield [data-close]','#btnCraftShield'].every(sel=>{const el=document.querySelector(sel),r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight+1&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2).closest(sel)===el;})`));
       await shot(page,`feedback-${label}-shield-scrolled.png`);
+      await page.locator('[data-shield-preset="clear"]').click();
+      await page.locator('[data-shield-adjust="water"][data-delta="1"]').click();
+      check(label+' plus button changes selected crystals',await page.evaluate('shieldMix.water===1'));
+      await page.locator('[data-shield-adjust="water"][data-delta="-1"]').click();
+      check(label+' minus button removes selected crystals',await page.evaluate('shieldMix.water===0'));
+      const slider=page.locator('[data-element="water"]');await slider.scrollIntoViewIfNeeded();const track=await slider.boundingBox();
+      if(mobile)await page.touchscreen.tap(track.x+track.width-10,track.y+track.height/2);
+      else {await page.mouse.move(track.x+10,track.y+track.height/2);await page.mouse.down();await page.mouse.move(track.x+track.width-10,track.y+track.height/2,{steps:8});await page.mouse.up();}
+      check(label+' slider pointer changes the water mixture',await page.evaluate('shieldMix.water>=4'));
+      await slider.press('Home');check(label+' slider Home clears water',await page.evaluate('shieldMix.water===0'));
+      await slider.press('End');check(label+' slider End uses available water',await page.evaluate('shieldMix.water===5&&Number(document.querySelector("[data-shield-row=water] output").value)===5'));
+      const roundBefore=await page.evaluate('S.round'),apBefore=await page.evaluate('S.ap');await page.locator('#btnCraftShield').click();
+      check(label+' actual craft deducts exact mix and keeps AP and round',await page.evaluate(({round,ap})=>S.inv.crystal.water===0&&S.inv.shields.length===1&&S.inv.shields[0].defense.water===5&&S.inv.shields[0].coverage===1&&S.round===round&&S.ap===ap,{round:roundBefore,ap:apBefore}));
+      check(label+' crafting once leaves mixture entry available',await page.locator('#btnShield').isEnabled());
+      await page.locator('#btnShield').click();await page.locator('[data-shield-adjust="wood"][data-delta="1"]').click();
+      check(label+' used round still allows adjustment and explains craft restriction',await page.evaluate('shieldMix.wood===2&&document.querySelector("#btnCraftShield").disabled&&document.querySelector("#btnCraftShield").textContent.includes("本轮已制造")&&document.querySelector("#shieldPreview").textContent.includes("下一轮")&&S.inv.crystal.wood===2&&S.inv.shields.length===1'));
+      await shot(page,`feedback-${label}-shield-used-round.png`);await page.locator('#dlgShield [data-close]').click();
+      await page.locator('#btnBag').click();await page.locator('#btnEnd').click();await page.locator('#btnBag').click();
+      check(label+' next round enables shield mixture again',await page.locator('#btnShield').isEnabled());
+      await page.locator('#btnShield').click();
+      check(label+' next round can craft matching recipe',await page.locator('#btnCraftShield').isEnabled());
       await page.locator('#dlgShield [data-close]').click();await page.evaluate('S.inv.crystal={metal:0,wood:0,water:2,fire:0,earth:0};render()');await page.locator('#btnShield').click();
       check(label+' shortage gives clear disabled state',await page.evaluate(`document.querySelector('#btnCraftShield').disabled&&document.querySelector('#shieldComplete').disabled&&document.querySelector('#shieldPreview').textContent.includes('库存不足')`));
       await context.close();
