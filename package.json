@@ -15,6 +15,7 @@
     "test:crystal": "node scripts/python.cjs scripts/crystal_check.py",
     "test:magic": "node scripts/magic_range_check.cjs",
     "test:demolition": "node scripts/demolition_check.cjs",
+    "test:large-shield": "node scripts/large_shield_check.cjs",
     "test:atmosphere": "node scripts/python.cjs scripts/atmosphere_check.py",
     "test:browser": "node scripts/python.cjs --suite",
     "test:all": "npm test && npm run test:browser && npm run test:feedback && npm run test:ground",

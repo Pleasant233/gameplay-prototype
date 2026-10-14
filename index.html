@@ -280,6 +280,8 @@
   #dlgShield .intro { font-size:12px;color:var(--muted);text-align:center; }
   .shield-presets { display:flex;flex-wrap:wrap;gap:5px;margin:12px 0; }
   .shield-presets .btn { flex:1;white-space:nowrap;min-height:38px;font-size:12px;padding:5px 8px; }
+  #shieldKinds { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #shieldKinds .btn { min-width:0;white-space:normal; }
   .shield-row { display:grid;grid-template-columns:1fr 40px 38px 40px;gap:6px;align-items:center;margin:8px 0;padding:7px 9px;border:1px solid #d6c8ac;border-radius:12px;background:#fff8e9; }
   .shield-row .element-pick { border:0;background:none;text-align:left;font:inherit;font-weight:900;padding:0;cursor:pointer; }
   .shield-row .element-pick:disabled { opacity:.5;cursor:default; }
@@ -438,7 +440,8 @@
 </div></dialog>
 <dialog id="dlgShield"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
-  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗普通结晶覆盖 1 格 · 每轮制造 1 次<br>点元素名称可集中防御该元素</p>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">普通结晶1点 · 大型结晶2点，可混用<br>每5点防护覆盖1格，需5的倍数 · 每轮制造1次<br>点元素名称可集中防御该元素</p>
+  <div class="shield-presets" id="shieldKinds"><button class="btn sm" data-shield-kind="crystal">普通结晶 · 1点</button><button class="btn sm" data-shield-kind="bigCrystal">大型结晶 · 2点</button></div>
   <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
   <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
   <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
@@ -859,34 +862,47 @@ $('btnAchievements').onclick=()=>{$('dlgMenu').close();renderProgress();$('dlgAc
 $('btnReroll').onclick=()=>doAct({type:'reroll'});
 $('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;$('bag').classList.remove('open');setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：预览覆盖区，点击地块确认');};
 let shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
-function shieldValues(){return {...shieldMix};}
+let shieldBigMix=Object.fromEntries(EL.map(e=>[e.key,0])),shieldBag='crystal';
+function shieldValues(){return {crystals:{...shieldMix},bigCrystals:{...shieldBigMix}};}
+function shieldPoints(){return EL.reduce((n,e)=>n+shieldMix[e.key]+2*shieldBigMix[e.key],0);}
+function shieldStock(){return EL.reduce((n,e)=>n+S.inv.crystal[e.key]+2*S.inv.bigCrystal[e.key],0);}
+function shieldMax(){const stock=shieldStock();return Math.floor(stock/(Object.values(S.inv.crystal).some(n=>n)?5:10))*(Object.values(S.inv.crystal).some(n=>n)?5:10);}
+function shieldMissing(){let n=shieldPoints(),missing=n<5?5-n:(5-n%5)%5;if(missing%2&&!EL.some(e=>S.inv.crystal[e.key]>shieldMix[e.key]))missing+=5;return missing;}
+function shieldAdd(points,primary){
+  if(primary){const big=Math.min(Math.floor(points/2),S.inv.bigCrystal[primary]-shieldBigMix[primary]);shieldBigMix[primary]+=big;points-=2*big;}
+  let normal=Math.min(points,EL.reduce((n,e)=>n+S.inv.crystal[e.key]-shieldMix[e.key],0));
+  if((points-normal)%2)normal--;
+  for(const [bag,mix,total] of [['crystal',shieldMix,normal],['bigCrystal',shieldBigMix,(points-normal)/2]]){
+    let remaining=total;
+    if(primary){const n=Math.min(remaining,S.inv[bag][primary]-mix[primary]);mix[primary]+=n;remaining-=n;}
+    while(remaining>0)for(const e of EL)if(remaining&&mix[e.key]<S.inv[bag][e.key]){mix[e.key]++;remaining--;}
+  }
+}
 function shieldFill(count,primary){
-  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
-  let remaining=Math.min(count,Object.values(S.inv.crystal).reduce((a,b)=>a+b,0));
-  if(primary){const n=Math.min(remaining,S.inv.crystal[primary]);shieldMix[primary]=n;remaining-=n;}
-  while(remaining>0){let filled=false;for(const e of EL)if(remaining&&shieldMix[e.key]<S.inv.crystal[e.key]){shieldMix[e.key]++;remaining--;filled=true;}if(!filled)break;}
+  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));shieldBigMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+  shieldAdd(count,primary);
   shieldPreview();
 }
 function shieldPreview(){
-  const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0),stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;
+  const values=shieldBag==='crystal'?shieldMix:shieldBigMix,n=shieldPoints(),stock=shieldStock(),missing=shieldMissing(),normal=Object.values(shieldMix).reduce((a,b)=>a+b,0),big=Object.values(shieldBigMix).reduce((a,b)=>a+b,0);
   const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
-  const reason=S.over?'本局已结束':S.interactionUsed['craft:shield']?'本轮已制造，下一轮可再次制造':stock<5?'库存不足 5 颗普通结晶，先积攒结晶':missing?`还差 ${missing} 颗普通结晶，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗普通结晶覆盖 1 格';
-  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);if(!row)continue;row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv.crystal[e.key];row.querySelector('[data-shield-focus]').disabled=!S.inv.crystal[e.key];row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv.crystal[e.key];}
+  const reason=S.over?'本局已结束':S.interactionUsed['craft:shield']?'本轮已制造，下一轮可再次制造':shieldMax()<5?'库存不足以组成整格防护，先积攒结晶':missing?`还差 ${missing} 点防护，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 点防护覆盖 1 格';
+  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv[shieldBag][e.key];row.querySelector('[data-shield-focus]').disabled=!(S.inv.crystal[e.key]+S.inv.bigCrystal[e.key])||shieldMax()<5;row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv[shieldBag][e.key];}
+  $('shieldKinds').querySelectorAll('[data-shield-kind]').forEach(b=>{b.classList.toggle('green',b.dataset.shieldKind===shieldBag);b.setAttribute('aria-pressed',b.dataset.shieldKind===shieldBag);b.textContent=b.dataset.shieldKind==='crystal'?`普通 · 1点（已选${normal}颗）`:`大型 · 2点（已选${big}颗）`;});
   $('shieldPreview').classList.toggle('incomplete',!valid);
-  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${reason}</small>`;
-  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 颗 → ${Math.ceil(Math.max(5,n)/5)} 格`;
-  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗普通结晶`:reason;
-  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&stock<(p==='max'?5:Number(p));});
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?(shieldMix[e.key]+2*shieldBigMix[e.key])/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>shieldMix[e.key]+shieldBigMix[e.key]).map(e=>`${e.name} ${shieldMix[e.key]+2*shieldBigMix[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>普通 ${normal} 颗 · 大型 ${big} 颗</small><small>${reason}</small>`;
+  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 点 → ${(n+missing)/5} 格`;
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 普通${normal}颗 + 大型${big}颗`:reason;
+  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&(p==='max'?shieldMax()<5:stock<Number(p)||(Number(p)%2&&!Object.values(S.inv.crystal).some(n=>n)));});
 }
-$('btnShield').onclick=()=>{
-  $('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>库存 ${S.inv.crystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}结晶">−</button><output aria-label="已选${e.name}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}结晶">+</button><input type="range" min="0" max="${S.inv.crystal[e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}结晶配比"></div>`).join('');
-  const stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(stock>=5?5:0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();
-};
-$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],Math.round(Number(e.target.value))));shieldPreview();};
-$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],shieldMix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,shieldMix[el]));}else if(focus){const n=Object.values(shieldMix).reduce((a,b)=>a+b,0);shieldFill(n>=5?n:5,focus.dataset.shieldFocus);Sfx.pick();}};
-$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset,stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(p==='clear'?0:p==='max'?Math.floor(stock/5)*5:Math.min(Number(p),Math.floor(stock/5)*5));Sfx.pick();};
-$('shieldComplete').onclick=()=>{let n=Object.values(shieldMix).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;for(const e of EL){const add=Math.min(missing,S.inv.crystal[e.key]-shieldMix[e.key]);shieldMix[e.key]+=add;missing-=add;}shieldPreview();Sfx.pick();};
-$('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',crystals:shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
+function shieldInputs(){const label=shieldBag==='crystal'?'普通':'大型';$('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>普通${S.inv.crystal[e.key]} · 大型${S.inv.bigCrystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}${label}结晶">−</button><output aria-label="已选${e.name}${label}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}${label}结晶">+</button><input type="range" min="0" max="${S.inv[shieldBag][e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}${label}结晶配比"></div>`).join('');}
+$('btnShield').onclick=()=>{shieldBag=Object.values(S.inv.crystal).some(n=>n)?'crystal':'bigCrystal';shieldInputs();shieldFill(shieldMax()>=5?(shieldBag==='crystal'?5:10):0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();};
+$('shieldKinds').onclick=e=>{const b=e.target.closest('[data-shield-kind]');if(!b)return;shieldBag=b.dataset.shieldKind;shieldInputs();shieldPreview();};
+$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element,mix=shieldBag==='crystal'?shieldMix:shieldBigMix;mix[el]=Math.max(0,Math.min(S.inv[shieldBag][el],Math.round(Number(e.target.value))));shieldPreview();};
+$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust,mix=shieldBag==='crystal'?shieldMix:shieldBigMix;mix[el]=Math.max(0,Math.min(S.inv[shieldBag][el],mix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,mix[el]));}else if(focus){const n=shieldPoints();shieldFill(n>=5?n:(Object.values(S.inv.crystal).some(n=>n)?5:10),focus.dataset.shieldFocus);Sfx.pick();}};
+$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset;shieldFill(p==='clear'?0:p==='max'?shieldMax():Number(p));Sfx.pick();};
+$('shieldComplete').onclick=()=>{shieldAdd(shieldMissing());shieldPreview();Sfx.pick();};
+$('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',...shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
 $('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render();if(r.ok)eventEffects(S.events); };
 $('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
 $('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };

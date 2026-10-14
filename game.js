@@ -367,12 +367,12 @@
       return success(`使用${a.inverse ? '逆' : a.big ? '大型' : ''}${elName(a.el)}结晶：${n > 0 ? '+' : ''}${n}`);
     },
     craftShield(s, a) {
-      const cost = a.crystals;
-      if (!cost || Object.keys(cost).some(e => !EL.includes(e)) || EL.some(e => !Number.isInteger(cost[e] === undefined ? 0 : cost[e]) || (cost[e] || 0) < 0 || (cost[e] || 0) > s.inv.crystal[e])) return fail('无效的结晶配比');
-      const n = sum(EL.map(e => cost[e] || 0));
-      if (n < 5 || n % 5 !== 0) return fail('元素盾需要 5 颗或 5 的倍数普通结晶');
-      const shield = { id: id(s), defense: Object.fromEntries(EL.map(e => [e, cost[e] || 0])), coverage: n / 5 };
-      for (const e of EL) s.inv.crystal[e] -= cost[e] || 0;
+      const cost = a.crystals, big = a.bigCrystals;
+      if ([[cost,s.inv.crystal],[big,s.inv.bigCrystal]].some(([mix,stock])=>!mix||Object.keys(mix).some(e=>!EL.includes(e))||EL.some(e=>!Number.isInteger(mix[e]===undefined?0:mix[e])||(mix[e]||0)<0||(mix[e]||0)>stock[e])))return fail('无效的结晶配比');
+      const defense=Object.fromEntries(EL.map(e=>[e,(cost[e]||0)+2*(big[e]||0)])),n=sum(Object.values(defense));
+      if (n < 5 || n % 5 !== 0) return fail('元素盾需要 5 点或 5 的倍数防护，普通结晶1点、大型结晶2点');
+      const shield = { id: id(s), defense, coverage: n / 5 };
+      for (const e of EL) {s.inv.crystal[e] -= cost[e] || 0;s.inv.bigCrystal[e]-=big[e]||0;}
       s.inv.shields.push(shield); return success(`制造元素盾，覆盖 ${shield.coverage} 格`);
     },
     deployShield(s, a) {
