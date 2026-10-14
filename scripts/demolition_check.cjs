@@ -33,7 +33,7 @@ async function shot(p,name){await p.screenshot({path:path.join(out,name+'.png'),
       });
       await clickCell(p,'3,3',mobile);
       const btn=p.locator('[data-a="demolish"]');assert.ok(await btn.isEnabled());
-      const text=await p.locator('#detail').innerText();assert.match(text,/金 ×3/);assert.match(text,/水 ×4/);assert.match(text,/土 ×1/);assert.doesNotMatch(text,/木 ×-2/);
+      const text=await p.locator('#detail').innerText();assert.match(text,/金×3/);assert.match(text,/水×4/);assert.match(text,/土×1/);assert.doesNotMatch(text,/木×-2/);
       await shot(p,'demolition-preview-'+label);record(label+' select terrain and preview matching positive crystal refunds');
       const before=await p.evaluate('({score:G.score(S).total,inv:structuredClone(S.inv),offers:S.offers.slice(),empty:G.emptyKeys(S).length})');
       await btn.click();

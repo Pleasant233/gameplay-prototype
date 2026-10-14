@@ -53,10 +53,10 @@
     maxPlants: 5,
     maxAnimals: Infinity,
     spawnChance: 1 / 3,
-    meteorEvery: 10,
+    eventEvery: 5,
     maxRounds: 40,
     stageEvery: 500,
-    stageTargets: [{round:10,score:80},{round:20,score:220},{round:30,score:450},{round:40,score:800}],
+    stageTargets: [{round:10,score:500},{round:20,score:1500},{round:30,score:3000},{round:40,score:6000}],
     maxAP: 9,
     magicUnlock: 20,
     pureCrystalRangeStep: 4,
@@ -89,7 +89,20 @@
     { id: 'green_world', name: '绿意归巢', desc: '同时拥有 20 株植物', metric: 'plants', target: 20, bonus: 30 },
     { id: 'settlement', name: '灵性共生', desc: '见证3只动物元素化', metric: 'feeds', target: 3, bonus: 30 },
   ];
-  const Data = { TERRAIN, ACHIEVEMENTS, VISIONS, ELEMENTS, TILE_TYPES, MAGICS, PLANTS, ANIMALS, RULES, SCORE, IDX: { M, W, A, F, E } };
+  const NATURAL_EVENTS = [
+    {id:'rain',name:'甘霖',tone:'positive',color:'#50baf0',delta:[0,3,8,0,3]},
+    {id:'meteor',name:'元素星雨',tone:'negative',color:'#f3ba5a'},
+    {id:'springWind',name:'春风',tone:'positive',color:'#88d973',delta:[0,8,0,0,4]},
+    {id:'earthPulse',name:'地脉涌动',tone:'positive',color:'#dcc075',delta:[4,0,0,0,8]},
+    {id:'abundance',name:'丰饶辉光',tone:'positive',color:'#f6e6a2',delta:[4,4,4,4,4]},
+    {id:'metalTide',name:'金辉潮汐',tone:'positive',color:'#eacf65',delta:[8,0,0,4,0]},
+    {id:'cold',name:'寒潮',tone:'negative',color:'#8aaee5',delta:[0,0,-4,-6,0]},
+    {id:'drought',name:'旱灾',tone:'negative',color:'#c9a479',delta:[0,-4,-8,0,0]},
+    {id:'heat',name:'热浪',tone:'negative',color:'#ed8659',delta:[0,-2,-8,4,0]},
+    {id:'miasma',name:'瘴雾',tone:'negative',color:'#a28cbb',delta:[0,-6,0,0,-4]},
+    {id:'sandstorm',name:'沙尘暴',tone:'negative',color:'#c8a774',delta:[-4,0,0,0,-6]},
+  ];
+  const Data = { TERRAIN, NATURAL_EVENTS, ACHIEVEMENTS, VISIONS, ELEMENTS, TILE_TYPES, MAGICS, PLANTS, ANIMALS, RULES, SCORE, IDX: { M, W, A, F, E } };
   if (typeof module !== 'undefined' && module.exports) module.exports = Data;
   else root.GameData = Data;
 })(this);

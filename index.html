@@ -343,6 +343,26 @@
   body.photo-mode #top,body.photo-mode #formulaHud,body.photo-mode #stageHud,body.photo-mode #dock,body.photo-mode #corner,body.photo-mode #cornerL,body.photo-mode #bag,body.photo-mode #journey,body.photo-mode #banner,body.photo-mode #achievementToast{display:none}
   .token.pure-hero{z-index:2;display:flex;flex-direction:column;text-align:center;filter:drop-shadow(0 0 18px var(--token-color))}.pure-hero i{width:70px;height:90px;border-radius:8px;clip-path:polygon(50% 0,92% 30%,82% 70%,50% 100%,18% 70%,8% 30%);font-size:34px;background:linear-gradient(145deg,#fff 5%,var(--token-color) 40%,#fff 52%,var(--token-color) 68%);box-shadow:none}.pure-hero b{font-size:18px;background:#27223cef;padding:8px 14px;border-radius:10px;color:#fff;white-space:nowrap}.pure-hero small{margin:4px 0;background:#27223cef;padding:3px 8px;border-radius:6px}
   @media(max-width:760px){#formulaHud{top:52px;padding:8px 10px}#formula{font-size:15px}#goal{font-size:11px}#stageHud{top:151px;flex-direction:row;gap:8px;font-size:10px}#hint{top:180px;bottom:auto}#journey{top:184px;width:calc(100vw - 20px);max-height:160px;overflow:auto}#detail,#bag{top:185px;bottom:auto;max-height:calc(100dvh - 440px);width:calc(100vw - 20px);left:10px;right:auto}#photoBar{width:calc(100vw - 20px);flex-wrap:wrap;justify-content:center}#photoBar span{font-size:11px}#top{padding-right:94px}.pill{font-size:12px;padding-right:6px}.pill .ico{display:none}#pillLeft{display:none}}
+  .family-badge{position:absolute;top:5px;left:7px;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #2338;background:#263b4533;padding:2px 5px;border-radius:5px}
+  .card .emb{top:25px}.card[data-family=ice] .art{background-image:radial-gradient(ellipse at 20% 20%,#f5ffff,transparent 65%)}
+  #detail{width:500px;top:190px;max-height:none;overflow:visible;border-radius:18px;z-index:8}
+  #detail .dh{position:relative;padding:12px 16px;border-radius:15px 15px 0 0}#detail h3{margin:0 35px 5px 0;font-size:22px;line-height:1.25}#detail h3 small{font-size:12px;white-space:nowrap}
+  #detail .close{position:absolute;right:10px;top:10px;width:32px;height:32px;padding:0}
+  .tile-attributes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 16px}.tile-attributes div{border:1px solid #ddd8c9;border-top:4px solid var(--element);border-radius:10px;padding:6px;text-align:center;background:#fffaf0}.tile-attributes small{display:block;font-size:12px}.tile-attributes b{font-size:30px;line-height:1.1}.tile-attributes .negative b{color:#be4a50}
+  .tile-metrics{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:0 16px 10px;font-size:14px}.tile-metrics small{font-size:11px;color:var(--muted)}
+  .tile-upgrades,.tile-guardians,.tile-demolish{margin:0 12px 10px;padding:10px;background:#f5f1e2;border:1px solid #dad6c4;border-radius:12px}
+  .section-line{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.section-line .btn{min-height:32px;padding:4px 10px;font-size:12px}
+  .upgrade-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.upgrade-option{background:#fffaf0;border-radius:8px;padding:8px;border:1px solid #e1d9c4;display:flex;flex-direction:column;gap:5px;font-size:13px}.upgrade-option small{display:block;line-height:1.35;font-size:11px;overflow-wrap:anywhere}.upgrade-option .btn{margin-top:auto;padding:5px 8px;min-height:32px;font-size:12px;white-space:normal}.upgrade-reasons{color:var(--muted)}
+  .tile-guardians small,.tile-demolish small{display:block;font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px}.guardian-controls{display:flex;gap:8px;margin:6px 0}.guardian-controls select{min-width:0;flex:1;padding:5px;font:inherit;font-size:12px;border:1px solid #c7c1ad;border-radius:7px}.guardian-controls .btn{font-size:12px;padding:4px 8px;white-space:nowrap}
+  .tile-demolish{display:flex;align-items:center;justify-content:space-between;gap:8px}.tile-demolish .btn{white-space:nowrap;font-size:12px;padding:6px 10px}
+  #detail.offer-preview{width:390px}.offer-instruction{font-size:12px;margin:0;padding:0 16px 12px;color:var(--muted)}
+  #batchPanel{position:fixed;bottom:20px;left:12px;width:540px;z-index:8;padding:12px;border-radius:14px}#batchPanel[hidden]{display:none}#batchPanel>small{display:block;font-size:11px;color:var(--muted);margin:3px 0}.batch-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:7px 0}.batch-edit select{min-width:0;font:inherit;font-size:12px;padding:5px;border:1px solid #d0c8b4;border-radius:7px}#batchPanel p{margin:6px 0;font-size:12px;line-height:1.4}.batch-actions{display:flex;gap:8px}.batch-actions .btn{flex:1;font-size:12px;padding:5px}
+  #stageHud{flex-wrap:wrap;justify-content:center;white-space:normal}
+  body.tile-detail-open #journey,body.tile-detail-open #banner,body.tile-detail-open #achievementToast,body.tile-detail-open #tip{display:none}
+  @media(max-height:780px){#detail{top:8px}}
+  @media(max-width:760px){#detail{left:8px;right:8px;top:8px;bottom:auto;width:calc(100vw - 16px);max-height:none;overflow:visible}#detail .dh{padding:10px 12px}#detail h3{font-size:19px}#detail h3 small{font-size:11px}.tile-attributes{padding:10px 12px;gap:5px}.tile-attributes b{font-size:28px}.tile-metrics{padding:0 12px 8px;font-size:12px;gap:4px}.tile-metrics small{font-size:10px}.tile-upgrades,.tile-guardians,.tile-demolish{margin:0 8px 8px;padding:8px}.upgrade-option{padding:6px;font-size:12px;gap:4px}.upgrade-option small{font-size:10px}.tile-guardians small,.tile-demolish small{font-size:10px}.tile-demolish .btn{font-size:11px;padding:5px 7px}#detail.offer-preview{top:185px;width:calc(100vw - 16px)}#detail.offer-preview .tile-attributes{padding:8px 12px}.offer-instruction{font-size:10px;padding:0 12px 8px}body.tile-detail-open #dock,body.tile-detail-open #top,body.tile-detail-open #formulaHud,body.tile-detail-open #stageHud,body.tile-detail-open #corner,body.tile-detail-open #cornerL,body.tile-detail-open #photoBar{display:none}#batchPanel{left:8px;bottom:8px;width:calc(100vw - 16px);padding:10px}}
+  @media(max-width:760px){#detail.offer-preview{top:8px}body:has(#detail.offer-preview.open) #top,body:has(#detail.offer-preview.open) #formulaHud,body:has(#detail.offer-preview.open) #stageHud,body:has(#detail.offer-preview.open) #corner,body:has(#detail.offer-preview.open) #cornerL{display:none}}
+  .upgrade-option:only-child{grid-column:1/-1}
 </style>
 </head>
 <body>
@@ -367,6 +387,7 @@
 </div>
 
 <aside id="detail" class="panel" aria-live="polite"></aside>
+<aside id="batchPanel" class="panel" hidden aria-live="polite"></aside>
 <aside id="bag" class="panel"><span class="tag toon">背包</span>
   <div class="sec">元素结晶 · 不耗行动 · 每轮不限次数 · 点击后选地块使用</div><div id="crystals"></div>
   <div class="sec">✧ 至纯元素结晶 · 永久扩展对应魔法</div><div id="pureCrystals"></div>
@@ -392,13 +413,13 @@
 <dialog id="dlgHelp"><div class="panel dlg">
   <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
   <h2>怎么玩</h2>
-  <p>① 挑战模式共40轮。第10/20/30/40轮结算后灵力须达到80/220/450/800；未达标立即失败。</p>
+  <p>① 挑战模式共40轮。第10/20/30/40轮结算后灵力须达到500/1500/3000/6000；未达标立即失败。</p>
   <p>② 一轮可以铺多个地块。铺地、施法、刷新和移动守护灵均耗1行动点；行动用尽后可继续使用免费结晶，点击“结束本轮”结算。</p>
   <p>地块不会自动使用背包结晶。先选择结晶，再点击目标地块才消耗；按 Esc 可取消。使用普通或大型元素结晶不消耗行动点，每轮不限次数；普通+1、大型+2、逆结晶−1。</p>
   <p>③ 同系列连片提高属性上限。点选地块，在详情选择升级方向，自动扣除所需普通／大型元素结晶。T4需合兽经历，T5需守护灵覆盖。</p>
   <p>④ 地块材料及制造系统已删除。每种地块都能和四邻对应系列互作；详情显示实际邻居与轮末属性增量。</p>
   <p>⑤ 同属性三灵轮末自动合兽，同格五兽自动合守护灵。动物自动元素化，植物与元素动物滋养地块。</p>
-  <p>⑥ 每10轮触发一种元素星雨，伤害逐次为3/5/7/9点，无尽模式继续增加。每颗对应至纯元素结晶永久增加4格魔法覆盖，可连续扩展。净化第一轮即可覆盖目标及周围四邻；其他魔法初始1格。</p>
+  <p>⑥ 每5轮轮换一种自然事件，含星雨和10种正负现象；强度每10轮提高，无尽模式继续增长。星雨带来至纯结晶，每颗扩展对应魔法4格。净化开局覆盖目标与四邻。</p><div id="eventGuide"></div>
   <p>⑦ 属性不足会沿升级路线退化；五项属性全部为负时地块消散。详情可消耗1行动点铲除地块，各元素正属性按1:1返还普通结晶，负属性不返还，同格生物一并移除。</p>
   <p>⑧ 初始85格铺满后可保存完整地图、摄影或检视，并继续无尽模式。也可开局选择无尽模式：轮次和可铺设边界无限制，星雨持续变强。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消 · <kbd>1</kbd>～<kbd>3</kbd> 选地块 · <kbd>B</kbd> 背包 · <kbd>Enter</kbd> 结束本轮 · <kbd>P</kbd> 摄影 · <kbd>Ctrl+S</kbd> 保存完整地图<br>
@@ -414,6 +435,7 @@
     <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
     <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
     <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
+    <button class="btn" id="btnMusic"><span class="t">♫ 背景音乐</span></button>
     <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
   </div>
   <div class="sec">下局模式</div><select id="gameMode" aria-label="下局模式"><option value="challenge">40 轮复苏挑战</option><option value="endless">无尽生境 · 无限轮次与地图</option></select>
@@ -458,6 +480,7 @@
 <script src="postfx.js"></script>
 <script src="view.js"></script>
 <script src="tokens.js"></script>
+<script src="music.js"></script>
 <script>
 const D = GameData, G = Game;
 const EL = D.ELEMENTS;
@@ -472,16 +495,13 @@ let archiveStore;try{archiveStore=localStorage;}catch(_){}
 const achievementBook=AchievementBook.create(archiveStore);
 let achievementQueue=[],achievementTimer=0,overTimer=0,gameSession=0;
 const ELD = { metal: '#b88a10', wood: '#33912a', water: '#1f5fb8', fire: '#b8302a', earth: '#8a5a2a' };
+$('eventGuide').innerHTML=D.NATURAL_EVENTS.map(e=>`<p><b>${esc(e.name)} · ${e.tone==='positive'?'正向':'负面'}</b>：${e.id==='meteor'?'随机元素陨落，元素盾可抵挡，并带来对应至纯结晶':e.delta.map((n,i)=>n?EL[i].name+(n>0?'+':'')+n:'').filter(Boolean).join(' · ')+'，作用于所有已放置地块'}</p>`).join('');
 
-// 地块卡面配色与图标（按 look）
+// 十个系列各自使用独立卡面配色与图标。
 const CARD = {
-  ruin: ['#b0a08a', '#7a6a58', '🏚'], pollute_water: ['#5a7a5a', '#34503a', '☠'], pollute_earth: ['#a0a048', '#6a6a28', '☣'],
-  pollute_rock: ['#7a6a8a', '#4a3a5a', '⛰'], barren: ['#d8b07a', '#a07a48', '🏜'], rock: ['#a8a090', '#706a5e', '🪨'],
-  sand: ['#f2d088', '#c8a050', '🌵'], bare: ['#b8a890', '#80705a', '⛰'], grass: ['#7ad050', '#3e9a2a', '🌱'],
-  water: ['#4ab0ff', '#1f6ad0', '💧'], lava: ['#ff7a3a', '#a8301a', '🌋'], waste: ['#c8b070', '#8a7440', '🍂'],
-  peak: ['#b8c8d8', '#6a7a8a', '🏔'], forest: ['#4aa848', '#246a2a', '🌲'], wet: ['#5aa888', '#2a6a58', '🪷'],
-  mine: ['#a88860', '#6a5038', '⛏'], valley: ['#6ac868', '#2a8a4a', '🏞'], rain: ['#3a9a5a', '#1a5a34', '🌴'],
-  fertile: ['#8ac048', '#4a7a20', '🌾'], creek: ['#6ad0a0', '#2a8a6a', '🏕'],
+  desert:['#efc784','#a46d3b','🏜'],woodland:['#62b879','#255842','🌲'],ice:['#d4f4ff','#77a9d0','❄'],
+  ocean:['#58c8ee','#2455aa','🌊'],grassland:['#b6dc67','#64863c','🌾'],wetland:['#87c2b5','#467c82','🪷'],
+  river:['#95e4d9','#339baf','〰'],mine:['#bdac96','#6a6473','⛏'],volcano:['#f49c6b','#98444b','🌋'],ruins:['#d5bf9e','#7d6865','🏛'],
 };
 
 // ---------- 音效（WebAudio 合成，无外部文件） ----------
@@ -518,6 +538,8 @@ const Sfx = (() => {
   };
 })();
 const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) { /* 不支持 */ } };
+const Music=HabitatMusic.create();
+document.addEventListener('pointerdown',()=>Music.start());
 const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.burstAt(k),ding:Sfx.ding,bump,state:()=>S,score:s=>G.score(s).total,left:s=>G.emptyKeys(s).length});
 
 function start(seed) {
@@ -573,7 +595,7 @@ function fxOf(a) {
     case 'mergeGuardian': case 'moveGuardian': return null; // Dedicated, composition-aware effects.
     case 'demolish': return null;
     case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
-    case 'upgrade': return ['upgrade',a.cell];
+    case 'upgrade': case 'upgradeBatch': return null;
     case 'deployShield': return null; // Region-wide deployment is shown after state sync.
     case 'moveSpirit': case 'moveBeast': return ['crystal', a.to, a.el];
     default: return a.cell ? ['place', a.cell] : null;
@@ -585,7 +607,7 @@ function doAct(action) {
   const r = G.act(S, action);
   if (!r.ok) { hint(r.msg, true); render(); return false; }
   mode = null; hint('');
-  if(action.type==='demolish')selected=null;
+  if(action.type==='demolish'||action.type==='upgradeBatch')selected=null;
   const f = fxOf(action);
   if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
   Tokens.enqueue(S.events);
@@ -614,11 +636,11 @@ function renderOffers() {
   const fresh = key !== offersKey && S.offers.length >= D.RULES.offersPerRound;
   offersKey = key;
   $('offers').innerHTML = S.offers.map((id, i) => {
-    const t = G.TYPE[id], c = CARD[t.look] || CARD.grass;
+    const t = G.TYPE[id], c = CARD[t.family];
     const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
-    return `<button class="card ${on}" ${S.over||S.ap<1?'disabled':''} data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
+    return `<button class="card ${on}" ${S.over||S.ap<1?'disabled':''} data-offer="${i}" data-family="${t.family}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
       <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
-      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}${t.level?` · T${t.level}`:""}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+      <span class="family-badge">${esc(t.familyName)}</span><span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)} · T${t.level}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
   }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
 }
 
@@ -630,50 +652,37 @@ function renderMagics() {
   }).join('');
 }
 
+function batchChanges(){return mode.cells.map(cell=>({cell,tileType:mode.directions[cell]}));}
+function renderBatch(){
+  const box=$('batchPanel');box.hidden=mode?.kind!=='batchUpgrade';if(box.hidden)return;
+  const changes=batchChanges(),plan=G.planUpgrades(S,changes),active=mode.active,children=active?D.TILE_TYPES.filter(t=>t.parent===S.cells[active].type):[];
+  const pay=plan.ok?EL.filter(e=>plan.normal[e.key]||plan.big[e.key]).map(e=>`${e.name}${plan.normal[e.key]}＋大${plan.big[e.key]}`).join(' · ')||'无需结晶':plan.msg;
+  box.innerHTML=`<b>同时升级 · 已选${mode.cells.length}块</b><small>点地图增减选择；可分别设置每块的方向</small><div class="batch-edit"><select id="batchCell" aria-label="选择要设置方向的地块">${mode.cells.map(k=>`<option value="${k}" ${k===active?'selected':''}>${k} ${esc(G.TYPE[S.cells[k].type].name)}</option>`).join('')}</select><select id="batchDirection" aria-label="升级方向">${children.map(t=>`<option value="${t.id}" ${mode.directions[active]===t.id?'selected':''}>${esc(t.name)} · ${esc(t.branch)}</option>`).join('')}</select></div><p>${esc(pay)}</p><div class="batch-actions"><button class="btn sm green" id="batchApply" ${!plan.ok||S.over?'disabled':''}>升级全部 · ${mode.cells.length}块</button><button class="btn sm" id="batchCancel">取消多选</button></div>`;
+  $('batchCell').onchange=e=>{mode.active=e.target.value;render();};$('batchDirection').onchange=e=>{mode.directions[mode.active]=e.target.value;render();};
+  $('batchApply').onclick=()=>doAct({type:'upgradeBatch',upgrades:batchChanges(),cell:mode.active});$('batchCancel').onclick=()=>{mode=null;hint('');render();};
+}
 function renderDetail() {
-  const t = selected && S.cells[selected];
-  const box = $('detail');
-  if (!t) { box.classList.remove('open'); return; }
-  box.classList.add('open');
-  const ty = G.TYPE[t.type], c = CARD[ty.look] || CARD.grass;
-  const cap = G.spiritCap(t), attrCap=G.attrCap(S,selected);
-  let h = `<div class="dh toon" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})">
-    <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
-    <h3>${c[2]} ${esc(t.oasis?"沙漠绿洲":ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : t.pond ? '💧小湖 · ' : ''}${t.farm?"🌾耕田 · ":""}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}<br>同属性3灵轮末自动合兽 · 免费<br>连片 ${G.cluster(S,selected).length} 格 · 属性上限 ${attrCap}</div></div>`;
-  h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / attrCap * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
-  let n = 0;
-  const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
-  const refund=t.attrs.map((v,i)=>v>0?elName(EL[i].key)+' ×'+v:'').filter(Boolean).join('、');
-  h+=row(`<span style="display:block"><b>铲除地块</b><small class="muted" style="display:block">返还普通结晶：${refund||'无'}<br>正属性1:1返还 · 同格生物一并移除</small></span>`,`<button class="btn sm red" data-a="demolish" ${S.ap<1?'disabled':''} title="消耗1行动点，移除地块并返还正属性对应的普通元素结晶">铲除 · 1行动</button>`);
-  for (const e of EL) {
-    const list = t.spirits.filter(s => s.el === e.key);
-    if (!list.length) continue;
-    h += row(`<i class="dot" style="background:${ELC[e.key]}"></i>${e.name}元素灵 ×${list.length}`,
-      `<button class="btn sm" data-a="moveSpirit" data-id="${list[0].id}">移动</button>
-       <button class="btn sm gold" data-a="merge" data-el="${e.key}" ${list.length < D.RULES.mergeCount ? 'disabled' : ''}>合成兽</button>`);
-  }
-  if(typeof terrainPanel==='function')h+=terrainPanel(t,selected);
-  if(t.cancers.length)h+=row(`☣ 癌元 ×${t.cancers.length}`,'<span class="muted">净化 / 焚尽可消灭</span>');
-  const shield=S.shields.filter(sh=>sh.cells.includes(selected));
-  if(shield.length)h+=row('🛡 元素盾',`<span class="muted">${shield.map(sh=>EL.filter(e=>sh.defense[e.key]).map(e=>e.name+sh.defense[e.key]).join(' ')).join(' / ')} · 共享</span>`);
-  for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, `<button class="btn sm" data-a="moveBeast" data-id="${b.id}">移动</button><span class="muted">每 2 轮产大结晶</span>`);
-  if(t.beasts.length)h+=row(`✦ 本格 ${t.beasts.length}/5 兽`,'<span class="muted">集齐五兽自动唤醒守护灵</span>');
-  for(const guardian of t.guardians||[])h+=row(`✦ ${guardianName(guardian.power)}<small class="muted" style="display:block">每轮五格 ${guardianText(guardian.power)}</small>`,`<button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${S.ap<1?'disabled':''} title="四邻已放置地块，每次消耗 1 行动点，可重复移动">移动 · 1行动</button>`);
-  for (const p of t.plants) h+=row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,`<span class="muted">每3轮自动滋养 · ${3-(p.age||0)%3}轮后</span>`);
-  const animalGroups=new Map();
-  for(const a of t.animals){const key=a.kind+':'+(a.el||'');const group=animalGroups.get(key)||{...a,count:0};group.count++;animalGroups.set(key,group);}
-  for (const a of animalGroups.values()) {
-    const nm = (a.el ? elName(a.el) + '元素' : '') + D.ANIMALS[a.kind].name;
-    h += row(`${D.ANIMALS[a.kind].icon} ${nm} ×${a.count}`, `<span class="muted">${a.el?'每轮 '+elName(a.el)+' +1/只':'随机吸收灵力'} · 不计分</span>`);
-  }
-  if (!n) h += '<div class="muted" style="padding:6px 14px">这块地还很安静。结束本轮后会孕育元素灵和生灵。</div>';
-  box.innerHTML = h;
+  const preview=mode?.kind==='place'&&mode.showProperties!==false;
+  const t=preview?G.makeTile(S.offers[mode.offer]):selected&&S.cells[selected],box=$('detail');
+  document.body.classList.toggle('tile-detail-open',!!t&&!preview);renderBatch();
+  if(!t){box.classList.remove('open');return;}
+  const ty=G.TYPE[t.type],c=CARD[ty.family],cap=preview?D.RULES.attrMax:G.attrCap(S,selected);
+  const guardianId=Number(box.querySelector('#detailGuardian')?.value),guardian=t.guardians.find(g=>g.id===guardianId)||t.guardians[0];
+  box.classList.add('open');box.classList.toggle('offer-preview',!!preview);
+  let h=`<div class="dh" style="background:linear-gradient(135deg,${c[0]},${c[1]})"><button class="btn round red sm close" data-a="close" aria-label="关闭地块属性">✕</button><h3>${c[2]} ${esc(ty.name)} <small>T${ty.level} · ${esc(ty.familyName)}</small></h3><small>${preview?'待放置地块 · 铺地消耗1行动点':'地块 '+selected+' · 连片'+G.cluster(S,selected).length+'格 · 属性上限'+cap}</small></div>`;
+  h+='<div class="tile-attributes">'+t.attrs.map((v,i)=>`<div style="--element:${ELC[EL[i].key]}" class="${v<0?'negative':''}"><small>${EL[i].name}</small><b>${v}</b></div>`).join('')+'</div>';
+  if(preview){h+='<p class="offer-instruction">点击相邻空位铺设；关闭属性仍保留已选卡片。</p>';box.innerHTML=h;return;}
+  h+=`<div class="tile-metrics"><b>生态值 ${G.ecology(t)}</b><small>动物＋植物总数</small><b>守护灵 ${t.guardians.length}</b></div>`;
+  const children=D.TILE_TYPES.filter(v=>v.parent===t.type);
+  h+=`<section class="tile-upgrades"><div class="section-line"><b>升级方向</b><button class="btn sm" data-a="batchStart" ${S.over||!children.length?'disabled':''}>多选升级</button></div><div class="upgrade-grid">`;
+  h+=children.length?children.map(v=>{const reasons=G.upgradeReasons(S,selected,v),cost=G.upgradeCost(S,selected,v),pay=EL.filter(e=>cost.normal[e.key]||cost.big[e.key]).map(e=>`${e.name}${cost.normal[e.key]}＋大${cost.big[e.key]}`).join(' · ');return `<div class="upgrade-option"><b>${esc(v.name)} · T${v.level}</b><small>${v.attrs.map((n,i)=>EL[i].name+n).join(' ')}</small><small>扣晶：${pay||'无需结晶'}</small><small class="upgrade-reasons">${reasons.length?esc(reasons.join(' · ')):'条件已满足'}</small><button class="btn sm green upgrade-direction" data-a="upgrade" data-type="${v.id}" ${reasons.length||S.over?'disabled':''}>${esc(v.branch)} · 升级</button></div>`;}).join(''):'<p>已达最高等级</p>';
+  h+='</div></section>';
+  h+='<section class="tile-guardians"><b>守护灵</b>'+(guardian?`<div class="guardian-controls"><select id="detailGuardian" aria-label="选择守护灵">${t.guardians.map((g,i)=>`<option value="${g.id}" ${g.id===guardian.id?'selected':''}>守护灵 ${i+1} · ${esc(guardianName(g.power))}</option>`).join('')}</select><button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${S.ap<1||S.over?'disabled':''}>移动 · 1行动</button></div><small>每轮滋养本格与四邻：${esc(guardianText(guardian.power))}</small>`:'<small>同格五兽自动唤醒守护灵</small>')+'</section>';
+  const refund=t.attrs.map((v,i)=>v>0?elName(EL[i].key)+'×'+v:'').filter(Boolean).join(' · ');
+  h+=`<section class="tile-demolish"><div><b>铲除地块</b><small>返还普通结晶：${refund||'无'}<br>同格生物一并移除</small></div><button class="btn sm red" data-a="demolish" ${S.ap<1||S.over?'disabled':''}>铲除 · 1行动</button></section>`;
+  box.innerHTML=h;
+  if($('detailGuardian'))$('detailGuardian').onchange=()=>renderDetail();
   if(document.body.classList.contains('photo-mode'))box.querySelectorAll('button:not([data-a=close])').forEach(b=>b.disabled=true);
-  box.querySelectorAll('[data-a]').forEach(b=>{const a=b.dataset.a;if(a==='close'||a==='upgrade')return;const id=+b.dataset.id;let lock=false;
-    if(['moveSpirit'].includes(a))lock=S.interactionUsed['spirit:'+id];
-    if(['moveBeast'].includes(a))lock=S.interactionUsed['beast:'+id];
-    if(lock||S.over||document.body.classList.contains('photo-mode')){b.disabled=true;b.title='本轮已交互';}
-  });
 }
 
 function renderInv() {
@@ -698,14 +707,16 @@ function render() {
   $('round').textContent = S.mode==='endless'?`${S.round} ∞`:`${S.round}/40`;
   $('ap').innerHTML = Array.from({ length: S.roundAP }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
   $('ap').dataset.value=`${S.ap}/${S.roundAP}`;
-  $('stageLabel').textContent=`灵脉 ${G.stage(S)} · 行动 ${S.ap}/${S.roundAP} · 星雨 ${10-(S.round-1)%10}轮`;
+  $('stageLabel').textContent=`灵脉 ${G.stage(S)} · 行动 ${S.ap}/${S.roundAP} · 事件 ${D.RULES.eventEvery-(S.round-1)%D.RULES.eventEvery}轮`;
   $('globalLabel').innerHTML=G.globalAttrs(S).map((v,i)=>`<span style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join(' ');
   $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
   const sc = G.score(S);
   const goal=G.checkpoint(S);
   $('formula').textContent=`灵力 ${sc.total} = 属性 ${sc.attrs} + 元素兽 ${sc.beasts} × 3 + 植物 ${sc.plants} + 愿景 ${sc.bonus}`;
-  $('goal').textContent=S.over?S.endReason:S.mode==='endless'?`无尽模式 · 星雨伤害 ${G.meteorStrength(S).damage} · 初始地图 ${S.completedMap?'已完成':'待复苏'}`:goal?`第 ${goal.round} 轮目标 ${goal.score} · 尚需 ${Math.max(0,goal.score-sc.total)} 灵力 · 星雨伤害 ${G.meteorStrength(S).damage}`:S.endReason;
-  $('goalProgress').max=goal?.score||800;$('goalProgress').value=Math.max(0,sc.total);
+  const nextEvent=G.eventForRound(S.round),eventLabel=`下一事件：${nextEvent.name}`;
+  Music.setScore(sc.total);musicLabel();
+  $('goal').textContent=S.over?S.endReason:S.mode==='endless'?`无尽模式 · ${eventLabel} · 初始地图 ${S.completedMap?'已完成':'待复苏'}`:goal?`第 ${goal.round} 轮目标 ${goal.score} · 尚需 ${Math.max(0,goal.score-sc.total)} 灵力 · ${eventLabel}`:S.endReason;
+  $('goalProgress').max=goal?.score||D.RULES.stageTargets.at(-1).score;$('goalProgress').value=Math.max(0,sc.total);
   $('btnSaveMap').disabled=!S.completedMap;$('btnInspect').disabled=!S.completedMap||!Object.keys(S.cells).length;$('btnEndless').disabled=!S.completedMap||S.mode==='endless'||S.result==='failed';
   Tokens.numbers(S);
   lastScore = sc.total;
@@ -751,6 +762,7 @@ function showOver() {
 // ---------- 事件 ----------
 function onCell(k) {
   const t = S.cells[k];
+  if(mode?.kind==='batchUpgrade'){if(!t)return;const children=D.TILE_TYPES.filter(v=>v.parent===t.type);if(!children.length){hint('该地块已达最高等级',true);return;}if(mode.cells.includes(k)){mode.cells=mode.cells.filter(v=>v!==k);delete mode.directions[k];}else{mode.cells.push(k);mode.directions[k]=children[0].id;}mode.active=mode.cells.includes(k)?k:mode.cells.at(-1);selected=null;render();return;}
   if (mode) {
     const m = mode;
     if (m.kind === 'place') { if (!t) doAct({ type: 'place', offer: m.offer, cell: k }); return; }
@@ -803,7 +815,7 @@ document.addEventListener('pointerdown', e => {
 $('offers').addEventListener('click', e => {
   const b = e.target.closest('[data-offer]'); if (!b) return;
   const i = +b.dataset.offer;
-  setMode(mode && mode.kind === 'place' && mode.offer === i ? null : { kind: 'place', offer: i }, `放置 ${G.TYPE[S.offers[i]].name}：点亮起的空位`);
+  setMode(mode && mode.kind === 'place' && mode.offer === i ? null : { kind: 'place', offer: i, showProperties:true }, `放置 ${G.TYPE[S.offers[i]].name}：点亮起的空位`);
 });
 $('magics').addEventListener('click', e => {
   const b = e.target.closest('[data-magic]'); if (!b) return;
@@ -826,18 +838,22 @@ $('detail').addEventListener('click', e => {
   const b = e.target.closest('[data-a]'); if (!b) return;
   const k = selected, id = +b.dataset.id;
   switch (b.dataset.a) {
-    case 'close': selected = null; render(); break;
+    case 'close': if(mode?.kind==='place')mode.showProperties=false;selected=null;render();break;
+    case 'batchStart': {const children=D.TILE_TYPES.filter(t=>t.parent===S.cells[k].type);mode={kind:'batchUpgrade',cells:[k],directions:{[k]:children[0].id},active:k};selected=null;hint('点击地块增减多选，再选择升级全部');render();break;}
     case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
     case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
     case 'demolish':doAct({type:'demolish',cell:k});break;
     case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
-    case 'moveGuardian':setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
+    case 'moveGuardian':selected=null;setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
     case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
   }
 });
 function eventEffects(events){
   events.filter(e=>['autoMerge','animalAwaken'].includes(e.kind)).slice(0,12).forEach(e=>View.fx('merge',e.cell,e.el));
   events.filter(e=>['guardianMerge','guardianMove','guardian'].includes(e.kind)).forEach(e=>{View.guardianFX(e);if(e.kind==='guardianMerge')Sfx.guard();});
+  events.filter(e=>e.kind==='upgrade').forEach(e=>View.fx('upgrade',e.cell));
+  events.filter(e=>e.kind==='weather').forEach(e=>View.fx('weather',e.cell,e.id));
+  const phenomenon=events.find(e=>e.kind==='naturalEvent');if(phenomenon&&phenomenon.id!=='meteor'){const def=D.NATURAL_EVENTS.find(e=>e.id===phenomenon.id);banner(def.name,`全场${phenomenon.n}格 · 强度${phenomenon.strength} · `+def.delta.map((v,i)=>v?EL[i].name+(v>0?'+':'')+v*phenomenon.strength:'').filter(Boolean).join(' '));}
   events.filter(e=>e.kind==='spell').forEach(e=>View.fx(e.magic,e.cell,e.el));
   events.filter(e=>e.kind==='pureCrystal').forEach(e=>Tokens.revealPure(e));
   if(events.some(e=>e.kind==='mapComplete'))banner('初始生境已铺满','菜单可保存、摄影检视，或继续无尽模式');
@@ -920,6 +936,8 @@ $('btnAgain').onclick = () => { $('over').close();exitPhoto();window.habitatSave
 const soundLabel = () => { $('btnSound').querySelector('.t').textContent = Sfx.on ? '🔊 音效开' : '🔇 音效关'; };
 $('btnSound').onclick = () => { Sfx.toggle(); soundLabel(); Sfx.tap(); };
 soundLabel();
+const musicLabel=()=>{$('btnMusic').querySelector('.t').textContent=Music.enabled?'♫ '+Music.mood:'♫ 背景音乐关';};
+$('btnMusic').onclick=()=>{Music.toggle();musicLabel();};musicLabel();
 let atmosphereOn=true;
 try{atmosphereOn=localStorage.getItem('atmosphere')!=='0';}catch(_){}
 const atmosphereLabel=()=>{

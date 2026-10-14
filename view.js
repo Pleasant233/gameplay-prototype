@@ -1031,6 +1031,7 @@
     const pos=wp(cell,cellHeight(...G.parse(cell))+0.035),n=tileMap[cell];
     const map={place:0xffe066,purify:0xfff5cf,mine:0xffcc22,spring:0x38c0ff,rich:0x79e84b,burn:0xff5a1a,merge:ELC[extra]||0xffffff,crystal:ELC[extra]||0xffffff,infection:0x9d71b2,meteor:ELC[extra]||0xd69a67,shield:0x87d9e3,upgrade:0x8aca66};
     const c=map[kind]||0xffffff;
+    if(kind==='weather'){if(reduced())return;const event=D.NATURAL_EVENTS.find(e=>e.id===extra);spawnBurst(pos,new THREE.Color(event.color).getHex(),LOW?3:6,.45,.85,event.tone==='positive'?.9:.25,event.tone==='positive'?'spark':'dust');return;}
     if(kind==='meteor'){
       meteorRain([{cell,el:extra,damage:3}]);return;
     }
@@ -1403,7 +1404,7 @@
       if(ghost.userData.frame&&!show)ghost.userData.frame.visible=false;
     }
     for(const k of Object.keys(tileMap)) {
-      const n=tileMap[k],sel=selectedK===k,tg=targets.has(k);
+      const n=tileMap[k],sel=selectedK===k||(modeRef?.kind==='batchUpgrade'&&modeRef.cells.includes(k)),tg=targets.has(k);
       if((sel||tg)&&!n.frame){n.frame=dashedFrame(0xffd23a);n.group.add(n.frame);}
       if(n.frame){
         n.frame.visible=sel||tg;
@@ -1547,11 +1548,13 @@
     }
     if (S.round !== lastRound) {
       lastRound = S.round;
+      if(!reduced()){
       shake = Math.max(shake, 0.2);
       for (const k of keysNow) {
         const t = S.cells[k];
         const h = (LOOK[G.TYPE[t.type].look] || LOOK.grass).h;
         spawnBurst(wp(k, h + 0.1), 0xfff2a0, 3, 0.5, 0.9, 1.4);
+      }
       }
     }
     ensureGhost();

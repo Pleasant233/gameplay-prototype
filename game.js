@@ -91,8 +91,10 @@
     return {deficit,normal,big};
   }
   const checkpoint = s => RULES.stageTargets.find(t=>t.round>=s.round);
+  const ecology = t => t.animals.length+t.plants.length;
+  const eventForRound = round => D.NATURAL_EVENTS[(Math.ceil(round/RULES.eventEvery)-1)%D.NATURAL_EVENTS.length];
   const restoration = s => Math.min(1,Math.max(0,score(s).total)/RULES.stageTargets.at(-1).score);
-  const meteorStrength = s => ({damage:1+2*Math.ceil(s.round/RULES.meteorEvery),count:Math.max(1,Math.floor(placedKeys(s).length*Math.min(.7,.25+.05*Math.ceil(s.round/RULES.meteorEvery))))});
+  const meteorStrength = s => ({damage:1+2*Math.ceil(s.round/10),count:Math.max(1,Math.floor(placedKeys(s).length*Math.min(.7,.25+.05*Math.ceil(s.round/10))))});
   const magicArea = (s,cell,magic) => magic==='purify'&&s.magicRange[magic]===RULES.purifyInitialRange?guardianArea(s,cell):region(s,cell,s.magicRange[magic]);
   function autoGuardians(s){
     for(const cell of placedKeys(s))while(s.cells[cell].beasts.length>=RULES.guardianMergeCount){
@@ -224,7 +226,7 @@
     const step=j.step;
     if(step===2 && a.type==='place')j.step=3;
     if(step===3 && a.type==='cast' && a.magic==='purify')j.step=4;
-    if(step===5 && a.type==='upgrade' && TYPE[s.cells[a.cell].type].level===2)j.step=6;
+    if(step===5 && ((a.type==='upgrade'&&TYPE[s.cells[a.cell].type].level===2)||(a.type==='upgradeBatch'&&a.upgrades.some(v=>TYPE[s.cells[v.cell].type].level===2))))j.step=6;
     if(step===6 && a.type==='useCrystal'){if(j.useRound!==s.round){j.useRound=s.round;j.waterUses=0;}j.waterUses++;if(j.waterUses>=2)j.step=7;}
     if(step===7 && s.round>=3 && a.type==='place')j.step=8;
     if(!j.done.includes(a.type))j.done.push(a.type);
@@ -253,6 +255,11 @@
     return [];
   }
   const handlers = {
+    upgradeBatch(s,a){
+      const plan=planUpgrades(s,a.upgrades);if(!plan.ok)return plan;
+      for(const change of a.upgrades)handlers.upgrade(s,change);
+      return success('同时升级 '+a.upgrades.length+' 块地形');
+    },
     demolish(s,a){
       const t=s.cells[a.cell];
       if(!t)return fail('请选择已有地块');
@@ -386,6 +393,13 @@
     const actual = score(s).total - before, accounted = sum(s.events.slice(eventStart).map(e => e.score || 0));
     if (actual !== accounted) emit(s, { cell: cell || '3,3', kind: 'attr', n: actual - accounted, score: actual - accounted });
   }
+  function planUpgrades(s,changes){
+    if(!Array.isArray(changes)||!changes.length||new Set(changes.map(v=>v.cell)).size!==changes.length)return fail('请选择地块和各自的升级方向');
+    const preview=structuredClone(s),normal=emptyEl(),big=emptyEl();
+    for(const change of changes){const result=handlers.upgrade(preview,change);if(!result.ok)return fail(change.cell+'：'+result.msg);}
+    for(const el of EL){normal[el]=s.inv.crystal[el]-preview.inv.crystal[el];big[el]=s.inv.bigCrystal[el]-preview.inv.bigCrystal[el];}
+    return {ok:true,normal,big};
+  }
   function act(s, action) {
     s.events = [];
     if (!action || !handlers[action.type]) return fail('未知行动');
@@ -442,10 +456,7 @@
     let blocked = 0;
     for (const cell of cells) {
       let damage = strength.damage;
-      for (const shield of s.shields) if (shield.cells.includes(cell)) {
-        const n = Math.min(damage, shield.defense[element]); shield.defense[element] -= n; damage -= n; blocked += n;
-        if (n) emit(s, { cell, kind: 'shield', el: element });
-      }
+      const absorbed=shieldDamage(s,cell,element,damage);damage-=absorbed;blocked+=absorbed;
       if (damage) addAttr(s, cell, EL.indexOf(element), -damage);
       emit(s, { cell, kind: 'meteor', el: element, damage, strength:strength.damage });
     }
@@ -454,6 +465,23 @@
     s.lastMeteor = { round: s.round, el: element, cells, blocked,damage:strength.damage };
     s.inv.pureCrystal[element]++;emit(s,{cell:cells[0],kind:'pureCrystal',el:element,n:1});
     log(s, `${elName(element)}陨石雨影响 ${cells.length} 格，元素盾抵挡 ${blocked} 点`);
+  }
+  function shieldDamage(s,cell,element,damage){
+    let blocked=0;for(const shield of s.shields)if(shield.cells.includes(cell)){const n=Math.min(damage-blocked,shield.defense[element]);shield.defense[element]-=n;blocked+=n;if(n)emit(s,{cell,kind:'shield',el:element});}
+    return blocked;
+  }
+  function naturalEvent(s){
+    const event=eventForRound(s.round),strength=Math.ceil(s.round/10),cells=placedKeys(s);
+    emit(s,{kind:'naturalEvent',id:event.id,strength,n:cells.length});
+    if(event.id==='meteor'){meteor(s);return;}
+    let blocked=0;
+    for(const cell of cells){
+      const t=s.cells[cell],before=sum(t.attrs);
+      event.delta.forEach((base,i)=>{let n=base*strength;if(n<0){const absorbed=shieldDamage(s,cell,EL[i],-n);n+=absorbed;blocked+=absorbed;}if(n)addAttr(s,cell,i,n);});
+      emit(s,{kind:'weather',id:event.id,cell,strength,score:sum(t.attrs)-before});
+    }
+    s.shields=s.shields.filter(sh=>sum(Object.values(sh.defense))>0);if(blocked)countStat(s,'blocked');
+    log(s,event.name+'影响 '+cells.length+' 格 · 强度 '+strength+(blocked?' · 元素盾抵挡 '+blocked+' 点':''));
   }
   // Settle after production, migration and disasters; newborn beasts act next round.
   function autoMergeSpirits(s) {
@@ -539,7 +567,7 @@
         if (prey) { t.animals = t.animals.filter(a => a !== prey); emit(s, { cell: k, kind: 'predation' }); }
       }
     }
-    if (s.round % RULES.meteorEvery === 0) meteor(s);
+    if (s.round % RULES.eventEvery === 0 && placedKeys(s).length) naturalEvent(s);
     degrade(s);trimSpirits(s); autoMergeSpirits(s);autoGuardians(s);checkMap(s);
     journeyRound(s);
     trimSpirits(s); updateProgress(s); reconcile(s, before, '3,3', eventStart);
@@ -584,7 +612,7 @@
       s.events=[];return s;
     }catch(_){return null;}
   }
-  const Game = { boardKeys, checkpoint,restoration,meteorStrength,magicArea,upgradeCost,tileRelations,RELATIONS,enterEndless,restore, supplyLevel, upgradeReasons, animalCap, newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, guardianArea, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
+  const Game = { ecology,eventForRound,planUpgrades,boardKeys, checkpoint,restoration,meteorStrength,magicArea,upgradeCost,tileRelations,RELATIONS,enterEndless,restore, supplyLevel, upgradeReasons, animalCap, newGame, act, endRound: endRoundPublic, legalPlacements, neighbors, score, spiritCap, cancerCap, attrCap, cluster, region, guardianArea, upgrades, globalAttrs, magicUnlocked, canPurify, stage, apLimit, eligiblePlants, eligibleAnimals, hasWater, bagCount, metrics, SHAPE, SHAPE_KEYS, BOUNDS, key, parse, TYPE, emptyKeys, makeTile };
   if (typeof module !== 'undefined' && module.exports) module.exports = Game;
   else root.Game = Game;
 })(this);

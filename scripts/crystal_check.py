@@ -61,24 +61,32 @@ try:
               S.inv.crystal.water=1;S.inv.bigCrystal.water=1;S.inv.inverseCrystal.water=1;
               selected='3,3';mode=null;render();
             }''')
+            if mobile and page.locator('#detail.open').count():
+                page.locator('[data-a="close"]').click()
             page.locator('#btnBag').click()
             page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').click()
-            check(label + ': choosing crystal with a selected tile does not spend it', page.evaluate("S.inv.crystal.water===1 && S.cells['3,3'].attrs[2]===0 && mode.kind==='crystal' && selected===null && !document.querySelector('#bag').classList.contains('open') && !document.querySelector('#detail').classList.contains('open')"))
+            check(label + ': choosing crystal after viewing a tile does not spend it', page.evaluate("S.inv.crystal.water===1 && S.cells['3,3'].attrs[2]===0 && mode.kind==='crystal' && selected===null && !document.querySelector('#bag').classList.contains('open') && !document.querySelector('#detail').classList.contains('open')"))
             check(label + ': target hint fits without covering the map', page.evaluate("document.querySelector('#hint').getBoundingClientRect().height<80 && document.documentElement.scrollWidth<=innerWidth"))
             page.screenshot(path=str(ROOT / 'artifacts' / f'crystal-select-{label}.png'), animations='disabled')
             page.keyboard.press('Escape')
             click_tile(page, '3,3', mobile)
             check(label + ': cancel and ordinary tile selection do not spend crystals', page.evaluate("mode===null && selected==='3,3' && S.inv.crystal.water===1 && S.cells['3,3'].attrs[2]===0"))
+            if mobile and page.locator('#detail.open').count():
+                page.locator('[data-a="close"]').click()
             page.locator('#btnBag').click()
             page.locator('[data-crystal="water"][data-big=""][data-inverse=""]').click()
             click_tile(page, '3,3', mobile)
             check(label + ': explicit target click spends ordinary crystal without AP or round change', page.evaluate("S.inv.crystal.water===0 && S.inv.bigCrystal.water===1 && S.cells['3,3'].attrs[2]===1 && S.ap===1 && S.round===1 && S.placed===0 && document.querySelectorAll('#ap i.used').length===2"))
             click_tile(page, '3,3', mobile)
+            if mobile and page.locator('#detail.open').count():
+                page.locator('[data-a="close"]').click()
             page.locator('#btnBag').click()
             page.locator('[data-crystal="water"][data-big="1"]').click()
             check(label + ': choosing large crystal does not spend it', page.evaluate("S.inv.bigCrystal.water===1 && S.cells['3,3'].attrs[2]===1"))
             click_tile(page, '3,3', mobile)
             check(label + ': explicit target click spends large crystal and adds 2', page.evaluate("S.inv.bigCrystal.water===0 && S.cells['3,3'].attrs[2]===3 && S.ap===1 && S.round===1 && S.placed===0"))
+            if mobile and page.locator('#detail.open').count():
+                page.locator('[data-a="close"]').click()
             page.locator('#btnBag').click()
             page.locator('[data-crystal="water"][data-inverse="1"]').click()
             check(label + ': choosing inverse crystal does not spend it', page.evaluate("S.inv.inverseCrystal.water===1 && S.cells['3,3'].attrs[2]===3"))

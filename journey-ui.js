@@ -33,11 +33,11 @@ function renderJourney(){
  const j=S.journey;if(!j||j.skipped){$('journey').hidden=true;return;}$('journey').hidden=false;
  const step=j&&!j.skipped?j.step:8,lesson=LESSONS[Math.min(8,step)];
  let title=lesson[0],copy=lesson[1];
- if(step>=8 && S.round>=9 && S.round<=10 && j&&!j.skipped){title='替土地撑起一片光';copy='第10轮将有土陨石雨。用5颗普通土晶造1格盾，部署在中心。防护池在覆盖范围内共享。';}
+ if(step>=8 && S.round>=9 && S.round<=10 && j&&!j.skipped){title='替土地撑起一片光';copy='自然现象每5轮发生一次，第10轮是土星雨。用5颗普通土晶造1格盾，部署在中心。防护池在覆盖范围内共享。';}
  else if(step>=8){
   const cells=Object.values(S.cells);
   if(cells.some(t=>t.guardians.length)){title='五兽聚力';copy='同格达到5只元素兽时自动合成守护灵。配比决定每轮十字范围的滋养，移动每步耗1行动。';}
-  else if(cells.some(t=>EL.some(e=>t.spirits.filter(sp=>sp.el===e.key&&!S.interactionUsed['spirit:'+sp.id]).length>=3))){title='三灵同源';copy='这片土地已有3个同属性元素灵。轮末会免费自动合成元素兽，也可以现在手动合成。';}
+  else if(cells.some(t=>EL.some(e=>t.spirits.filter(sp=>sp.el===e.key&&!S.interactionUsed['spirit:'+sp.id]).length>=3))){title='三灵同源';copy='这片土地已有3个同属性元素灵。轮末会免费自动合成元素兽。';}
  }
  const latest=(S.story?.memories||[]).filter(k=>!S.story.read.includes(k)).at(-1);
  $('journey').innerHTML=`<button id="journeyToggle" class="journey-title">✦ ${esc(title)} <small>${journeyExpanded?'−':'＋'}</small></button>${journeyExpanded?`<p>${esc(copy).replace(/\n/g,'<br>')}</p><div class="journey-controls"><button class="btn sm green" id="journeyFocus">${step===0?'开始旅程':step<8?lesson[2]:'回声册'}</button>${step<8?'<button class="btn sm" id="journeySkip">跳过教学</button>':''}${latest?`<button class="btn sm gold" id="journeyMemory">新回声 · ${esc(MEMORIES[latest]?.[0]||latest)}</button>`:''}</div><small>v1.3 · 地块供给 T${G.supplyLevel(S)} · ${saveWarning?'本机存储不可用':'已自动保存'}</small>`:''}`;
@@ -51,16 +51,6 @@ function openEchoes(focus){
  const list=S.completedMap?Object.keys(MEMORIES):(S.story?.memories||[]);
  $('echoBody').innerHTML=`<p class="muted">土地记得你走过的每一步。${S.completedMap?'未触发的残卷已在生境重建后解封。':'完成首次行动，找回新的回声。'}</p>`+(list.length?list.map(k=>`<article id="echo-${k}"><small>${S.story?.memories.includes(k)?'旅途记忆':'生境重建后解封'}</small><h3>${esc(MEMORIES[k]?.[0]||k)}</h3><p>${esc(MEMORIES[k]?.[1]||'').replace(/\n/g,'<br>')}</p></article>`).join(''):'<p>第一道回声藏在净化之后。</p>');
  if(S.story)S.story.read=[...S.story.memories];saveJourney();$('dlgEcho').showModal();if(focus)$('echo-'+focus)?.scrollIntoView({block:'nearest'});
-}
-function terrainPanel(t,k){
- const ty=G.TYPE[t.type];if(!ty.family)return '';
- let h=`<section class="terrain-info">${S.journey&&!S.journey.skipped&&S.journey.step<8?'<p><b>✦ '+esc(LESSONS[S.journey.step][0])+'</b><br>'+esc(LESSONS[S.journey.step][1])+'</p>':''}<b>${esc(ty.familyName)} · T${ty.level} · ${esc(ty.branch)}</b><p>${esc(ty.effect)}</p>`;
- if(ty.trigger)h+=`<small>${esc(ty.trigger)}。${esc(ty.cost)}</small>`;
- const rule=G.RELATIONS[ty.family],active=G.tileRelations(S,k);
- h+=`<div class="relation-list"><b>四邻互作 · ${esc(rule.name)}</b><small>搭配 ${rule.targets.map(f=>D.TERRAIN.families.find(v=>v.key===f).name).join(' / ')}</small>${active.length?active.map(r=>`<div>${esc(G.TYPE[S.cells[r.neighbor].type].name)} → 本格${elName(r.el)} +${r.n}/轮</div>`).join(''):'<div>相邻尚无对应地块</div>'}</div>`;
- const children=D.TILE_TYPES.filter(v=>v.parent===t.type);
- h+=children.map(v=>{const reasons=G.upgradeReasons(S,k,v),cost=G.upgradeCost(S,k,v),pay=EL.filter(e=>cost.normal[e.key]||cost.big[e.key]).map(e=>`${e.name} 普通${cost.normal[e.key]} / 大型${cost.big[e.key]}`).join(' · ');return `<div class="branch-card"><b>${esc(v.name)} · T${v.level} · ${esc(v.branch)}</b><p>${esc(v.effect)}</p><small>自动消耗：${pay||'属性已满足，无需结晶'}</small><small>${reasons.length?esc(reasons.join(' · ')):'升级条件满足'}</small><button class="btn sm green upgrade-direction" data-a="upgrade" data-type="${v.id}" ${reasons.length||S.over?'disabled':''}>选择 ${esc(v.branch)} · 升为${esc(v.name)}</button></div>`;}).join('');
- return h+'</section>';
 }
 $('btnEcho').onclick=()=>openEchoes();$('closeEcho').onclick=()=>$('dlgEcho').close();
 $('btnAtlas').onclick=()=>{
