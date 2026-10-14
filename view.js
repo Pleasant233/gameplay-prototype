@@ -165,6 +165,19 @@
     }
     const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(p,3)); return g;
   }
+  function upgradeGlowGeometry(k) {
+    const p=[],ix=[];
+    for(let side=0;side<4;side++)for(let i=0;i<AXIS.length-1;i++){
+      const start=p.length/3;
+      for(const a of [AXIS[i],AXIS[i+1]])for(const edge of [HALF-.012,HALF-.052]){
+        const x=side===0?a:side===1?edge:side===2?-a:-edge;
+        const z=side===0?-edge:side===1?a:side===2?edge:-a;
+        p.push(x,surfaceHeight(k,x,z)+.018,z);
+      }
+      ix.push(start,start+1,start+2,start+2,start+1,start+3);
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setIndex(ix);return g;
+  }
   function anchorChildren(group,k,h) {
     group.children.forEach(o=> {
       if(o.userData.groundOffset == null) o.userData.groundOffset=o.position.y-h;
@@ -186,6 +199,7 @@
   function rebuildTerrain(n) {
     n.terrain.geometry.dispose(); n.terrain.geometry=terrainGeometry(n.k);
     n.edgeLine.geometry.dispose(); n.edgeLine.geometry=outlineGeometry(n.k);
+    if(n.upgradeGlow){n.upgradeGlow.geometry.dispose();n.upgradeGlow.geometry=upgradeGlowGeometry(n.k);}
     anchorChildren(n.scenery,n.k,n.look.h); anchorChildren(n.units,n.k,n.look.h);
   }
   function baseGeometry() {
@@ -817,6 +831,7 @@
     scene.remove(n.group);
     releaseLocalGeometry(n.scenery); releaseLocalGeometry(n.units);
     n.terrain.geometry.dispose(); n.edgeLine.geometry.dispose(); n.edgeLine.material.dispose();
+    if(n.upgradeGlow){n.upgradeGlow.geometry.dispose();n.upgradeGlow.material.dispose();}
     if(n.frame) { n.frame.userData.band.geometry.dispose(); n.frame.userData.band.material.dispose(); n.frame.userData.cornerMat.dispose(); }
     n.terrain.material.forEach(m => m.dispose());
     pickables.delete(n.terrain);
@@ -1445,6 +1460,7 @@
     updateHighlights(dt, time);
     for (const k of Object.keys(tileMap)) {
       const n = tileMap[k];
+      if(n.upgradeGlow)n.upgradeGlow.material.opacity=reduced()?.8:.24+.7*(.5+.5*Math.sin(time*5));
       let y = n.lift, sxz = 1, sy = 1;
       if(n.impactDelay!=null){n.impactDelay-=dt;if(n.impactDelay<=0){n.impact=0.4;delete n.impactDelay;}}
       if(n.impact>0){n.impact=Math.max(0,n.impact-dt);y+=Math.sin(n.impact/0.4*Math.PI)*0.05;}
@@ -1521,6 +1537,13 @@
     if(terrainChanged){
       Object.values(tileMap).forEach(rebuildTerrain);
       Object.entries(pads).forEach(([k,m])=>{m.geometry.dispose();m.geometry=terrainGeometry(k);});
+    }
+    for(const k of keysNow){
+      const n=tileMap[k],canUpgrade=!S.over&&G.upgrades(S,k).length>0;
+      if(canUpgrade&&!n.upgradeGlow){
+        n.upgradeGlow=new THREE.Mesh(upgradeGlowGeometry(k),new THREE.MeshBasicMaterial({color:new THREE.Color(1.7,1.35,.35),transparent:true,opacity:.8,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+        n.upgradeGlow.name='upgradeGlow';n.group.add(n.upgradeGlow);
+      }else if(!canUpgrade&&n.upgradeGlow){n.group.remove(n.upgradeGlow);n.upgradeGlow.geometry.dispose();n.upgradeGlow.material.dispose();delete n.upgradeGlow;}
     }
     if (S.round !== lastRound) {
       lastRound = S.round;
