@@ -9,4 +9,6 @@
 ![手机选择结晶不立即扣库存](screenshots/crystal-select-2026-10-14-phone.png)
 ![桌面升级预览不扣晶](screenshots/crystal-upgrade-2026-10-14-desktop.png)
 
-正式发布与线上复测结果随后记录。
+已发布：https://element-habitat.vercel.app 。部署 `dpl_7Kr8X4wH6EZCu6Ht3UWjkD6qH8fj`，READY / production；游戏源码 `cf532dd80ab101d7ec7ecd4055f8d61777b943b1`。
+
+直接加载正式站点进行同一套桌面／手机25项交互检查，全部通过、浏览器错误0；没有替换线上游戏或渲染代码。报告位于忽略的 `artifacts/crystal-selection-production.json`。手机为模拟视口。
