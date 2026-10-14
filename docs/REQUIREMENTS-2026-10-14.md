@@ -22,6 +22,8 @@
 
 ## 验证入口
 
+追加需求：可升级地块四边显示金色闪烁光带，贴合实际地表高度。提示使用 `G.upgrades`，结晶不足或升级条件消失时释放光带；减少动态效果时常亮。没有新增玩法状态。
+
 - `npm test`：当前规则、80地块目录、生态、存档、30局完整模拟、地表接缝及云几何。
 - `npm run test:ui` / `npm run test:gameplay`：当前需求的桌面、手机真实WebGL交互和截图。
 - `npm run test:feedback`：星雨、盾、粒子预算、回收与减少动态效果。
@@ -30,7 +32,7 @@
 
 原v1／v13交互命令现运行当前需求测试，旧的“一轮一块”“手工选五兽”“材料采集”等断言已被对应的新规则断言替换。测试探针只由测试服务器注入，游戏没有新增调试API。
 
-本地浏览器检查共103项（需求26、反馈29、底座25、结晶9、后处理14），均通过且无浏览器错误。新版报告写入忽略的 `artifacts/`，没有覆盖历史发布结果。软件WebGL及手机模拟不能代替实机性能或美术接受度确认。
+18项需求的初次浏览器检查共103项（需求26、反馈29、底座25、结晶9、后处理14），均通过且无浏览器错误。追加升级提示后，完整需求回归通过26项，手机粒子检查因测试时钟暂停而超时；推进时钟后，桌面／手机的粒子回收和阶段失败4项定向重测通过，覆盖余下检查。没有将首次超时运行记为整套通过。新版报告写入忽略的 `artifacts/`，没有覆盖历史发布结果。软件WebGL及手机模拟不能代替实机性能或美术接受度确认。
 
 已发布存档继续恢复；旧存档超过40轮时转为无尽，原铺满结束的存档可继续无尽。升级大型结晶补充的额外1点仍须满足属性上限。
 
@@ -42,5 +44,7 @@
 | 紫灰荒地与灵力公式 | [截图](screenshots/requirements-2026-10-14-after-desktop.png) | [截图](screenshots/requirements-2026-10-14-after-phone.png) |
 | 80种模型 | [截图](screenshots/requirements-2026-10-14-models-desktop.png) | [截图](screenshots/requirements-2026-10-14-models-phone.png) |
 | 至纯结晶中央展示 | [截图](screenshots/requirements-2026-10-14-pure-desktop.png) | [截图](screenshots/requirements-2026-10-14-pure-phone.png) |
+| 升级提示前 | [截图](screenshots/upgrade-glow-2026-10-14-before-desktop.png) | [截图](screenshots/upgrade-glow-2026-10-14-before-phone.png) |
+| 可升级四边金光 | [截图](screenshots/upgrade-glow-2026-10-14-after-desktop.png) | [截图](screenshots/upgrade-glow-2026-10-14-after-phone.png) |
 
 正式发布结果见[发布记录](RELEASE-2026-10-14.md)。
