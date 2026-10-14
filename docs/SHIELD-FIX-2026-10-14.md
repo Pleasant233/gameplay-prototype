@@ -9,4 +9,6 @@
 ![桌面制造后仍可调配](screenshots/shield-fix-2026-10-14-desktop.png)
 ![320px手机模拟制造后仍可调配](screenshots/shield-fix-2026-10-14-phone.png)
 
-正式发布与线上复测结果随后记录。
+正式地址：https://element-habitat.vercel.app 。部署 `dpl_3ErfVzbYKpTyiWeAEcGqfRZiMpX8`，READY / production；游戏源码 `a86d789ce7fb43fed35f40492cfd8a4c06681e51`。
+
+线上7项复测通过、浏览器错误0：页面公开访问200且与本地修复逐字节一致；桌面／手机真实控件制造混合元素盾、精确扣晶且AP与轮次不变；制造后重新调配并提示本轮限制；下一轮恢复制造。直接加载线上源码，没有替换游戏或渲染代码。报告位于忽略的 `artifacts/shield-live-report.json`。手机为模拟视口。
