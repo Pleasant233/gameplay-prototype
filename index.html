@@ -340,7 +340,7 @@
   #photoBar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:30;background:#292539df;border-radius:10px;padding:10px;color:white;text-align:center;display:flex;gap:8px;align-items:center}#photoBar[hidden]{display:none}
   body.photo-mode #top,body.photo-mode #formulaHud,body.photo-mode #stageHud,body.photo-mode #dock,body.photo-mode #corner,body.photo-mode #cornerL,body.photo-mode #bag,body.photo-mode #journey,body.photo-mode #banner,body.photo-mode #achievementToast{display:none}
   .token.pure-hero{z-index:2;display:flex;flex-direction:column;text-align:center;filter:drop-shadow(0 0 18px var(--token-color))}.pure-hero i{width:70px;height:90px;border-radius:8px;clip-path:polygon(50% 0,92% 30%,82% 70%,50% 100%,18% 70%,8% 30%);font-size:34px;background:linear-gradient(145deg,#fff 5%,var(--token-color) 40%,#fff 52%,var(--token-color) 68%);box-shadow:none}.pure-hero b{font-size:18px;background:#27223cef;padding:8px 14px;border-radius:10px;color:#fff;white-space:nowrap}.pure-hero small{margin:4px 0;background:#27223cef;padding:3px 8px;border-radius:6px}
-  @media(max-width:760px){#formulaHud{top:52px;padding:8px 10px}#formula{font-size:15px}#goal{font-size:11px}#stageHud{top:151px;flex-direction:row;gap:8px;font-size:10px}#hint{top:180px}#journey{top:184px;width:calc(100vw - 20px);max-height:160px;overflow:auto}#detail,#bag{top:185px;bottom:auto;max-height:calc(100dvh - 440px);width:calc(100vw - 20px);left:10px;right:auto}#photoBar{width:calc(100vw - 20px);flex-wrap:wrap;justify-content:center}#photoBar span{font-size:11px}#top{padding-right:94px}.pill{font-size:12px;padding-right:6px}.pill .ico{display:none}#pillLeft{display:none}}
+  @media(max-width:760px){#formulaHud{top:52px;padding:8px 10px}#formula{font-size:15px}#goal{font-size:11px}#stageHud{top:151px;flex-direction:row;gap:8px;font-size:10px}#hint{top:180px;bottom:auto}#journey{top:184px;width:calc(100vw - 20px);max-height:160px;overflow:auto}#detail,#bag{top:185px;bottom:auto;max-height:calc(100dvh - 440px);width:calc(100vw - 20px);left:10px;right:auto}#photoBar{width:calc(100vw - 20px);flex-wrap:wrap;justify-content:center}#photoBar span{font-size:11px}#top{padding-right:94px}.pill{font-size:12px;padding-right:6px}.pill .ico{display:none}#pillLeft{display:none}}
 </style>
 </head>
 <body>
@@ -392,7 +392,7 @@
   <h2>怎么玩</h2>
   <p>① 挑战模式共40轮。第10/20/30/40轮结算后灵力须达到80/220/450/800；未达标立即失败。</p>
   <p>② 一轮可以铺多个地块。铺地、施法、刷新和移动守护灵均耗1行动点；行动用尽后可继续使用免费结晶，点击“结束本轮”结算。</p>
-  <p>使用普通或大型元素结晶不消耗行动点，每轮不限次数，只消耗对应库存；普通+1、大型+2、逆结晶−1。</p>
+  <p>地块不会自动使用背包结晶。先选择结晶，再点击目标地块才消耗；按 Esc 可取消。使用普通或大型元素结晶不消耗行动点，每轮不限次数；普通+1、大型+2、逆结晶−1。</p>
   <p>③ 同系列连片提高属性上限。点选地块，在详情选择升级方向，自动扣除所需普通／大型元素结晶。T4需合兽经历，T5需守护灵覆盖。</p>
   <p>④ 地块材料及制造系统已删除。每种地块都能和四邻对应系列互作；详情显示实际邻居与轮末属性增量。</p>
   <p>⑤ 同属性三灵轮末自动合兽，同格五兽自动合守护灵。动物自动元素化，植物与元素动物滋养地块。</p>
@@ -808,8 +808,8 @@ $('bag').addEventListener('click', e => {
   const c = e.target.closest('[data-crystal]');
   if (c) {
     const el = c.dataset.crystal, big = c.dataset.big === '1',inverse=c.dataset.inverse==='1';
-    if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big, inverse }); return; }
-    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '使用结晶（不消耗行动点）：点击目标地块');
+    selected=null;$('bag').classList.remove('open');
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '点击目标地块才消耗结晶 · Esc 取消');
     return;
   }
 
