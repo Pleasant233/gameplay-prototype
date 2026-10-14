@@ -22,3 +22,9 @@
 ![手机混合调配](screenshots/large-shield-2026-10-14-mixed-phone.png)
 
 ![手机纯大型配方](screenshots/large-shield-2026-10-14-pure-phone.png)
+
+## 正式发布
+
+已发布至 https://element-habitat.vercel.app ，部署 `dpl_GBbQ9wM2nqndqjwtcUVCWXsbA6iw` 为 READY / production；游戏源码提交 `a18276ec45b00f3af92058cf06dbaecaeccfa679`。
+
+直接加载正式网址执行同一套桌面／手机23项交互检查，全部通过、浏览器错误0，未替换线上游戏或渲染代码。报告在忽略的 `artifacts/large-shield-production.json`。
