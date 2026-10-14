@@ -56,3 +56,9 @@
 ![待放卡片属性](screenshots/season-2026-10-14-offer-phone.png)
 
 报告保存于忽略的 `artifacts/season-fast.log`、`season-ui-local.json`、`detail-layout.json`、`crystal-check-local.json`、`demolition-local.json`、`feedback/feedback-report.json`。
+
+## 正式发布
+
+已发布到 https://element-habitat.vercel.app ，部署 `dpl_2yUHhHsvH5qevJpUfYYQ6nEtSqpX` 为 READY / production；游戏源码提交 `7f8144f3894126f6264eaa2ddbe55b4b60e8af6d`。
+
+正式网址直接执行同一套桌面／手机23项检查，全部通过，浏览器、音频与WebGL错误0；没有替换游戏逻辑，只注入只读音频／渲染观察探针。5个音乐阶段均有实际输出。上述新版截图已更新为正式站点捕获；线上报告在忽略的 `artifacts/season-ui-production.json`。
