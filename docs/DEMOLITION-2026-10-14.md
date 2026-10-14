@@ -19,3 +19,9 @@
 ![手机铲除预览](screenshots/demolition-2026-10-14-preview-phone.png)
 
 ![手机铲除后](screenshots/demolition-2026-10-14-cleared-phone.png)
+
+## 正式发布
+
+已发布至 https://element-habitat.vercel.app ，部署 `dpl_E4PQiEDBDrmHs5QXyWEX6LMp7c8A` 为 READY / production；游戏源码提交 `873f9d2b41f4e225796dff4032db7384666b69fc`。
+
+直接加载正式网址执行同一套桌面／手机17项交互检查，全部通过、浏览器错误0，未替换线上游戏或渲染代码。报告在忽略的 `artifacts/demolition-production.json`。
