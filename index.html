@@ -397,7 +397,7 @@
   <p>④ 地块材料及制造系统已删除。每种地块都能和四邻对应系列互作；详情显示实际邻居与轮末属性增量。</p>
   <p>⑤ 同属性三灵轮末自动合兽，同格五兽自动合守护灵。动物自动元素化，植物与元素动物滋养地块。</p>
   <p>⑥ 每10轮触发一种元素星雨，伤害逐次为3/5/7/9点，无尽模式继续增加。每颗对应至纯元素结晶永久增加4格魔法覆盖，可连续扩展。净化第一轮即可覆盖目标及周围四邻；其他魔法初始1格。</p>
-  <p>⑦ 属性不足会沿升级路线退化；五项属性全部为负时地块消散。净化、结晶与元素盾可保护生境。</p>
+  <p>⑦ 属性不足会沿升级路线退化；五项属性全部为负时地块消散。详情可消耗1行动点铲除地块，各元素正属性按1:1返还普通结晶，负属性不返还，同格生物一并移除。</p>
   <p>⑧ 初始85格铺满后可保存完整地图、摄影或检视，并继续无尽模式。也可开局选择无尽模式：轮次和可铺设边界无限制，星雨持续变强。</p>
   <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消 · <kbd>1</kbd>～<kbd>3</kbd> 选地块 · <kbd>B</kbd> 背包 · <kbd>Enter</kbd> 结束本轮 · <kbd>P</kbd> 摄影 · <kbd>Ctrl+S</kbd> 保存完整地图<br>
   手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
@@ -568,6 +568,7 @@ function fxOf(a) {
     case 'cast': return [a.magic, a.cell];
     case 'merge': return ['merge', a.cell, a.el];
     case 'mergeGuardian': case 'moveGuardian': return null; // Dedicated, composition-aware effects.
+    case 'demolish': return null;
     case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
     case 'upgrade': return ['upgrade',a.cell];
     case 'deployShield': return null; // Region-wide deployment is shown after state sync.
@@ -581,6 +582,7 @@ function doAct(action) {
   const r = G.act(S, action);
   if (!r.ok) { hint(r.msg, true); render(); return false; }
   mode = null; hint('');
+  if(action.type==='demolish')selected=null;
   const f = fxOf(action);
   if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
   Tokens.enqueue(S.events);
@@ -638,6 +640,8 @@ function renderDetail() {
   h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / attrCap * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
   let n = 0;
   const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
+  const refund=t.attrs.map((v,i)=>v>0?elName(EL[i].key)+' ×'+v:'').filter(Boolean).join('、');
+  h+=row(`<span style="display:block"><b>铲除地块</b><small class="muted" style="display:block">返还普通结晶：${refund||'无'}<br>正属性1:1返还 · 同格生物一并移除</small></span>`,`<button class="btn sm red" data-a="demolish" ${S.ap<1?'disabled':''} title="消耗1行动点，移除地块并返还正属性对应的普通元素结晶">铲除 · 1行动</button>`);
   for (const e of EL) {
     const list = t.spirits.filter(s => s.el === e.key);
     if (!list.length) continue;
@@ -822,6 +826,7 @@ $('detail').addEventListener('click', e => {
     case 'close': selected = null; render(); break;
     case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
     case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
+    case 'demolish':doAct({type:'demolish',cell:k});break;
     case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
     case 'moveGuardian':setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
     case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;

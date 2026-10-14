@@ -253,6 +253,13 @@
     return [];
   }
   const handlers = {
+    demolish(s,a){
+      const t=s.cells[a.cell];
+      if(!t)return fail('请选择已有地块');
+      EL.forEach((el,i)=>{const n=Math.max(0,t.attrs[i]);if(n){s.inv.crystal[el]+=n;emit(s,{cell:a.cell,kind:'crystal',el,n});}});
+      delete s.cells[a.cell];emit(s,{cell:a.cell,kind:'vanish'});
+      return success('铲除地块，正属性已返还普通元素结晶');
+    },
     tutorial(s,a){
       if(!s.journey)return fail('未开启操作教学');
       if(a.skip){s.journey.skipped=true;return success('已跳过操作教学，回声仍可解锁');}
@@ -383,7 +390,7 @@
     s.events = [];
     if (!action || !handlers[action.type]) return fail('未知行动');
     if (s.over) return fail('游戏已结束');
-    const cost = ['place', 'cast', 'moveGuardian','reroll'].includes(action.type) ? 1 : 0;
+    const cost = ['place', 'cast', 'moveGuardian','reroll','demolish'].includes(action.type) ? 1 : 0;
     if (s.ap < cost) return fail('行动点不足');
     const used = interactionKeys(s, action);
     if (used.some(k => s.interactionUsed[k])) return fail('该生物或物品本轮已交互');
