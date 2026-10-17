@@ -19,7 +19,9 @@
     "test:v1-ui": "node scripts/v1_browser_check.cjs",
     "test:feedback": "node scripts/feedback_check.cjs",
     "test:ground": "node scripts/ground_check.cjs",
-    "test:v13-ui": "node scripts/v13_browser_check.cjs"
+    "test:v13-ui": "node scripts/v13_browser_check.cjs",
+    "test:unity-rules": "node scripts/unity-parity.cjs",
+    "unity:export-data": "node scripts/export-unity-data.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

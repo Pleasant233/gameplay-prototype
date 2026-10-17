@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2b6fd6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="元素生境：五行地块策略小游戏">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>元素生境</title>
+<style>
+  :root {
+    --ink: #fff; --ink2: #5a4220; --muted: #8a7a62;
+    --paper: #fff7e6; --paper2: #f3e3c2; --edge: #c9a56a;
+    --blue: #3b8cf0; --blue-d: #1f5fb8; --green: #5ccf3a; --green-d: #33912a;
+    --gold: #ffcc33; --gold-d: #d48a12; --red: #ff5a4a; --red-d: #b8302a;
+    --purple: #a46cf0; --purple-d: #6a3ab8;
+    --metal: #f2c230; --wood: #5ccf3a; --water: #3fa6ff; --fire: #ff6a3a; --earth: #d09a5a;
+    --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6fb6ff; color: var(--ink2);
+    font: 600 13px/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+  #world { position: fixed; inset: 0; }
+  #world canvas { touch-action: none; }
+
+  /* 卡通描边字 */
+  .toon { color: #fff; -webkit-text-stroke: 0; paint-order: stroke fill;
+    text-shadow: 0 2px 0 rgba(0,0,0,.45), 1px 0 0 rgba(0,0,0,.35), -1px 0 0 rgba(0,0,0,.35), 0 -1px 0 rgba(0,0,0,.35); }
+
+  /* 纸面面板 */
+  .panel { background: linear-gradient(180deg, var(--paper), var(--paper2)); border: 3px solid #fff;
+    border-radius: 18px; box-shadow: 0 0 0 2px var(--edge), 0 6px 0 2px #a8844a, 0 12px 24px rgba(0,0,0,.25); }
+  .tag { position: absolute; z-index: 3; top: -13px; left: 14px; padding: 2px 12px; border-radius: 10px; font-size: 12px;
+    background: linear-gradient(180deg, #6aa8ff, var(--blue)); border: 2px solid #fff; box-shadow: 0 2px 0 var(--blue-d); }
+
+  /* 立体按钮 */
+  .btn { --c: var(--blue); --d: var(--blue-d); position: relative; font: inherit; font-weight: 800; color: #fff; cursor: pointer;
+    border: 2px solid rgba(0,0,0,.25); border-radius: 12px; padding: 8px 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.28) 0 45%, transparent 55%), var(--c);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 4px 0 var(--d), 0 6px 8px rgba(0,0,0,.25);
+    transition: transform .08s, box-shadow .08s, filter .15s; }
+  .btn:not(:disabled):hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:not(:disabled):active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 1px 0 var(--d), 0 2px 4px rgba(0,0,0,.2); }
+  .btn:disabled { --c: #a9a9a9; --d: #777; cursor: not-allowed; filter: saturate(.3); }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .btn.green { --c: var(--green); --d: var(--green-d); }
+  .btn.gold { --c: var(--gold); --d: var(--gold-d); color: #6a3a00; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+  .btn.red { --c: var(--red); --d: var(--red-d); }
+  .btn.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+  .btn.sm { padding: 4px 10px; font-size: 12px; border-radius: 9px; box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 var(--d); }
+  .btn.sm:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--d); }
+  .btn .t { position: relative; }
+  .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.55); transform: scale(0); pointer-events: none;
+    animation: rip .5s ease-out forwards; }
+  @keyframes rip { to { transform: scale(2.6); opacity: 0; } }
+
+  /* 顶栏 */
+  #top { position: fixed; top: calc(10px + var(--safe-t)); left: 0; right: 0; display: flex; justify-content: center; gap: 10px;
+    padding: 0 12px; z-index: 5; pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  .pill { position: relative; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px;
+    background: rgba(20, 30, 50, .55); border: 2px solid rgba(255,255,255,.35); border-radius: 22px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-size: 18px; font-weight: 900; }
+  .pill .ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
+    border: 2px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+  .pill small { display: block; font-size: 10px; line-height: 1; opacity: .85; font-weight: 700; }
+  .pill b { display: block; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  #pillScore .ico { background: radial-gradient(circle at 35% 30%, #fff6b0, var(--gold) 50%, var(--gold-d)); }
+  #pillRound .ico { background: radial-gradient(circle at 35% 30%, #c8e4ff, var(--blue) 55%, var(--blue-d)); }
+  #pillLeft .ico { background: radial-gradient(circle at 35% 30%, #d8ffc8, var(--green) 55%, var(--green-d)); }
+  .bump { animation: bump .5s cubic-bezier(.3,1.8,.5,1); }
+  @keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .ap { display: flex; gap: 4px; }
+  .ap i { width: 20px; height: 26px; display: block; clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+    background: radial-gradient(circle at 40% 30%, #fff 0 8%, #9fe8ff 20%, #26a8ff 60%, #1660c8);
+    transition: transform .3s cubic-bezier(.3,1.8,.5,1), filter .3s; filter: drop-shadow(0 0 4px #4ac8ff); }
+  .ap i.used { filter: grayscale(1) brightness(.5); transform: scale(.78); }
+  #pillAp { padding-left: 12px; }
+
+  #corner { position: fixed; top: calc(10px + var(--safe-t)); right: 12px; display: flex; gap: 8px; z-index: 6; }
+  #cornerL { position: fixed; top: calc(10px + var(--safe-t)); left: 12px; display: flex; gap: 8px; z-index: 6; }
+
+  /* 底部操作区 */
+  #dock { position: fixed; left: 0; right: 0; bottom: calc(10px + var(--safe-b)); display: flex; justify-content: center;
+    align-items: flex-end; gap: 14px; padding: 0 12px; z-index: 5; pointer-events: none; }
+  #dock > * { pointer-events: auto; }
+  .tray { position: relative; padding: 18px 12px 12px; }
+  #offers { display: flex; gap: 10px; }
+  .card { position: relative; width: 96px; height: 120px; border-radius: 14px; border: 3px solid #fff; cursor: pointer; padding: 0;
+    font: inherit; color: #fff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 5px 0 rgba(0,0,0,.25);
+    transition: transform .25s cubic-bezier(.3,1.6,.5,1), box-shadow .2s; animation: deal .5s cubic-bezier(.3,1.5,.5,1) backwards; }
+  .card:hover { transform: translateY(-6px) rotate(-1.5deg); }
+  .card:active { transform: translateY(-2px) scale(.96); }
+  .card.on { transform: translateY(-14px) scale(1.05); box-shadow: 0 0 0 3px var(--gold), 0 0 22px 4px rgba(255,204,51,.8), 0 8px 0 rgba(0,0,0,.25); }
+  .card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  @keyframes deal { from { transform: translateY(80px) rotate(12deg) scale(.6); opacity: 0; } }
+  .card .art { position: absolute; inset: 0; }
+  .card .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%, rgba(0,0,0,.35)); }
+  .card .emb { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); }
+  .card .nm { position: relative; font-size: 14px; font-weight: 900; text-align: center; padding: 2px 0; }
+  .card .gems { position: relative; display: flex; justify-content: center; gap: 2px; padding: 3px 4px 6px; background: rgba(0,0,0,.3); }
+  .gem { min-width: 15px; height: 17px; border-radius: 5px; font-size: 11px; line-height: 15px; text-align: center; font-weight: 900;
+    border: 1.5px solid rgba(255,255,255,.8); }
+  .gem.z { opacity: .3; }
+  .gem.neg { background: var(--red) !important; }
+
+  #magics { display: flex; gap: 8px; }
+  .mg { --c: var(--purple); --d: var(--purple-d); width: 58px; height: 66px; padding: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; border-radius: 16px; }
+  .mg .gl { font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.35)); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
+  .mg:not(:disabled):hover .gl { transform: scale(1.2) rotate(-8deg); }
+  .mg small { font-size: 11px; }
+  .mg.on { animation: wob 1s ease-in-out infinite; box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(255,204,51,.9), 0 4px 0 var(--d); }
+  @keyframes wob { 50% { transform: translateY(-4px) scale(1.06); } }
+  .mg.used::after { content: "✓"; position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--green); border: 2px solid #fff; font-size: 11px; line-height: 16px; }
+  .mg[data-magic=purify] { --c: #8fd8ff; --d: #3a8ab8; }
+  .mg[data-magic=mine] { --c: #ffcc33; --d: #c08010; }
+  .mg[data-magic=spring] { --c: #3fa6ff; --d: #1f5fb8; }
+  .mg[data-magic=rich] { --c: #d09a5a; --d: #8a5a2a; }
+  .mg[data-magic=burn] { --c: #ff6a3a; --d: #b8302a; }
+
+  .mg small { white-space:nowrap; }
+  .mg.locked::after { content:"🔒";position:absolute;right:-3px;top:-6px;font-size:11px; }
+  #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
+  #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-3deg) scale(1.05); } 90% { transform: rotate(3deg) scale(1.05); } }
+
+  /* 背包抽屉 */
+  #bag { position: fixed; right: 12px; top: calc(64px + var(--safe-t)); width: 260px; padding: 18px 12px 12px; z-index: 6;
+    transform: translateX(calc(100% + 30px)); transition: transform .35s cubic-bezier(.3,1.3,.5,1); }
+  #bag.open { transform: none; }
+  .sec { font-size: 11px; color: var(--muted); margin: 6px 0 4px; }
+  #crystals { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .cr { --c: #888; --d: #555; padding: 4px 8px 4px 6px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .cr i { width: 12px; height: 14px; display: inline-block; clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); background: #fff; }
+
+  /* 地块详情 */
+  #detail { position: fixed; left: 12px; top: calc(64px + var(--safe-t)); width: 280px; max-height: calc(100vh - 260px);
+    overflow: auto; padding: 0 0 10px; z-index: 6; transform: translateX(calc(-100% - 30px)) rotate(-4deg);
+    transition: transform .4s cubic-bezier(.3,1.4,.5,1); }
+  #detail.open { transform: none; }
+  .dh { padding: 12px 14px 10px; border-radius: 14px 14px 0 0; color: #fff; position: relative; }
+  .dh h3 { margin: 0; font-size: 20px; font-weight: 900; }
+  .dh .sub { font-size: 12px; opacity: .95; }
+  .dh .x { position: absolute; right: 8px; top: 8px; }
+  .bars5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 10px 14px 4px; }
+  .bar5 { text-align: center; font-size: 11px; color: var(--muted); }
+  .bar5 .tube { height: 46px; border-radius: 8px; background: rgba(0,0,0,.08); position: relative; overflow: hidden; margin-bottom: 2px;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,.15); }
+  .bar5 .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; transition: height .5s cubic-bezier(.3,1.5,.5,1);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5); }
+  .bar5 b { display: block; font-size: 14px; color: var(--ink2); }
+  .bar5 .neg { background: var(--red) !important; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin: 6px 10px 0;
+    padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.6); box-shadow: 0 2px 0 rgba(0,0,0,.06);
+    animation: pop .35s cubic-bezier(.3,1.6,.5,1) backwards; }
+  .row > span:first-child { display: flex; align-items: center; gap: 6px; }
+  .row > span:last-child { display: flex; gap: 4px; flex-wrap: wrap; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+  .muted { color: var(--muted); font-size: 12px; }
+  #detail::-webkit-scrollbar { width: 6px; } #detail::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 3px; }
+
+  /* 提示条 */
+  #hint { position: fixed; left: 50%; top: calc(64px + var(--safe-t)); transform: translate(-50%, -20px) scale(.8); opacity: 0; z-index: 7;
+    padding: 8px 20px; border-radius: 20px; font-size: 14px; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 24px);
+    overflow: hidden; text-overflow: ellipsis; background: linear-gradient(180deg, #4a9cff, #2b6fd6); border: 2px solid #fff;
+    box-shadow: 0 4px 0 #1a4a9a, 0 8px 16px rgba(0,0,0,.25); transition: all .3s cubic-bezier(.3,1.6,.5,1); }
+  #hint.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  #hint.err { background: linear-gradient(180deg, #ff7a6a, #e0402f); box-shadow: 0 4px 0 #9a2a1a, 0 8px 16px rgba(0,0,0,.25); }
+  #hint.err.show { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { margin-left: -8px; } 40%, 80% { margin-left: 8px; } }
+
+  #tip { position: fixed; z-index: 8; pointer-events: none; padding: 6px 10px; font-size: 12px; display: none; border-radius: 10px;
+    white-space: nowrap; background: rgba(20,30,50,.85); color: #fff; border: 2px solid rgba(255,255,255,.4); }
+  #tip .g { display: inline-block; min-width: 14px; text-align: center; margin-right: 3px; }
+
+  /* 飘字 / 横幅 */
+  .float { position: fixed; z-index: 9; pointer-events: none; font-size: 22px; font-weight: 900; animation: rise 1.1s ease-out forwards; }
+  @keyframes rise { 0% { transform: translate(-50%, 0) scale(.4); opacity: 0; } 20% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; }
+    100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+  #banner { position: fixed; left: 0; right: 0; top: 22%; z-index: 9; pointer-events: none; text-align: center; display: none; }
+  #banner .rib { display: inline-block; padding: 12px 64px; font-size: 30px; font-weight: 900; letter-spacing: 6px;
+    background: linear-gradient(180deg, #ffd54a, #f0a010); border: 3px solid #fff; border-radius: 8px;
+    box-shadow: 0 6px 0 #b06a00, 0 14px 30px rgba(0,0,0,.35); clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%); }
+  #banner .sub { margin: 6px auto 0; font-size: 14px; max-width: min(520px, calc(100vw - 32px)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #banner.go { display: block; animation: ban 1.6s cubic-bezier(.3,1.4,.5,1) forwards; }
+  @keyframes ban { 0% { transform: scale(.2) rotate(-8deg); opacity: 0; } 18% { transform: scale(1.1); opacity: 1; } 28% { transform: scale(1); }
+    80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+  #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(circle, rgba(255,240,180,.15), transparent 65%); opacity: 0; }
+  #flash.go { animation: fl .7s ease-out; }
+  @keyframes fl { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 帮助 / 日志 / 结算弹窗 */
+  dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, calc(100vw - 32px)); overflow: visible; }
+  dialog::backdrop { background: rgba(10, 30, 60, .5); }
+  dialog[open] .panel { animation: dlg .45s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes dlg { from { transform: scale(.5) translateY(40px); opacity: 0; } }
+  .dlg { position: relative; padding: 26px 22px 20px; color: var(--ink2); }
+  .dlg h2 { margin: 0 0 10px; text-align: center; font-size: 22px; }
+  .dlg .close { position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; font-size: 16px; }
+  .dlg kbd { background: #fff; border: 1px solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; font: 700 11px monospace; }
+  .dlg p { margin: 6px 0; font-weight: 600; }
+  #log { max-height: 50vh; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+  #log li { padding: 4px 8px; border-radius: 6px; } #log li:nth-child(odd) { background: rgba(0,0,0,.05); }
+  .big { font-size: 64px; font-weight: 900; text-align: center; line-height: 1; margin: 8px 0; }
+  .stars { text-align: center; font-size: 40px; letter-spacing: 4px; }
+  .stars span { display: inline-block; animation: star .5s cubic-bezier(.3,1.8,.5,1) backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+  .stars span.off { filter: grayscale(1) opacity(.35); }
+  @keyframes star { from { transform: scale(0) rotate(-90deg); } }
+  .sum5 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; text-align: center; }
+  .sum5 div { background: rgba(255,255,255,.7); border-radius: 10px; padding: 6px 2px; font-size: 11px; color: var(--muted); }
+  .sum5 b { display: block; font-size: 18px; color: var(--ink2); }
+
+  #nogl { position: fixed; inset: 0; display: none; place-items: center; z-index: 20; background: #6fb6ff; padding: 24px; text-align: center; }
+
+  /* 手机竖屏 */
+  @media (max-width: 760px) {
+    #cornerL { display: none; }
+    #corner { right: 8px; gap: 6px; } #corner .btn.round { width: 38px; height: 38px; font-size: 15px; }
+    #top { justify-content: flex-start; padding: 0 92px 0 8px; gap: 4px; }
+    .pill { height: 34px; font-size: 14px; padding: 0 8px 0 4px; gap: 4px; } .pill .ico { width: 24px; height: 24px; font-size: 11px; border-width: 1.5px; }
+    #pillAp { padding: 0 8px; } .pill small { display: none; } .ap { gap: 2px; } .ap i { width: 14px; height: 19px; }
+    #btnMenuHelp { display: inline-block !important; }
+    #dock { padding: 0 8px; }
+    .card { min-width: 0; } .gem { min-width: 0; flex: 1; max-width: 16px; font-size: 10px; } .card .nm { font-size: 13px; }
+    .mg { min-width: 0; } #magicTray { min-width: 0; }
+    #btnEnd .t { font-size: 13px; } #btnEnd { width: 64px; height: 64px; padding: 0; border-radius: 16px; line-height: 1.2; }
+    #dock { flex-direction: column; align-items: stretch; gap: 10px; }
+    #dock .row2 { display: flex; gap: 10px; align-items: flex-end; justify-content: space-between; }
+    .tray { padding: 16px 8px 8px; }
+    #offers { gap: 6px; justify-content: center; }
+    .card { flex: 1; width: auto; max-width: 110px; height: 96px; } .card .emb { font-size: 26px; top: 8px; }
+    #magics { gap: 5px; } .mg { width: auto; flex: 1; height: 56px; } .mg .gl { font-size: 20px; }
+    #magicTray { flex: 1; }
+
+    #detail { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(250px + var(--safe-b)); max-height: 30vh;
+      transform: translateY(calc(100% + 280px)); }
+    #detail.open { transform: none; }
+    #bag { left: 8px; right: 8px; width: auto; }
+    #hint { top: auto; bottom: calc(256px + var(--safe-b)); }
+  }
+  @media (min-width: 761px) { #dock .row2 { display: contents; } }
+  @media (max-height: 520px) and (orientation: landscape) {
+    .card { height: 84px; width: 80px; } .card .emb { font-size: 22px; top: 6px; }
+    .mg { height: 52px; width: 50px; }
+    #detail { max-height: calc(100vh - 80px); }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
+
+  #btnReroll { position:absolute;right:8px;top:-14px;font-size:10px;padding:3px 6px; }
+  #bag { max-height:calc(100vh - 290px);overflow:auto;touch-action:pan-y; }
+  #detail, dialog, .dlg { touch-action:pan-y; }
+  dialog { max-height:85dvh; }
+  .dlg { max-height:82dvh;overflow:auto; }
+  .dlg .close { right:8px;top:8px; }
+  .dlg h2 { padding:0 24px; }
+  .progress-card { background:rgba(255,255,255,.68);border:2px solid #dbc69c;border-radius:12px;margin:8px 0;padding:10px; }
+  .progress-card.done { border-color:#8aba51;background:#eff6da; }
+  .progress-card b { display:block;color:var(--ink2);font-size:14px; }
+  .progress-card p { font-size:12px; }
+  .progress-card progress { width:100%;height:8px;accent-color:#6cad47;display:block;margin-top:6px; }
+  #stageHud { position:fixed;top:calc(57px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:12px;max-width:calc(100vw - 16px);font-size:11px;padding:4px 12px;border-radius:16px;background:rgba(28,47,64,.6);white-space:nowrap;pointer-events:none; }
+  #achievementToast { position:fixed;top:calc(92px + var(--safe-t));left:50%;transform:translate(-50%,-16px);z-index:18;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 24px); }
+  #achievementToast.show { opacity:1;transform:translate(-50%,0); }
+  #dlgAchievements,#dlgShield { width:min(440px,calc(100vw - 32px)); }
+  #dlgShield .dlg { max-height:84dvh;overflow:hidden;padding:22px 16px 16px;display:flex;flex-direction:column; }
+  #shieldBody { overflow:auto;min-height:0;overscroll-behavior:contain; }
+  #dlgShield .close { right:6px;top:6px; }
+  #dlgShield h2 { padding-right:16px;flex-shrink:0; }
+  #dlgShield .intro { font-size:12px;color:var(--muted);text-align:center; }
+  .shield-presets { display:flex;flex-wrap:wrap;gap:5px;margin:12px 0; }
+  .shield-presets .btn { flex:1;white-space:nowrap;min-height:38px;font-size:12px;padding:5px 8px; }
+  #shieldKinds { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #shieldKinds .btn { min-width:0;white-space:normal; }
+  .shield-row { display:grid;grid-template-columns:1fr 40px 38px 40px;gap:6px;align-items:center;margin:8px 0;padding:7px 9px;border:1px solid #d6c8ac;border-radius:12px;background:#fff8e9; }
+  .shield-row .element-pick { border:0;background:none;text-align:left;font:inherit;font-weight:900;padding:0;cursor:pointer; }
+  .shield-row .element-pick:disabled { opacity:.5;cursor:default; }
+  .shield-row small { display:block;font-size:10px;color:var(--muted);font-weight:600; }
+  .shield-row output { text-align:center;font-size:19px;font-weight:900; }
+  .shield-row .btn { width:40px;min-height:40px;padding:2px;font-size:20px; }
+  .shield-row input[type=range] { grid-column:1/-1;width:100%;height:18px;margin:0;cursor:pointer;accent-color:var(--el-color); }
+  .shield-row input[type=range] { appearance:none;-webkit-appearance:none;background:transparent;height:22px; }
+  .shield-row input[type=range]::-webkit-slider-runnable-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-webkit-slider-thumb { appearance:none;-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--el-color);border:3px solid #fff;box-shadow:0 1px 3px #ae9774; }
+  .shield-row input[type=range]::-moz-range-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-moz-range-thumb { width:14px;height:14px;border-radius:50%;background:var(--el-color);border:3px solid #fff; }
+  .shield-row input[type=range]:disabled { opacity:.4;cursor:default; }
+  #shieldPreview { border-radius:12px;padding:10px;background:#e5f0dc;border:1px solid #c2d5b1;text-align:center; }
+  #shieldPreview b { display:block;font-size:18px; }
+  #shieldPreview small { display:block;font-size:11px;margin-top:4px; }
+  .shield-bar { display:flex;height:10px;overflow:hidden;border-radius:8px;background:#cfc7b6;margin:8px 0; }
+  #shieldPreview.incomplete { background:#fff0d9;border-color:#e4c08c; }
+  #shieldComplete { min-height:34px;margin-top:6px; }
+  #btnCraftShield { width:100%;min-height:44px;margin-top:10px;flex-shrink:0; }
+  #scenario { width:100%;padding:8px;background:var(--paper);border:2px solid var(--edge);border-radius:10px;font:inherit; }
+  .sum5 { grid-template-columns:repeat(3,1fr); }
+  @media(max-width:760px) {
+    #ap i { display:none; } #ap::after { content:attr(data-value);font-size:12px; }
+    #stageHud { font-size:10px;gap:0;padding:4px 8px;flex-direction:column;align-items:center; }
+    #bag { max-height:calc(100dvh - 330px); }
+    #detail { bottom:calc(250px + var(--safe-b)); }
+    #achievementToast { font-size:12px;top:calc(100px + var(--safe-t)); }
+  }
+
+ </style>
+<style>
+  #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
+  .token { position:absolute; left:0; top:0; color:var(--token-color); font-size:25px; will-change:transform;
+    filter:drop-shadow(0 0 7px var(--token-color)); white-space:nowrap; }
+  .token i { font-style:normal; }
+  .token small { font-size:12px; color:#fff; margin-left:2px; }
+  #bagCount { position:absolute; right:-8px; top:-8px; min-width:21px; padding:2px 4px; border-radius:12px;
+    background:#ec5845; color:#fff; font-size:11px; border:2px solid #fff; line-height:14px; }
+  #btnBag { overflow:visible !important; }
+  #btnBag .ripple { display:none; }
+  .pill.bump, #btnBag.bump { filter:drop-shadow(0 0 8px #ffe14a); }
+
+ #journey{position:fixed;top:110px;left:18px;width:280px;z-index:12;border:1px solid #c2c49f;border-radius:16px;background:rgba(255,251,230,.95);box-shadow:0 8px 28px #243d2426;padding:14px;color:#364d39;font-size:13px;line-height:1.65}
+ .journey-title{border:0;background:none;color:#315342;font-family:inherit;font-weight:700;font-size:16px;width:100%;text-align:left;cursor:pointer}.journey-title small{float:right}.journey-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.journey-controls .btn{white-space:normal}#journey p{margin:6px 0}#journey>small{font-size:10px;color:#637363}
+ .terrain-info{padding:12px;background:#f3f5df;font-size:12px;line-height:1.65}.terrain-info p{margin:5px 0}.terrain-info select{max-width:100%;padding:5px}.branch-card{border-left:3px solid #91b670;padding:7px 9px;margin:7px 0;background:#fff9}.terrain-info button{margin:4px}#echoBody{line-height:1.8;padding-top:20px}#echoBody article{margin:14px 0;padding:14px;background:#f6f3e4;border-radius:12px}#echoBody h3{margin:3px 0}#echoBody p{white-space:normal}
+ body:has(#detail.open) #journey{display:none}
+ @media(max-width:650px){#journey{top:103px;left:10px;width:calc(100% - 20px);padding:9px 12px;font-size:11px;max-height:170px;overflow:auto}#journey p{max-height:48px;overflow:auto}.journey-title{font-size:13px}.journey-controls .btn{font-size:11px;padding:5px 8px}body:has(#bag.open) #journey{display:none}}
+ </style>
+<style>
+  #formulaHud{position:fixed;top:62px;left:50%;transform:translateX(-50%);width:min(780px,calc(100vw - 24px));padding:10px 18px;background:#27223cde;border:1px solid #d4cef187;border-radius:14px;color:#f6f3ff;text-align:center;z-index:5;pointer-events:none;box-shadow:0 8px 24px #24203830}
+  #formula{font-size:21px;display:block;font-variant-numeric:tabular-nums;line-height:1.35}#goal{font-size:13px;color:#e9d997;margin-top:4px}#goalProgress{display:block;width:100%;height:7px;margin-top:7px;accent-color:#a7d780}
+  #stageHud{top:154px;font-size:12px}#hint{top:190px}#journey{top:190px}#detail,#bag{top:190px;max-height:calc(100dvh - 395px);overflow:auto}
+  .panel{border-width:2px;border-radius:12px;box-shadow:0 4px 16px #25203735} .btn{border-radius:8px}.map-tools{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}select{font:inherit;width:100%;padding:8px;border:1px solid #baa98c;border-radius:6px;background:#fff8e8}
+  .pure-stock{display:block;width:100%;text-align:left;margin:5px 0}.pure-stock small{display:block;color:#fff;font-size:11px}.card:disabled{filter:grayscale(.55);cursor:default}.card:disabled:hover{transform:none}
+  .upgrade-direction{width:100%;text-align:left;min-height:36px}.branch-card small{display:block}.relation-list{padding:8px;background:#e7eed8;border-radius:8px;font-size:12px}
+  #detail:not(.open),#bag:not(.open){visibility:hidden;pointer-events:none}#detail .dh{position:sticky;top:0;z-index:2}#achievementToast{top:184px}
+  #photoBar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:30;background:#292539df;border-radius:10px;padding:10px;color:white;text-align:center;display:flex;gap:8px;align-items:center}#photoBar[hidden]{display:none}
+  body.photo-mode #top,body.photo-mode #formulaHud,body.photo-mode #stageHud,body.photo-mode #dock,body.photo-mode #corner,body.photo-mode #cornerL,body.photo-mode #bag,body.photo-mode #journey,body.photo-mode #banner,body.photo-mode #achievementToast{display:none}
+  .token.pure-hero{z-index:2;display:flex;flex-direction:column;text-align:center;filter:drop-shadow(0 0 18px var(--token-color))}.pure-hero i{width:70px;height:90px;border-radius:8px;clip-path:polygon(50% 0,92% 30%,82% 70%,50% 100%,18% 70%,8% 30%);font-size:34px;background:linear-gradient(145deg,#fff 5%,var(--token-color) 40%,#fff 52%,var(--token-color) 68%);box-shadow:none}.pure-hero b{font-size:18px;background:#27223cef;padding:8px 14px;border-radius:10px;color:#fff;white-space:nowrap}.pure-hero small{margin:4px 0;background:#27223cef;padding:3px 8px;border-radius:6px}
+  @media(max-width:760px){#formulaHud{top:52px;padding:8px 10px}#formula{font-size:15px}#goal{font-size:11px}#stageHud{top:151px;flex-direction:row;gap:8px;font-size:10px}#hint{top:180px;bottom:auto}#journey{top:184px;width:calc(100vw - 20px);max-height:160px;overflow:auto}#detail,#bag{top:185px;bottom:auto;max-height:calc(100dvh - 440px);width:calc(100vw - 20px);left:10px;right:auto}#photoBar{width:calc(100vw - 20px);flex-wrap:wrap;justify-content:center}#photoBar span{font-size:11px}#top{padding-right:94px}.pill{font-size:12px;padding-right:6px}.pill .ico{display:none}#pillLeft{display:none}}
+  .family-badge{position:absolute;top:5px;left:7px;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #2338;background:#263b4533;padding:2px 5px;border-radius:5px}
+  .card .emb{top:25px}.card[data-family=ice] .art{background-image:radial-gradient(ellipse at 20% 20%,#f5ffff,transparent 65%)}
+  #detail{width:500px;top:190px;max-height:none;overflow:visible;border-radius:18px;z-index:8}
+  #detail .dh{position:relative;padding:12px 16px;border-radius:15px 15px 0 0}#detail h3{margin:0 35px 5px 0;font-size:22px;line-height:1.25}#detail h3 small{font-size:12px;white-space:nowrap}
+  #detail .close{position:absolute;right:10px;top:10px;width:32px;height:32px;padding:0}
+  .tile-attributes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 16px}.tile-attributes div{border:1px solid #ddd8c9;border-top:4px solid var(--element);border-radius:10px;padding:6px;text-align:center;background:#fffaf0}.tile-attributes small{display:block;font-size:12px}.tile-attributes b{font-size:30px;line-height:1.1}.tile-attributes .negative b{color:#be4a50}
+  .tile-metrics{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:0 16px 10px;font-size:14px}.tile-metrics small{font-size:11px;color:var(--muted)}
+  .tile-upgrades,.tile-guardians,.tile-demolish{margin:0 12px 10px;padding:10px;background:#f5f1e2;border:1px solid #dad6c4;border-radius:12px}
+  .section-line{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.section-line .btn{min-height:32px;padding:4px 10px;font-size:12px}
+  .upgrade-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.upgrade-option{background:#fffaf0;border-radius:8px;padding:8px;border:1px solid #e1d9c4;display:flex;flex-direction:column;gap:5px;font-size:13px}.upgrade-option small{display:block;line-height:1.35;font-size:11px;overflow-wrap:anywhere}.upgrade-option .btn{margin-top:auto;padding:5px 8px;min-height:32px;font-size:12px;white-space:normal}.upgrade-reasons{color:var(--muted)}
+  .tile-guardians small,.tile-demolish small{display:block;font-size:11px;line-height:1.45;color:var(--muted);margin-top:5px}.guardian-controls{display:flex;gap:8px;margin:6px 0}.guardian-controls select{min-width:0;flex:1;padding:5px;font:inherit;font-size:12px;border:1px solid #c7c1ad;border-radius:7px}.guardian-controls .btn{font-size:12px;padding:4px 8px;white-space:nowrap}
+  .tile-demolish{display:flex;align-items:center;justify-content:space-between;gap:8px}.tile-demolish .btn{white-space:nowrap;font-size:12px;padding:6px 10px}
+  #detail.offer-preview{width:390px}.offer-instruction{font-size:12px;margin:0;padding:0 16px 12px;color:var(--muted)}
+  #batchPanel{position:fixed;bottom:20px;left:12px;width:540px;z-index:8;padding:12px;border-radius:14px}#batchPanel[hidden]{display:none}#batchPanel>small{display:block;font-size:11px;color:var(--muted);margin:3px 0}.batch-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:7px 0}.batch-edit select{min-width:0;font:inherit;font-size:12px;padding:5px;border:1px solid #d0c8b4;border-radius:7px}#batchPanel p{margin:6px 0;font-size:12px;line-height:1.4}.batch-actions{display:flex;gap:8px}.batch-actions .btn{flex:1;font-size:12px;padding:5px}
+  #stageHud{flex-wrap:wrap;justify-content:center;white-space:normal}
+  body.tile-detail-open #journey,body.tile-detail-open #banner,body.tile-detail-open #achievementToast,body.tile-detail-open #tip{display:none}
+  @media(max-height:780px){#detail{top:8px}}
+  @media(max-width:760px){#detail{left:8px;right:8px;top:8px;bottom:auto;width:calc(100vw - 16px);max-height:none;overflow:visible}#detail .dh{padding:10px 12px}#detail h3{font-size:19px}#detail h3 small{font-size:11px}.tile-attributes{padding:10px 12px;gap:5px}.tile-attributes b{font-size:28px}.tile-metrics{padding:0 12px 8px;font-size:12px;gap:4px}.tile-metrics small{font-size:10px}.tile-upgrades,.tile-guardians,.tile-demolish{margin:0 8px 8px;padding:8px}.upgrade-option{padding:6px;font-size:12px;gap:4px}.upgrade-option small{font-size:10px}.tile-guardians small,.tile-demolish small{font-size:10px}.tile-demolish .btn{font-size:11px;padding:5px 7px}#detail.offer-preview{top:185px;width:calc(100vw - 16px)}#detail.offer-preview .tile-attributes{padding:8px 12px}.offer-instruction{font-size:10px;padding:0 12px 8px}body.tile-detail-open #dock,body.tile-detail-open #top,body.tile-detail-open #formulaHud,body.tile-detail-open #stageHud,body.tile-detail-open #corner,body.tile-detail-open #cornerL,body.tile-detail-open #photoBar{display:none}#batchPanel{left:8px;bottom:8px;width:calc(100vw - 16px);padding:10px}}
+  @media(max-width:760px){#detail.offer-preview{top:8px}body:has(#detail.offer-preview.open) #top,body:has(#detail.offer-preview.open) #formulaHud,body:has(#detail.offer-preview.open) #stageHud,body:has(#detail.offer-preview.open) #corner,body:has(#detail.offer-preview.open) #cornerL{display:none}}
+  .upgrade-option:only-child{grid-column:1/-1}
+  .tile-relations{margin:0 12px 8px;padding:6px 10px;background:#edf5e7;border:1px solid #cfdfc3;border-radius:10px;font-size:11px;line-height:1.35}.tile-relations p{margin:2px 0}.tile-relations small{color:var(--muted)}
+  .tower-intro{margin:10px 16px;font-size:12px;line-height:1.5}.tower-grid{padding:0 12px 12px;display:grid;gap:7px}.tower-row{display:grid;grid-template-columns:28px 1fr 1fr;gap:6px;align-items:center}.tower-row>b{color:var(--element);text-align:center}.tower-feature{padding:6px;border:1px solid #dad6c4;border-radius:10px;background:#fffaf0;font-size:12px}.tower-feature small{display:block;color:var(--muted);font-size:10px;margin:2px 0}.tower-feature .btn{width:100%;padding:4px;font-size:11px;min-height:28px;white-space:normal}
+  @media(max-width:760px){.tile-relations{margin:0 8px 8px;padding:6px 8px;font-size:11px}.tower-intro{margin:8px 12px;font-size:11px}.tower-grid{padding:0 8px 8px;gap:5px}.tower-feature{padding:5px;font-size:11px}.tower-row{grid-template-columns:22px 1fr 1fr;gap:4px}#detail .tile-upgrades .section-line{margin-bottom:5px}}
+  #detail .dh{padding-top:9px;padding-bottom:9px}.tile-attributes{padding-top:8px;padding-bottom:8px}.tile-upgrades,.tile-guardians,.tile-demolish{padding:8px;margin-bottom:8px}.section-line{margin-bottom:5px}
+  @media(max-width:760px) and (max-height:740px){#detail .dh{padding-top:7px;padding-bottom:7px}.tile-attributes{padding-top:6px;padding-bottom:6px}.tile-attributes b{font-size:24px}.tile-upgrades,.tile-guardians,.tile-demolish{padding:6px;margin-bottom:6px}.upgrade-option{padding:5px}.tile-relations{margin-bottom:6px}}
+  .tower-feature{line-height:1.2}
+  #stageHud{position:absolute;top:calc(100% + 6px);width:max-content}
+  @media(max-width:760px){#stageLabel{flex-basis:100%;text-align:center}}
+  .tile-metrics .btn{font-size:11px;padding:5px 7px;white-space:nowrap;min-height:30px}
+  @media(max-height:780px){.tile-metrics{padding-bottom:6px}.tile-metrics .btn{padding:2px 6px;min-height:24px}}
+  #dlgCrystals{width:440px;max-height:90dvh}#dlgCrystals .dlg{display:flex;flex-direction:column;max-height:90dvh;padding:20px 16px;overflow:hidden}#dlgCrystals h2{margin:0 32px 5px 0;font-size:22px}#crystalTarget{font-size:12px;color:var(--muted);margin:0 0 12px}
+  #crystalBatchBody{overflow:auto;min-height:0;padding:0 2px 5px}.crystal-tabs{display:flex;gap:6px;margin-bottom:12px}.crystal-tabs .btn{flex:1;font-size:12px;padding:7px 4px}.crystal-tabs .btn::after{content:' · ' attr(data-n);font-size:10px}
+  .crystal-input{display:grid;grid-template-columns:minmax(60px,1fr) 34px 68px 34px;gap:7px;align-items:center;margin:7px 0;padding:7px;background:#f5f1e2;border-radius:10px}.crystal-input label{color:var(--element)}.crystal-input small{display:block;font-size:10px;color:var(--muted)}.crystal-input .btn{padding:5px;min-height:34px}.crystal-input input{min-width:0;width:100%;height:34px;text-align:center;font:inherit;font-weight:bold;border:1px solid #cec7b3;border-radius:7px;background:#fffaf0}
+  #crystalPreview{padding:10px 0;font-size:12px}#crystalPreview p{margin:7px 0}#crystalPreview>small{display:block;font-size:11px;color:var(--muted);line-height:1.4}.crystal-result{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.crystal-result>div{text-align:center;border-top:3px solid var(--element);border-radius:6px;background:#f5f1e2;padding:5px 0}.crystal-result small,.crystal-result b{display:block;font-size:11px}#applyCrystals{flex-shrink:0}
+  @media(max-width:760px){#dlgCrystals .dlg{padding:18px 12px}.crystal-tabs{gap:4px}.crystal-tabs .btn{font-size:11px}.crystal-input{grid-template-columns:minmax(52px,1fr) 32px 58px 32px;gap:5px}.tile-metrics small{display:none}}
+</style>
+</head>
+<body>
+<div id="world" aria-label="三维地图：点击地块选择，拖拽旋转，双指或滚轮缩放"></div>
+<div id="flash"></div>
+<div id="tokens" aria-hidden="true"></div>
+
+<aside id="journey" aria-live="polite"></aside>
+<dialog id="dlgEcho"><div class="panel dlg"><button class="btn round red close" id="closeEcho" aria-label="关闭回声册">✕</button><div id="echoBody"></div></div></dialog>
+<div id="cornerL">
+  <button class="btn round" id="btnHelp" title="玩法说明" aria-label="玩法说明"><span class="t">?</span></button>
+</div>
+<header id="top" class="toon">
+  <div class="pill" id="pillRound"><span class="ico">⏳</span><span><small>轮次</small><b id="round">1</b></span></div>
+  <div class="pill" id="pillAp" title="行动点"><div class="ap" id="ap"></div></div>
+  <div class="pill" id="pillScore" title="灵力值"><span class="ico">✦</span><span><small>灵力</small><b id="score">0</b></span></div>
+  <div class="pill" id="pillLeft" title="剩余空位"><span class="ico">⬢</span><span><small>空位</small><b id="left"></b></span></div>
+</header>
+<div id="corner">
+  <button class="btn round gold" id="btnBag" title="结晶背包" aria-label="结晶背包"><span class="t">🎒</span><b id="bagCount">0</b></button>
+  <button class="btn round" id="btnMenu" title="菜单" aria-label="菜单"><span class="t">☰</span></button>
+</div>
+
+<aside id="detail" class="panel" aria-live="polite"></aside>
+<aside id="batchPanel" class="panel" hidden aria-live="polite"></aside>
+<aside id="bag" class="panel"><span class="tag toon">背包</span>
+  <div class="sec">元素结晶 · 不耗行动 · 每轮不限次数 · 点击后选地块使用</div><div id="crystals"></div>
+  <div class="sec">✧ 至纯元素结晶 · 永久扩展对应魔法</div><div id="pureCrystals"></div>
+
+  <div class="sec">元素盾</div><div id="shieldStock"></div><button class="btn sm" id="btnShield">🛡 调配元素盾</button>
+</aside>
+
+<div id="formulaHud" aria-live="polite"><b id="formula"></b><div id="goal"></div><progress id="goalProgress"></progress>
+  <div id="stageHud" class="toon"><span id="stageLabel"></span><span id="globalLabel"></span></div>
+</div>
+<div id="achievementToast" class="panel" role="status" aria-live="polite"></div>
+<div id="hint" class="toon" role="status" aria-live="polite"></div>
+<div id="tip"></div>
+<div id="banner" class="toon"><div class="rib" id="banTxt"></div><div class="sub" id="banSub"></div></div>
+
+<footer id="dock">
+  <div class="tray panel"><span class="tag toon" id="offerTag">待选地块</span><button class="btn sm" id="btnReroll" title="消耗 1 行动点刷新候选">↻ 刷新 · 1 AP</button><div id="offers"></div></div>
+  <div class="row2">
+    <div class="tray panel" id="magicTray"><span class="tag toon" style="background:linear-gradient(180deg,#c49aff,var(--purple));box-shadow:0 2px 0 var(--purple-d)">魔法</span><div id="magics"></div></div>
+    <div id="endWrap"><button class="btn green toon" id="btnEnd"><span class="t">结束本轮 ▶</span></button></div>
+  </div>
+</footer>
+
+<dialog id="dlgHelp"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>怎么玩</h2>
+  <p>① 挑战模式共40轮。第10/20/30/40轮结算后灵力须达到500/1500/3000/6000；未达标立即失败。</p>
+  <p>② 一轮可以铺多个地块。铺地、施法、刷新和移动守护灵均耗1行动点；行动用尽后可继续使用免费结晶，点击“结束本轮”结算。</p>
+  <p>地块不会自动使用背包结晶。先选择结晶，再点击目标地块才消耗；按 Esc 可取消。使用普通或大型元素结晶不消耗行动点，每轮不限次数；普通+1、大型+2、逆结晶−1。</p>
+  <p>③ 同系列连片提高属性上限。点选地块，在详情选择升级方向，自动扣除所需普通／大型元素结晶。T4需合兽经历，T5需守护灵覆盖。</p>
+  <p>④ 地块材料及制造系统已删除。每种地块都能和四邻对应系列互作；详情显示实际邻居与轮末属性增量。</p>
+  <p>⑤ 同属性三灵轮末自动合兽，同格五兽自动合守护灵。动物自动元素化，植物与元素动物滋养地块。</p>
+  <p>⑥ 每4轮发生一次事件：90%为元素星雨，10%为正面事件。倒计时预告具体元素与效果；强度每10轮提高。中央守护塔按元素升级庇护和灵力涌泉，均从1级起、最高7级，升级依次耗10、100、1000…颗对应普通结晶，不耗行动点。每级向四邻扩大一圈，涌泉每轮为覆盖地块增加等级点对应属性；庇护免除对应元素星雨。星雨带来至纯结晶，每颗扩展对应魔法4格。</p><div id="eventGuide"></div>
+  <p>灵力＝全图属性之和×0.5＋守护塔累计消耗的元素结晶数＋全图生态值（动物＋植物）。</p>
+  <p>⑦ 属性不足会沿升级路线退化；五项属性全部为负时地块消散。详情可消耗1行动点铲除地块，各元素正属性按1:1返还普通结晶，负属性不返还，同格生物一并移除。</p>
+  <p>⑧ 初始85格铺满后可保存完整地图、摄影或检视，并继续无尽模式。也可开局选择无尽模式：轮次和可铺设边界无限制，星雨持续变强。</p>
+  <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消 · <kbd>1</kbd>～<kbd>3</kbd> 选地块 · <kbd>B</kbd> 背包 · <kbd>Enter</kbd> 结束本轮 · <kbd>P</kbd> 摄影 · <kbd>Ctrl+S</kbd> 保存完整地图<br>
+  手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
+  <p class="muted" id="scoreDetail"></p>
+</div></dialog>
+
+<dialog id="dlgMenu"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>元素生境 v1.3</h2><div class="journey-controls"><button class="btn" id="btnEcho">✦ 回声册</button><button class="btn" id="btnAtlas">地脉图鉴 · 80种</button></div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">
+    <button class="btn gold" id="btnAchievements">🏆 成就与愿景</button>
+    <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
+    <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
+    <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
+    <button class="btn" id="btnMusic"><span class="t">♫ 背景音乐</span></button>
+    <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
+  </div>
+  <div class="sec">下局模式</div><select id="gameMode" aria-label="下局模式"><option value="challenge">40 轮复苏挑战</option><option value="endless">无尽生境 · 无限轮次与地图</option></select>
+  <div class="sec">下局剧本</div><select id="scenario" aria-label="下局剧本"><option value="tutorial">初醒之旅 · 剧情教学</option><option value="standard">自由生境 · 80地块</option></select>
+  <div class="map-tools"><button class="btn" id="btnSaveMap">保存完整地图</button><button class="btn" id="btnInspect">摄影与检视</button><button class="btn green" id="btnEndless">继续无尽模式</button></div>
+  <div class="sec">日志</div><ul id="log"></ul>
+</div></dialog>
+
+<div id="photoBar" hidden><button class="btn" id="btnTakePhoto">保存照片（PNG）</button><button class="btn" id="btnExitPhoto">返回经营（Esc）</button><span>拖动旋转 · 右键平移 · 滚轮缩放 · 点击检视</span></div>
+<dialog id="over"><div class="panel dlg">
+  <h2 id="overTitle">元素生境</h2>
+  <div class="stars" id="stars"></div>
+  <div class="big toon" id="overScore" style="color:var(--gold)"></div>
+  <div class="sum5" id="overSum"></div>
+  <p class="muted" id="overText" style="text-align:center"></p>
+  <div style="text-align:center;margin-top:10px"><button class="btn green toon" id="btnAgain" style="font-size:18px;padding:12px 28px"><span class="t">再来一局</span></button><button class="btn" id="btnOverInspect">检视地图</button><button class="btn green" id="btnOverEndless">继续无尽模式</button></div>
+</div></dialog>
+
+<dialog id="dlgAchievements"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭成就册">✕</button>
+  <h2>🏆 生境成就册</h2><p id="achievementSummary" class="muted"></p>
+  <div class="sec">本局愿景 · 完成后分别奖励 30 分</div><div id="visions"></div>
+  <div class="sec">旅途成就 · 本机记录</div><div id="achievementList"></div>
+</div></dialog>
+<dialog id="dlgShield"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">普通结晶1点 · 大型结晶2点，可混用<br>每5点防护覆盖1格，需5的倍数 · 每轮制造1次<br>点元素名称可集中防御该元素</p>
+  <div class="shield-presets" id="shieldKinds"><button class="btn sm" data-shield-kind="crystal">普通结晶 · 1点</button><button class="btn sm" data-shield-kind="bigCrystal">大型结晶 · 2点</button></div>
+  <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
+  <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
+  <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
+  <button class="btn green" id="btnCraftShield">制造元素盾</button>
+</div></dialog>
+<dialog id="dlgCrystals"><div class="panel dlg">
+  <button class="btn round red close" data-close aria-label="关闭结晶加点">✕</button>
+  <h2>✦ 结晶加点</h2><p id="crystalTarget"></p>
+  <div id="crystalBatchBody"><div class="crystal-tabs" id="crystalKinds">
+    <button class="btn sm" data-crystal-kind="crystal">普通 ＋1</button><button class="btn sm" data-crystal-kind="bigCrystal">大型 ＋2</button><button class="btn sm" data-crystal-kind="inverseCrystal">逆结晶 −1</button>
+  </div><div id="crystalInputs"></div></div>
+  <div id="crystalPreview" aria-live="polite"></div><button class="btn green" id="applyCrystals">确认加点</button>
+</div></dialog>
+<div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
+
+
+<script src="lib/three.min.js"></script>
+<script src="terrain.js"></script>
+<script src="data.js"></script>
+<script src="game.js"></script>
+<script src="achievements.js"></script>
+<script src="postfx.js"></script>
+<script src="view.js"></script>
+<script src="tokens.js"></script>
+<script src="music.js"></script>
+<script>
+const D = GameData, G = Game;
+const EL = D.ELEMENTS;
+const guardianText = power => EL.filter(e=>power[e.key]).map(e=>`${e.name} +${power[e.key]}`).join(' · ');
+const guardianName = power => EL.filter(e=>power[e.key]).map(e=>e.name).join('')+'守护灵';
+let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, offersKey = '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const elName = k => EL.find(e => e.key === k).name;
+const ELC = { metal: '#f2c230', wood: '#5ccf3a', water: '#3fa6ff', fire: '#ff6a3a', earth: '#d09a5a' };
+let archiveStore;try{archiveStore=localStorage;}catch(_){}
+const achievementBook=AchievementBook.create(archiveStore);
+let achievementQueue=[],achievementTimer=0,overTimer=0,gameSession=0;
+const ELD = { metal: '#b88a10', wood: '#33912a', water: '#1f5fb8', fire: '#b8302a', earth: '#8a5a2a' };
+function eventDescription(s){
+  const event=G.eventForRound(s),round=Math.ceil(s.round/D.RULES.eventEvery)*D.RULES.eventEvery,strength=Math.ceil(round/10);
+  return event.id==='meteor'?`${elName(event.el)}星雨 · ${G.meteorStrength({...s,round}).count}格${elName(event.el)} −${1+2*strength}（庇护／元素盾可挡），获至纯${elName(event.el)}晶`:`${event.name} · 全图${event.delta.map((v,i)=>v?EL[i].name+' +'+v*strength:'').filter(Boolean).join('／')}`;
+}
+$('eventGuide').innerHTML=D.NATURAL_EVENTS.map(e=>`<p><b>${esc(e.name)} · ${e.tone==='positive'?'正向':'负面'}</b>：${e.id==='meteor'?'随机元素陨落，元素盾可抵挡，并带来对应至纯结晶':e.delta.map((n,i)=>n?EL[i].name+(n>0?'+':'')+n:'').filter(Boolean).join(' · ')+'，作用于所有已放置地块'}</p>`).join('');
+
+// 十个系列各自使用独立卡面配色与图标。
+const CARD = {
+  desert:['#efc784','#a46d3b','🏜'],woodland:['#62b879','#255842','🌲'],ice:['#d4f4ff','#77a9d0','❄'],
+  ocean:['#58c8ee','#2455aa','🌊'],grassland:['#b6dc67','#64863c','🌾'],wetland:['#87c2b5','#467c82','🪷'],
+  river:['#95e4d9','#339baf','〰'],mine:['#bdac96','#6a6473','⛏'],volcano:['#f49c6b','#98444b','🌋'],ruins:['#d5bf9e','#7d6865','🏛'],
+};
+
+// ---------- 音效（WebAudio 合成，无外部文件） ----------
+const Sfx = (() => {
+  let ctx = null, on = true;
+  try { on = localStorage.getItem('sfx') !== '0'; } catch (_) { /* 隐私模式 */ }
+  function tone(f, d, type, vol, slide) {
+    if (!on) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+      g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + d);
+    } catch (_) { /* 无音频设备 */ }
+  }
+  return {
+    tap: () => tone(660, 0.07, 'triangle', 0.08),
+    pick: () => { tone(520, 0.08, 'triangle', 0.1); setTimeout(() => tone(780, 0.1, 'triangle', 0.1), 50); },
+    place: () => { tone(180, 0.18, 'sine', 0.22, 90); setTimeout(() => tone(880, 0.12, 'triangle', 0.08), 60); },
+    magic: () => { tone(400, 0.35, 'sine', 0.12, 1200); setTimeout(() => tone(1200, 0.25, 'triangle', 0.06), 120); },
+    err: () => { tone(220, 0.12, 'square', 0.06); setTimeout(() => tone(160, 0.16, 'square', 0.06), 90); },
+    round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
+    win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
+    ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
+    link: n => [660,880,1100].slice(0,Math.min(3,n)).forEach((f,i)=>setTimeout(()=>tone(f,.18,'triangle',.055),i*65)),
+    guard: () => { tone(420,.22,'sine',.09,1000);setTimeout(()=>tone(1320,.3,'triangle',.04),120); },
+    meteor: () => tone(320,.65,'sine',.065,75),
+    impact: blocked => { tone(blocked?980:95,blocked?.18:.22,blocked?'triangle':'sine',blocked?.045:.065,blocked?1500:45); },
+    get on() { return on; },
+    toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
+  };
+})();
+const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) { /* 不支持 */ } };
+const Music=HabitatMusic.create();
+document.addEventListener('pointerdown',()=>Music.start());
+const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.burstAt(k),ding:Sfx.ding,bump,state:()=>S,score:s=>G.score(s).total,left:s=>G.emptyKeys(s).length});
+
+function start(seed) {
+  Tokens.reset();
+  document.querySelectorAll('.float').forEach(el=>el.remove());
+  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{tutorial:$('scenario').value==='tutorial',mode:$('gameMode').value});
+  if(seed==null&&!window.habitatSaveTried){window.habitatSaveTried=true;try{const raw=localStorage.getItem('element-habitat-save-v13');if(raw){const saved=G.restore(raw);if(saved)S=saved;}}catch(_){}}
+  gameSession++;clearTimeout(overTimer);overTimer=0;clearTimeout(achievementTimer);achievementTimer=0;achievementQueue=[];$('achievementToast').classList.remove('show');
+  mode = null; selected = null; hint('');
+  lastScore = G.score(S).total; lastRound = 1; offersKey = '';
+  render();
+  banner(S.mode==='endless'?'无尽生境':`第 ${S.round} / 40 轮`, '每次铺地、施法与刷新消耗 1 行动点');
+}
+
+function hint(msg, err) {
+  const h = $('hint');
+  clearTimeout(hintTimer);
+  if (!msg) { h.classList.remove('show'); return; }
+  h.textContent = msg; h.className = 'toon' + (err ? ' err' : '');
+  void h.offsetWidth; h.classList.add('show');
+  if (err) { hintTimer = setTimeout(() => h.classList.remove('show'), 2000); Sfx.err(); buzz(40); }
+}
+function setMode(m, msg) { mode = m; if (m) Sfx.pick(); hint(m ? msg : ''); render(); }
+
+function banner(txt, sub) {
+  const b = $('banner');
+  $('banTxt').textContent = txt; $('banSub').textContent = sub || '';
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+}
+function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+// 在地块或元素上方飘字
+function floatText(txt, color, x, y) {
+  const d = document.createElement('div');
+  d.className = 'float toon'; d.textContent = txt; d.style.color = color || '#fff';
+  d.style.left = x + 'px'; d.style.top = y + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1150);
+}
+function floatAtCell(k, txt, color) {
+  const p = View.project ? View.project(k) : null;
+  if (p) floatText(txt, color, p.x, p.y - 20);
+  else { const r = $('score').getBoundingClientRect(); floatText(txt, color, r.left + r.width / 2, r.bottom + 10); }
+}
+function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+
+// 行动成功后的特效类型
+function fxOf(a) {
+  switch (a.type) {
+    case 'place': return ['place', a.cell];
+    case 'cast': return [a.magic, a.cell];
+    case 'merge': return ['merge', a.cell, a.el];
+    case 'mergeGuardian': case 'moveGuardian': return null; // Dedicated, composition-aware effects.
+    case 'demolish': return null;
+    case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
+    case 'useCrystals':return null;
+    case 'upgrade': case 'upgradeBatch': return null;
+    case 'deployShield': return null; // Region-wide deployment is shown after state sync.
+    case 'moveSpirit': case 'moveBeast': return ['crystal', a.to, a.el];
+    default: return a.cell ? ['place', a.cell] : null;
+  }
+}
+
+function doAct(action) {
+  const before = G.score(S).total, round = S.round;
+  const r = G.act(S, action);
+  if (!r.ok) { hint(r.msg, true); render(); return false; }
+  mode = null; hint('');
+  if(action.type==='demolish'||action.type==='upgradeBatch')selected=null;
+  const f = fxOf(action);
+  if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
+  Tokens.enqueue(S.events);
+  render();
+  eventEffects(S.events);
+  if(action.type==='useCrystals'){
+    const session=S;
+    for(const el of new Set(action.crystals.map(c=>c.el)))Tokens.down(action.cell,el,()=>{if(S===session)View.fx(action.crystals.some(c=>c.el===el&&c.kind!=='inverseCrystal')?'crystal':'infection',action.cell,el);});
+  }
+  if(action.type==='deployShield') { const sh=S.shields.find(sh=>sh.id===action.shieldId);if(sh)View.shieldDeploy(sh);Sfx.guard();buzz([15,35,20]); }
+  if (f) {
+    if(action.type==='useCrystal') { const session=S;Tokens.down(action.cell,action.el,()=>{if(S===session)View.fx(...f);}); }
+    else if(action.type!=='cast')View.fx(f[0], f[1], f[2]);
+  }
+  const gain = (S.round === round ? G.score(S).total : before) - before;
+  const cell = action.cell || action.to;
+  if (gain && cell) floatAtCell(cell, (gain > 0 ? '+' : '') + gain, gain > 0 ? '#ffe14a' : '#ff6a5a');
+  else if (cell) floatAtCell(cell, r.msg.length > 10 ? '✓' : r.msg, '#fff');
+  return true;
+}
+
+function gemRow(a) {
+  return a.map((v, i) => `<span class="gem ${v === 0 ? 'z' : ''} ${v < 0 ? 'neg' : ''}" style="background:${ELC[EL[i].key]}" title="${EL[i].name}">${v}</span>`).join('');
+}
+
+function renderOffers() {
+  $('offerTag').textContent=`铺地 · 1 AP · 本轮已铺 ${S.placed} 块`;
+  $('btnReroll').disabled=S.over||S.ap<1;
+  const key = S.round + ':' + S.offers.join(',');
+  const fresh = key !== offersKey && S.offers.length >= D.RULES.offersPerRound;
+  offersKey = key;
+  $('offers').innerHTML = S.offers.map((id, i) => {
+    const t = G.TYPE[id], c = CARD[t.family];
+    const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
+    return `<button class="card ${on}" ${S.over||S.ap<1?'disabled':''} data-offer="${i}" data-family="${t.family}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
+      <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
+      <span class="family-badge">${esc(t.familyName)}</span><span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)} · T${t.level}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+  }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
+}
+
+function renderMagics() {
+  $('magics').innerHTML = D.MAGICS.map(m => {
+    const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
+    const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
+    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc + ' · 覆盖 '+S.magicRange[m.id]+' 格')}" ${used||locked||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+  }).join('');
+}
+
+function batchChanges(){return mode.cells.map(cell=>({cell,tileType:mode.directions[cell]}));}
+function renderBatch(){
+  const box=$('batchPanel');box.hidden=mode?.kind!=='batchUpgrade';if(box.hidden)return;
+  const changes=batchChanges(),plan=G.planUpgrades(S,changes),active=mode.active,children=active?D.TILE_TYPES.filter(t=>t.parent===S.cells[active].type):[];
+  const pay=plan.ok?EL.filter(e=>plan.normal[e.key]||plan.big[e.key]).map(e=>`${e.name}${plan.normal[e.key]}＋大${plan.big[e.key]}`).join(' · ')||'无需结晶':plan.msg;
+  box.innerHTML=`<b>同时升级 · 已选${mode.cells.length}块</b><small>点地图增减选择；可分别设置每块的方向</small><div class="batch-edit"><select id="batchCell" aria-label="选择要设置方向的地块">${mode.cells.map(k=>`<option value="${k}" ${k===active?'selected':''}>${k} ${esc(G.TYPE[S.cells[k].type].name)}</option>`).join('')}</select><select id="batchDirection" aria-label="升级方向">${children.map(t=>`<option value="${t.id}" ${mode.directions[active]===t.id?'selected':''}>${esc(t.name)} · ${esc(t.branch)}</option>`).join('')}</select></div><p>${esc(pay)}</p><div class="batch-actions"><button class="btn sm green" id="batchApply" ${!plan.ok||S.over?'disabled':''}>升级全部 · ${mode.cells.length}块</button><button class="btn sm" id="batchCancel">取消多选</button></div>`;
+  $('batchCell').onchange=e=>{mode.active=e.target.value;render();};$('batchDirection').onchange=e=>{mode.directions[mode.active]=e.target.value;render();};
+  $('batchApply').onclick=()=>doAct({type:'upgradeBatch',upgrades:batchChanges(),cell:mode.active});$('batchCancel').onclick=()=>{mode=null;hint('');render();};
+}
+function renderDetail() {
+  const preview=mode?.kind==='place'&&mode.showProperties!==false;
+  const t=preview?G.makeTile(S.offers[mode.offer]):selected&&S.cells[selected],box=$('detail');
+  const tower=!preview&&selected===G.TOWER_CELL&&!t;
+  document.body.classList.toggle('tile-detail-open',(!!t||tower)&&!preview);renderBatch();
+  if(tower){
+    box.classList.add('open');box.classList.remove('offer-preview');
+    box.innerHTML=`<div class="dh" style="background:linear-gradient(135deg,#f4df9a,#82bca9)"><button class="btn round red sm close" data-a="close" aria-label="关闭守护塔">✕</button><h3>✦ 守护塔 <small>五行之心</small></h3><small>塔灵力 ${S.tower.spent} · 累计投入结晶颗数</small></div><p class="tower-intro">庇护：每轮免除覆盖格对应元素星雨。<br>灵力涌泉：每轮对应属性＋等级，遵循连片上限。<br>范围为距中央四邻1～7圈（4／12／24…格），最高7级；普通1点／大型2点，优先普通；升级不耗行动。</p><div class="tower-grid">${EL.map(e=>`<div class="tower-row" style="--element:${ELD[e.key]}"><b>${e.name}</b>${['shelter','spring'].map(f=>{const level=S.tower[f][e.key],cost=G.towerCost(level),max=level===7,pay=G.towerPayment(S,f,e.key);return `<div class="tower-feature"><b>${f==='shelter'?'庇护':'灵力涌泉'} · ${level}级</b><small>${level}圈 · 已覆盖${G.towerArea(S,level).length}格${f==='spring'?' · '+e.name+'＋'+level+'/轮':''}</small><button class="btn sm ${f==='shelter'?'gold':'green'}" data-a="upgradeTower" data-feature="${f}" data-el="${e.key}" title="${max?'已满级':'升'+(level+1)+'级，需'+cost+'点；扣普通'+pay.normal+'颗、大型'+pay.big+'颗'}" ${max||S.over||!pay.ok?'disabled':''}>${max?'已满级':`升级 · ${cost>=10000?cost/10000+'万':cost}点${e.name}`}</button><small>普通 ${S.inv.crystal[e.key]} · 大型 ${S.inv.bigCrystal[e.key]}</small></div>`;}).join('')}</div>`).join('')}</div>`;
+    if(document.body.classList.contains('photo-mode'))box.querySelectorAll('[data-a=upgradeTower]').forEach(b=>b.disabled=true);
+    return;
+  }
+  if(!t){box.classList.remove('open');return;}
+  const ty=G.TYPE[t.type],c=CARD[ty.family],cap=preview?D.RULES.attrMax:G.attrCap(S,selected);
+  const guardianId=Number(box.querySelector('#detailGuardian')?.value),guardian=t.guardians.find(g=>g.id===guardianId)||t.guardians[0];
+  box.classList.add('open');box.classList.toggle('offer-preview',!!preview);
+  let h=`<div class="dh" style="background:linear-gradient(135deg,${c[0]},${c[1]})"><button class="btn round red sm close" data-a="close" aria-label="关闭地块属性">✕</button><h3>${c[2]} ${esc(ty.name)} <small>T${ty.level} · ${esc(ty.familyName)}</small></h3><small>${preview?'待放置地块 · 铺地消耗1行动点':'地块 '+selected+' · 连片'+G.cluster(S,selected).length+'格 · 属性上限'+cap}</small></div>`;
+  h+='<div class="tile-attributes">'+t.attrs.map((v,i)=>`<div style="--element:${ELC[EL[i].key]}" class="${v<0?'negative':''}"><small>${EL[i].name}</small><b>${v}</b></div>`).join('')+'</div>';
+  if(preview){h+='<p class="offer-instruction">点击相邻空位铺设；关闭属性仍保留已选卡片。</p>';box.innerHTML=h;return;}
+  h+=`<div class="tile-metrics"><b>生态值 ${G.ecology(t)}</b><small>动植物</small><b>守护灵 ${t.guardians.length}</b><button class="btn sm" data-a="crystalBatch" ${S.over?'disabled':''}>结晶加点</button></div>`;
+  const rule=G.RELATIONS[ty.family],relations=G.tileRelations(S,selected),n=Math.max(1,ty.level-2),i=EL.findIndex(e=>e.key===rule.el),gain=Math.min(Math.max(0,cap-t.attrs[i]),relations.length*n);
+  const familyName=f=>D.TERRAIN.families.find(v=>v.key===f).name;
+  const feeds=Object.entries(G.RELATIONS).filter(([,r])=>r.targets.includes(ty.family)).map(([f])=>familyName(f));
+  h+=`<section class="tile-relations"><b>四邻互作 · ${esc(rule.name)}</b><p>每个相邻${rule.targets.map(familyName).join('／')}，轮末使本格${elName(rule.el)}＋${n}。</p><p>当前${relations.length}格${relations.length?'（'+relations.map(r=>r.neighbor).join('／')+'）':''}，合计${elName(rule.el)}＋${gain}${gain<relations.length*n?'（受属性上限限制）':''}。</p><small>本格也可滋养相邻${feeds.join('／')}，按对方互作规则结算。</small></section>`;
+  const children=D.TILE_TYPES.filter(v=>v.parent===t.type);
+  h+=`<section class="tile-upgrades"><div class="section-line"><b>升级方向</b><button class="btn sm" data-a="batchStart" ${S.over||!children.length?'disabled':''}>多选升级</button></div><div class="upgrade-grid">`;
+  h+=children.length?children.map(v=>{const reasons=G.upgradeReasons(S,selected,v),cost=G.upgradeCost(S,selected,v),pay=EL.filter(e=>cost.normal[e.key]||cost.big[e.key]).map(e=>`${cost.normal[e.key]?e.name+'晶×'+cost.normal[e.key]:''}${cost.normal[e.key]&&cost.big[e.key]?'＋':''}${cost.big[e.key]?'大'+e.name+'晶×'+cost.big[e.key]:''}`).join(' · ');return `<div class="upgrade-option"><b>${esc(v.name)} · T${v.level}</b><small>${v.attrs.map((n,i)=>EL[i].name+n).join(' ')}</small><small>扣晶：${pay||'无需结晶'}</small><small class="upgrade-reasons">${reasons.length?esc(reasons.map(r=>r.replace('结晶不足（缺属性 ','晶缺').replace('）','')).join(' · ')):'条件已满足'}</small><button class="btn sm green upgrade-direction" data-a="upgrade" data-type="${v.id}" ${reasons.length||S.over?'disabled':''}>${esc(v.branch)} · 升级</button></div>`;}).join(''):'<p>已达最高等级</p>';
+  h+='</div></section>';
+  h+='<section class="tile-guardians"><b>守护灵</b>'+(guardian?`<div class="guardian-controls"><select id="detailGuardian" aria-label="选择守护灵">${t.guardians.map((g,i)=>`<option value="${g.id}" ${g.id===guardian.id?'selected':''}>守护灵 ${i+1} · ${esc(guardianName(g.power))}</option>`).join('')}</select><button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${S.ap<1||S.over?'disabled':''}>移动 · 1行动</button></div><small>每轮滋养本格与四邻：${esc(guardianText(guardian.power))}</small>`:'<small>同格五兽自动唤醒守护灵</small>')+'</section>';
+  const refund=t.attrs.map((v,i)=>v>0?elName(EL[i].key)+'×'+v:'').filter(Boolean).join(' · ');
+  h+=`<section class="tile-demolish"><div><b>铲除地块</b><small>返还普通结晶：${refund||'无'}<br>同格生物一并移除</small></div><button class="btn sm red" data-a="demolish" ${S.ap<1||S.over?'disabled':''}>铲除 · 1行动</button></section>`;
+  box.innerHTML=h;
+  if($('detailGuardian'))$('detailGuardian').onchange=()=>renderDetail();
+  if(document.body.classList.contains('photo-mode'))box.querySelectorAll('button:not([data-a=close])').forEach(b=>b.disabled=true);
+}
+
+function renderInv() {
+  const inv = S.inv;
+  let h = '', total = 0;
+  for (const e of EL) for (const kind of ['normal','big','inverse']) {
+    const big=kind==='big',inverse=kind==='inverse';
+    const n = (inverse ? inv.inverseCrystal : big ? inv.bigCrystal : inv.crystal)[e.key];
+    if (!n) continue;
+    total += n;
+    const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big && !!mode.inverse===inverse ? 'on' : '';
+    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" data-inverse="${inverse?1:''}" ${S.over?'disabled':''} style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${inverse?'逆结晶 −1':big ? '大型结晶 +2' : '结晶 +1'}，不消耗行动点，每轮不限次数"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${inverse?'逆':big ? '大' : ''}${e.name}×${n}</button>`;
+  }
+  $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
+  $('btnBag').dataset.n = total;
+  $('pureCrystals').innerHTML=D.MAGICS.map(m=>`<button class="btn sm pure-stock" data-pure="${m.id}" ${S.over||!inv.pureCrystal[m.element]?'disabled':''} style="--c:${ELC[m.element]};--d:${ELD[m.element]}">✧ 至纯${elName(m.element)} ×${inv.pureCrystal[m.element]}<small>${m.name} ${S.magicRange[m.id]} → ${S.magicRange[m.id]+D.RULES.pureCrystalRangeStep} 格</small></button>`).join('');
+  $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
+  $('btnShield').disabled=S.over;
+}
+
+function render() {
+  $('round').textContent = S.mode==='endless'?`${S.round} ∞`:`${S.round}/40`;
+  $('ap').innerHTML = Array.from({ length: S.roundAP }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
+  $('ap').dataset.value=`${S.ap}/${S.roundAP}`;
+  $('stageLabel').textContent=`灵脉 ${G.stage(S)} · ${D.RULES.eventEvery-(S.round-1)%D.RULES.eventEvery}轮后：${eventDescription(S)}`;
+  $('globalLabel').innerHTML=G.globalAttrs(S).map((v,i)=>`<span style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join(' ');
+  $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
+  const sc = G.score(S);
+  const goal=G.checkpoint(S);
+  $('formula').textContent=`灵力 ${sc.total} = 属性 ${sc.attrs} × 0.5 + 守护塔 ${sc.tower} + 生态 ${sc.ecology}`;
+  Music.setScore(sc.total);musicLabel();
+  $('goal').textContent=S.over?S.endReason:S.mode==='endless'?`无尽模式 · 初始地图 ${S.completedMap?'已完成':'待复苏'}`:goal?`第 ${goal.round} 轮目标 ${goal.score} · 尚需 ${Math.max(0,goal.score-sc.total)} 灵力`:S.endReason;
+  $('goalProgress').max=goal?.score||D.RULES.stageTargets.at(-1).score;$('goalProgress').value=Math.max(0,sc.total);
+  $('btnSaveMap').disabled=!S.completedMap;$('btnInspect').disabled=!S.completedMap||!Object.keys(S.cells).length;$('btnEndless').disabled=!S.completedMap||S.mode==='endless'||S.result==='failed';
+  Tokens.numbers(S);
+  lastScore = sc.total;
+  $('scoreDetail').textContent = $('formula').textContent;
+  const be = $('btnEnd');
+  be.disabled = S.over;
+  be.classList.toggle('ready', !be.disabled && S.ap > 0);
+  renderOffers(); renderMagics(); renderDetail(); renderInv();
+  $('log').innerHTML = S.log.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join('');
+  View.sync(S, { mode, selected });
+  renderProgress();
+  if(typeof renderJourney==='function')renderJourney();
+  if(S.over&&!$('over').open&&!document.body.classList.contains('photo-mode')&&!overTimer){
+    if(S.events.some(e=>e.kind==='pureCrystal')){const session=gameSession;overTimer=setTimeout(()=>{if(gameSession===session&&S.over)showOver();},5000);}
+    else showOver();
+  }
+  if (S.round !== lastRound) {
+    lastRound = S.round;
+    bump($('pillRound'));
+    Sfx.round(); flash();
+    const got = S.log.find(l => l.startsWith(`[${S.round - 1}] 获得`));
+    banner(`第 ${S.round} 轮`, got ? got.replace(/^\[\d+\] /, '') : '灵地在生长');
+  }
+}
+
+function showOver() {
+  overTimer=0;
+  const sc = G.score(S);
+  const stars = S.result==='won'?3:0;
+  $('stars').innerHTML = [1, 2, 3].map(i => `<span class="${i > stars ? 'off' : ''}" style="animation-delay:${300 + i * 200}ms">⭐</span>`).join('');
+  $('overSum').innerHTML = [['属性×0.5', sc.attrs*.5], ['守护塔',sc.tower],['生态值',sc.ecology],['灵力',sc.total]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
+  $('overTitle').textContent=S.result==='won'?'生境目标完成':'复苏挑战失败';
+  $('overText').textContent=S.endReason;
+  $('btnOverEndless').hidden=!S.completedMap||S.result==='failed';
+  $('btnOverInspect').hidden=!S.completedMap;$('btnOverInspect').disabled=!Object.keys(S.cells).length;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());$('over').showModal();
+  if(S.result==='won')Sfx.win();else Sfx.err();
+  // 分数滚动
+  const el = $('overScore'), t0 = performance.now();
+  (function tick(t) { const u = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(sc.total * (1 - Math.pow(1 - u, 3))); if (u < 1) requestAnimationFrame(tick); })(t0);
+}
+
+// ---------- 事件 ----------
+function onCell(k) {
+  const t = S.cells[k];
+  if(mode?.kind==='batchUpgrade'){if(!t)return;const children=D.TILE_TYPES.filter(v=>v.parent===t.type);if(!children.length){hint('该地块已达最高等级',true);return;}if(mode.cells.includes(k)){mode.cells=mode.cells.filter(v=>v!==k);delete mode.directions[k];}else{mode.cells.push(k);mode.directions[k]=children[0].id;}mode.active=mode.cells.includes(k)?k:mode.cells.at(-1);selected=null;render();return;}
+  if (mode) {
+    const m = mode;
+    if (m.kind === 'place') { if (!t) doAct({ type: 'place', offer: m.offer, cell: k }); return; }
+    if (!t) return;
+    if (m.kind === 'cast') doAct({ type: 'cast', magic: m.magic, cell: k });
+    else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big, inverse:m.inverse });
+    else if (m.kind==='deployShield') doAct({type:'deployShield',cell:k,shieldId:m.id});
+    else if (m.kind==='moveBeast') {if(doAct({type:'moveBeast',from:m.from,beastId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind==='moveGuardian') {if(doAct({type:'moveGuardian',from:m.from,guardianId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind === 'moveSpirit') { if (doAct({ type: 'moveSpirit', from: m.from, spiritId: m.id, to: k })) { selected = k; render(); } }
+    return;
+  }
+  selected = (t||k===G.TOWER_CELL) && selected !== k ? k : null;
+  if (selected) {Sfx.tap();if(S.journey?.step===1&&selected==='3,2')G.act(S,{type:'tutorial',cell:selected});}
+  render();
+}
+
+function onHover(k, x, y) {
+  const tip = $('tip');
+  const t = k && S.cells[k];
+  if(k===G.TOWER_CELL&&!t){tip.innerHTML='<b>✦ 守护塔</b><br>点击升级庇护与灵力涌泉';tip.style.display='block';tip.style.left=Math.min(x+16,innerWidth-220)+'px';tip.style.top=Math.max(70,y-55)+'px';return;}
+  if (!k || (!t && !(mode && mode.kind === 'place'))) { tip.style.display = 'none'; return; }
+  if (t) {
+    const s = t.attrs.reduce((a, b) => a + b, 0);
+    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('')+`<br>连片 ×${G.cluster(S,k).length} · 上限 ${G.attrCap(S,k)}`;
+    if(mode&&mode.kind==='deployShield'){const sh=S.inv.shields.find(sh=>sh.id===mode.id);if(sh)tip.innerHTML+=`<br>🛡 覆盖 ${G.region(S,k,sh.coverage).length} 格 · 点击部署`;}
+    if(mode&&mode.kind==='moveGuardian'){const g=(S.cells[mode.from].guardians||[]).find(g=>g.id===mode.id);tip.innerHTML+=G.neighbors(mode.from).includes(k)&&g?`<br>✦ 移动 · 1行动 · 轮末滋养 ${G.guardianArea(S,k).length} 格<br>${guardianText(g.power)}`:'<br>需选择四邻已放置地块';}
+  } else {
+    const ok = G.legalPlacements(S).includes(k);
+    if(ok){const type=S.offers[mode.offer],preview={...S,cells:{...S.cells,[k]:G.makeTile(type)}},n=G.cluster(preview,k).length;tip.innerHTML=`放置 <b>${esc(G.TYPE[type].name)}</b>${n>1?`<br>连成 ${n} 格 · 上限 ${G.attrCap(preview,k)}`:''}`;}else tip.innerHTML='需与已有地块相邻';
+  }
+  tip.style.display = 'block';
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, x + 14) + 'px';
+  tip.style.top = (y + 16) + 'px';
+}
+
+// 按钮点击水波纹
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn, .card');
+  if (!b || b.disabled) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height);
+  const w = document.createElement('span');
+  w.className = 'ripple';
+  w.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+  b.style.overflow = 'hidden';
+  b.appendChild(w);
+  setTimeout(() => w.remove(), 520);
+});
+
+$('offers').addEventListener('click', e => {
+  const b = e.target.closest('[data-offer]'); if (!b) return;
+  const i = +b.dataset.offer;
+  setMode(mode && mode.kind === 'place' && mode.offer === i ? null : { kind: 'place', offer: i, showProperties:true }, `放置 ${G.TYPE[S.offers[i]].name}：点亮起的空位`);
+});
+$('magics').addEventListener('click', e => {
+  const b = e.target.closest('[data-magic]'); if (!b) return;
+  const id = b.dataset.magic, m = D.MAGICS.find(x => x.id === id);
+  if (!mode && selected) { doAct({ type: 'cast', magic: id, cell: selected }); return; }   // 已选中地块时直接施放
+  setMode(mode && mode.kind === 'cast' && mode.magic === id ? null : { kind: 'cast', magic: id }, `${m.name}：${m.desc}`);
+});
+$('bag').addEventListener('click', e => {
+  const c = e.target.closest('[data-crystal]');
+  if (c) {
+    const el = c.dataset.crystal, big = c.dataset.big === '1',inverse=c.dataset.inverse==='1';
+    selected=null;$('bag').classList.remove('open');
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '点击目标地块才消耗结晶 · Esc 取消');
+    return;
+  }
+
+});
+$('pureCrystals').onclick=e=>{const b=e.target.closest('[data-pure]');if(b)doAct({type:'usePureCrystal',magic:b.dataset.pure});};
+$('detail').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const k = selected, id = +b.dataset.id;
+  switch (b.dataset.a) {
+    case 'close': if(mode?.kind==='place')mode.showProperties=false;selected=null;render();break;
+    case 'crystalBatch':openCrystalBatch();break;
+    case 'batchStart': {const children=D.TILE_TYPES.filter(t=>t.parent===S.cells[k].type);mode={kind:'batchUpgrade',cells:[k],directions:{[k]:children[0].id},active:k};selected=null;hint('点击地块增减多选，再选择升级全部');render();break;}
+    case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
+    case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
+    case 'upgradeTower':doAct({type:'upgradeTower',feature:b.dataset.feature,el:b.dataset.el});break;
+    case 'demolish':doAct({type:'demolish',cell:k});break;
+    case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
+    case 'moveGuardian':selected=null;setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
+    case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
+  }
+});
+function eventEffects(events){
+  events.filter(e=>['autoMerge','animalAwaken'].includes(e.kind)).slice(0,12).forEach(e=>View.fx('merge',e.cell,e.el));
+  events.filter(e=>['guardianMerge','guardianMove','guardian'].includes(e.kind)).forEach(e=>{View.guardianFX(e);if(e.kind==='guardianMerge')Sfx.guard();});
+  events.filter(e=>e.kind==='upgrade').forEach(e=>View.fx('upgrade',e.cell));
+  events.filter(e=>e.kind==='towerUpgrade').forEach(e=>View.fx('upgrade',e.cell));
+  events.filter(e=>e.kind==='towerSpring').forEach(e=>View.fx('towerSpring',e.cell,e.el));
+  events.filter(e=>e.kind==='weather').forEach(e=>View.fx('weather',e.cell,e.id));
+  const phenomenon=events.find(e=>e.kind==='naturalEvent');if(phenomenon&&phenomenon.id!=='meteor'){const def=D.NATURAL_EVENTS.find(e=>e.id===phenomenon.id);banner(def.name,`全场${phenomenon.n}格 · 强度${phenomenon.strength} · `+def.delta.map((v,i)=>v?EL[i].name+(v>0?'+':'')+v*phenomenon.strength:'').filter(Boolean).join(' '));}
+  events.filter(e=>e.kind==='spell').forEach(e=>View.fx(e.magic,e.cell,e.el));
+  events.filter(e=>e.kind==='pureCrystal').forEach(e=>Tokens.revealPure(e));
+  if(events.some(e=>e.kind==='mapComplete'))banner('初始生境已铺满','菜单可保存、摄影检视，或继续无尽模式');
+  const meteors=events.filter(e=>e.kind==='meteor');
+  if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.sheltered).length} 格获守护塔庇护 · ${meteors.filter(e=>!e.sheltered&&e.damage<e.strength).length} 格获元素盾拦截`);}
+  events.filter(e=>['purify','infection','degrade','vanish'].includes(e.kind)||(!meteors.length&&e.kind==='shield')).forEach(e=>View.fx(e.kind,e.cell,e.el));
+}
+function renderProgress() {
+  const values=G.metrics(S), fresh=achievementBook.observe(S,values), archive=achievementBook.snapshot();
+  for(const id of fresh)achievementQueue.push(D.ACHIEVEMENTS.find(a=>a.id===id));
+  if(fresh.length&&!achievementTimer)nextAchievement();
+  $('achievementSummary').textContent=`已解锁 ${archive.unlocked.length}/${D.ACHIEVEMENTS.length} · ${achievementBook.persistent()?'记录保存在此浏览器':'本次会话记录，浏览器存储不可用'}`;
+  $('visions').innerHTML=S.visions.map(v=>{const d=D.VISIONS.find(d=>d.id===v.id),n=Math.min(d.target,values[d.metric]||0);return `<div class="progress-card ${v.done?'done':''}"><b>${v.done?'✓':'☆'} ${d.name}</b><p>${d.desc}</p><progress max="${d.target}" value="${v.done?d.target:n}"></progress><small>${v.done?'已完成':n+'/'+d.target}</small></div>`;}).join('');
+  $('achievementList').innerHTML=D.ACHIEVEMENTS.map(a=>{const done=archive.unlocked.includes(a.id),n=archive.progress[a.id]||0;return `<div class="progress-card ${done?'done':''}" data-achievement="${a.id}"><b>${a.icon} ${a.name} ${done?'✓':''}</b><p>${a.desc}</p><progress max="${a.target}" value="${done?a.target:n}"></progress><small>${done?'已解锁':n+'/'+a.target} · 本局 ${Math.min(a.target,values[a.metric]||0)}/${a.target}</small></div>`;}).join('');
+}
+function nextAchievement() {
+  if(!achievementQueue.length){achievementTimer=0;return;}
+  const a=achievementQueue.shift();$('achievementToast').textContent=`${a.icon} 成就解锁 · ${a.name}`;$('achievementToast').classList.add('show');
+  achievementTimer=setTimeout(()=>{$('achievementToast').classList.remove('show');achievementTimer=setTimeout(nextAchievement,350);},3000);
+}
+$('btnAchievements').onclick=()=>{$('dlgMenu').close();renderProgress();$('dlgAchievements').showModal();};
+$('btnReroll').onclick=()=>doAct({type:'reroll'});
+$('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;$('bag').classList.remove('open');setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：预览覆盖区，点击地块确认');};
+let crystalMix,crystalKind='crystal';
+function crystalSelection(){return Object.entries(crystalMix).flatMap(([kind,mix])=>EL.filter(e=>mix[e.key]>0).map(e=>({kind,el:e.key,count:mix[e.key]})));}
+function openCrystalBatch(){
+  mode=null;$('bag').classList.remove('open');
+  crystalMix=Object.fromEntries(['crystal','bigCrystal','inverseCrystal'].map(kind=>[kind,Object.fromEntries(EL.map(e=>[e.key,0]))]));crystalKind='crystal';
+  $('crystalTarget').textContent=G.TYPE[S.cells[selected].type].name+' · 地块 '+selected+' · 不消耗行动点';
+  render();renderCrystalBatch();$('dlgCrystals').showModal();
+}
+function renderCrystalBatch(){
+  $('crystalKinds').querySelectorAll('button').forEach(b=>{const n=Object.values(crystalMix[b.dataset.crystalKind]).reduce((a,b)=>a+b,0);b.classList.toggle('gold',b.dataset.crystalKind===crystalKind);b.dataset.n=n;b.setAttribute('aria-pressed',String(b.dataset.crystalKind===crystalKind));});
+  $('crystalInputs').innerHTML=EL.map(e=>{const n=crystalMix[crystalKind][e.key],stock=S.inv[crystalKind][e.key];return `<div class="crystal-input" style="--element:${ELD[e.key]}"><label for="crystal-${e.key}"><b>${e.name}</b><small>库存 ${stock}</small></label><button class="btn sm" data-crystal-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}结晶" ${n===0?'disabled':''}>−</button><input id="crystal-${e.key}" data-crystal-count="${e.key}" type="number" inputmode="numeric" min="0" max="${stock}" step="1" value="${n}" aria-label="${e.name}结晶数量" ${!stock?'disabled':''}><button class="btn sm" data-crystal-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}结晶" ${n>=stock?'disabled':''}>＋</button></div>`;}).join('');
+  crystalBatchPreview();
+}
+function crystalBatchPreview(){
+  const crystals=crystalSelection(),plan=G.planCrystals(S,selected,crystals),t=S.cells[selected];
+  $('crystalPreview').innerHTML=`<div class="crystal-result">${EL.map((e,i)=>`<div style="--element:${ELD[e.key]}"><small>${e.name}</small><b>${t.attrs[i]} → ${plan.ok?plan.attrs[i]:t.attrs[i]}</b></div>`).join('')}</div><p>${plan.ok?`共 ${plan.count} 颗 · 属性合计${plan.gain>=0?'＋':''}${plan.gain}`:esc(plan.msg)}</p><small>${plan.ok&&plan.capped?'已达连片属性上限，超出部分不增加属性，所选结晶仍会消耗。':'可切换普通、大型、逆结晶，保留各自已选数量。'}</small>`;
+  $('applyCrystals').disabled=!plan.ok||S.over;
+  $('applyCrystals').textContent=plan.ok?'确认使用 '+plan.count+' 颗':'确认加点';
+  $('crystalInputs').querySelectorAll('[data-crystal-adjust]').forEach(b=>{const n=crystalMix[crystalKind][b.dataset.crystalAdjust];b.disabled=Number(b.dataset.delta)<0?n===0:n>=S.inv[crystalKind][b.dataset.crystalAdjust];});
+  const tab=$('crystalKinds').querySelector(`[data-crystal-kind="${crystalKind}"]`);tab.dataset.n=Object.values(crystalMix[crystalKind]).reduce((a,b)=>a+b,0);
+}
+$('crystalKinds').onclick=e=>{const b=e.target.closest('[data-crystal-kind]');if(b){crystalKind=b.dataset.crystalKind;renderCrystalBatch();}};
+$('crystalInputs').oninput=e=>{const el=e.target.dataset.crystalCount;if(!el)return;const n=Number(e.target.value);crystalMix[crystalKind][el]=Number.isFinite(n)?Math.max(0,Math.min(S.inv[crystalKind][el],Math.floor(n))):0;crystalBatchPreview();};
+$('crystalInputs').onchange=e=>{if(e.target.dataset.crystalCount)e.target.value=crystalMix[crystalKind][e.target.dataset.crystalCount];};
+$('crystalInputs').onclick=e=>{const b=e.target.closest('[data-crystal-adjust]');if(b){crystalMix[crystalKind][b.dataset.crystalAdjust]+=Number(b.dataset.delta);renderCrystalBatch();}};
+$('applyCrystals').onclick=()=>{if(doAct({type:'useCrystals',cell:selected,crystals:crystalSelection()}))$('dlgCrystals').close();else renderCrystalBatch();};
+let shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+let shieldBigMix=Object.fromEntries(EL.map(e=>[e.key,0])),shieldBag='crystal';
+function shieldValues(){return {crystals:{...shieldMix},bigCrystals:{...shieldBigMix}};}
+function shieldPoints(){return EL.reduce((n,e)=>n+shieldMix[e.key]+2*shieldBigMix[e.key],0);}
+function shieldStock(){return EL.reduce((n,e)=>n+S.inv.crystal[e.key]+2*S.inv.bigCrystal[e.key],0);}
+function shieldMax(){const stock=shieldStock();return Math.floor(stock/(Object.values(S.inv.crystal).some(n=>n)?5:10))*(Object.values(S.inv.crystal).some(n=>n)?5:10);}
+function shieldMissing(){let n=shieldPoints(),missing=n<5?5-n:(5-n%5)%5;if(missing%2&&!EL.some(e=>S.inv.crystal[e.key]>shieldMix[e.key]))missing+=5;return missing;}
+function shieldAdd(points,primary){
+  if(primary){const big=Math.min(Math.floor(points/2),S.inv.bigCrystal[primary]-shieldBigMix[primary]);shieldBigMix[primary]+=big;points-=2*big;}
+  let normal=Math.min(points,EL.reduce((n,e)=>n+S.inv.crystal[e.key]-shieldMix[e.key],0));
+  if((points-normal)%2)normal--;
+  for(const [bag,mix,total] of [['crystal',shieldMix,normal],['bigCrystal',shieldBigMix,(points-normal)/2]]){
+    let remaining=total;
+    if(primary){const n=Math.min(remaining,S.inv[bag][primary]-mix[primary]);mix[primary]+=n;remaining-=n;}
+    while(remaining>0)for(const e of EL)if(remaining&&mix[e.key]<S.inv[bag][e.key]){mix[e.key]++;remaining--;}
+  }
+}
+function shieldFill(count,primary){
+  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));shieldBigMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+  shieldAdd(count,primary);
+  shieldPreview();
+}
+function shieldPreview(){
+  const values=shieldBag==='crystal'?shieldMix:shieldBigMix,n=shieldPoints(),stock=shieldStock(),missing=shieldMissing(),normal=Object.values(shieldMix).reduce((a,b)=>a+b,0),big=Object.values(shieldBigMix).reduce((a,b)=>a+b,0);
+  const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
+  const reason=S.over?'本局已结束':S.interactionUsed['craft:shield']?'本轮已制造，下一轮可再次制造':shieldMax()<5?'库存不足以组成整格防护，先积攒结晶':missing?`还差 ${missing} 点防护，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 点防护覆盖 1 格';
+  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv[shieldBag][e.key];row.querySelector('[data-shield-focus]').disabled=!(S.inv.crystal[e.key]+S.inv.bigCrystal[e.key])||shieldMax()<5;row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv[shieldBag][e.key];}
+  $('shieldKinds').querySelectorAll('[data-shield-kind]').forEach(b=>{b.classList.toggle('green',b.dataset.shieldKind===shieldBag);b.setAttribute('aria-pressed',b.dataset.shieldKind===shieldBag);b.textContent=b.dataset.shieldKind==='crystal'?`普通 · 1点（已选${normal}颗）`:`大型 · 2点（已选${big}颗）`;});
+  $('shieldPreview').classList.toggle('incomplete',!valid);
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?(shieldMix[e.key]+2*shieldBigMix[e.key])/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>shieldMix[e.key]+shieldBigMix[e.key]).map(e=>`${e.name} ${shieldMix[e.key]+2*shieldBigMix[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>普通 ${normal} 颗 · 大型 ${big} 颗</small><small>${reason}</small>`;
+  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 点 → ${(n+missing)/5} 格`;
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 普通${normal}颗 + 大型${big}颗`:reason;
+  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&(p==='max'?shieldMax()<5:stock<Number(p)||(Number(p)%2&&!Object.values(S.inv.crystal).some(n=>n)));});
+}
+function shieldInputs(){const label=shieldBag==='crystal'?'普通':'大型';$('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>普通${S.inv.crystal[e.key]} · 大型${S.inv.bigCrystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}${label}结晶">−</button><output aria-label="已选${e.name}${label}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}${label}结晶">+</button><input type="range" min="0" max="${S.inv[shieldBag][e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}${label}结晶配比"></div>`).join('');}
+$('btnShield').onclick=()=>{shieldBag=Object.values(S.inv.crystal).some(n=>n)?'crystal':'bigCrystal';shieldInputs();shieldFill(shieldMax()>=5?(shieldBag==='crystal'?5:10):0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();};
+$('shieldKinds').onclick=e=>{const b=e.target.closest('[data-shield-kind]');if(!b)return;shieldBag=b.dataset.shieldKind;shieldInputs();shieldPreview();};
+$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element,mix=shieldBag==='crystal'?shieldMix:shieldBigMix;mix[el]=Math.max(0,Math.min(S.inv[shieldBag][el],Math.round(Number(e.target.value))));shieldPreview();};
+$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust,mix=shieldBag==='crystal'?shieldMix:shieldBigMix;mix[el]=Math.max(0,Math.min(S.inv[shieldBag][el],mix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,mix[el]));}else if(focus){const n=shieldPoints();shieldFill(n>=5?n:(Object.values(S.inv.crystal).some(n=>n)?5:10),focus.dataset.shieldFocus);Sfx.pick();}};
+$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset;shieldFill(p==='clear'?0:p==='max'?shieldMax():Number(p));Sfx.pick();};
+$('shieldComplete').onclick=()=>{shieldAdd(shieldMissing());shieldPreview();Sfx.pick();};
+$('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',...shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render();if(r.ok)eventEffects(S.events); };
+$('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
+$('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
+$('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
+$('btnMenuHelp').onclick = () => { $('dlgMenu').close(); $('dlgHelp').showModal(); };
+function downloadFile(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function exitPhoto(){document.body.classList.remove('photo-mode');$('photoBar').hidden=true;View.resize();}
+function enterPhoto(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());mode=null;selected=null;document.body.classList.add('photo-mode');$('photoBar').hidden=false;render();View.resize();View.frameMap();}
+function continueEndless(){const r=G.enterEndless(S);if(!r.ok){hint(r.msg,true);return;}document.querySelectorAll('dialog[open]').forEach(d=>d.close());render();hint('无尽生境：沿外缘继续铺地');}
+$('btnSaveMap').onclick=()=>downloadFile(new Blob([JSON.stringify({version:1,state:S},null,2)],{type:'application/json'}),`元素生境-第${S.round}轮.json`);
+$('btnInspect').onclick=enterPhoto;$('btnOverInspect').onclick=enterPhoto;$('btnEndless').onclick=continueEndless;$('btnOverEndless').onclick=continueEndless;
+$('btnExitPhoto').onclick=exitPhoto;$('btnTakePhoto').onclick=async()=>downloadFile(await View.photo(),`元素生境-第${S.round}轮.png`);
+$('btnNew').onclick = () => { $('dlgMenu').close();exitPhoto();window.habitatSaveTried=true;start(); };
+$('btnAgain').onclick = () => { $('over').close();exitPhoto();window.habitatSaveTried=true;start(); };
+const soundLabel = () => { $('btnSound').querySelector('.t').textContent = Sfx.on ? '🔊 音效开' : '🔇 音效关'; };
+$('btnSound').onclick = () => { Sfx.toggle(); soundLabel(); Sfx.tap(); };
+soundLabel();
+const musicLabel=()=>{$('btnMusic').querySelector('.t').textContent=Music.enabled?'♫ '+Music.mood:'♫ 背景音乐关';};
+$('btnMusic').onclick=()=>{Music.toggle();musicLabel();};musicLabel();
+let atmosphereOn=true;
+try{atmosphereOn=localStorage.getItem('atmosphere')!=='0';}catch(_){}
+const atmosphereLabel=()=>{
+  View.setAtmosphere(atmosphereOn);
+  $('btnAtmosphere').querySelector('.t').textContent=atmosphereOn?'✨ 氛围开':'✨ 氛围关';
+  $('btnAtmosphere').setAttribute('aria-pressed',String(atmosphereOn));
+};
+$('btnAtmosphere').onclick=()=>{atmosphereOn=!atmosphereOn;try{localStorage.setItem('atmosphere',atmosphereOn?'1':'0');}catch(_){}atmosphereLabel();Sfx.tap();};
+atmosphereLabel();
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d && d.id !== 'over') d.close(); }));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if(document.body.classList.contains('photo-mode')){exitPhoto();return;}
+  if (document.querySelector('dialog[open]')) return;
+  if (mode) setMode(null);
+  else if (selected) { selected = null; render(); }
+});
+document.addEventListener('gesturestart', e => e.preventDefault());   // iOS 禁止页面缩放
+
+document.addEventListener('keydown',e=>{
+  if(e.repeat||document.querySelector('dialog[open]')||e.target.closest('input,select,textarea'))return;
+  if(e.ctrlKey&&e.key.toLowerCase()==='s'&&S.completedMap){e.preventDefault();$('btnSaveMap').click();return;}
+  if(document.body.classList.contains('photo-mode'))return;
+  if(/^[123]$/.test(e.key))$('offers').querySelector(`[data-offer="${Number(e.key)-1}"]`)?.click();
+  if(e.key.toLowerCase()==='b')$('btnBag').click();
+  if(e.key==='Enter'){e.preventDefault();$('btnEnd').click();}
+  if(e.key.toLowerCase()==='p'&&S.completedMap)enterPhoto();
+});
+
+if (!View.supported || View.supported()) {
+  View.init($('world'), {
+    onCell, onHover,
+    onFlash() { flash(); },
+    onLink(count,cell) { Sfx.link(count);floatAtCell(cell,`连片 ×${count} · 上限 ${G.attrCap(S,cell)}`,'#e9ffaf');buzz(15); },
+    onImpact(blocked) { Sfx.impact(blocked); },
+    onMiss() { if (!mode && selected) { selected = null; render(); } },
+  });
+  start();
+} else {
+  $('nogl').style.display = 'grid';
+}
+</script>
+<script src="journey-ui.js"></script>
+</body>
+</html>

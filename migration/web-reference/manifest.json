@@ -1,0 +1,58 @@
+{
+  "source": "https://element-habitat.vercel.app/",
+  "capturedDate": "2026-10-17",
+  "timezone": "Asia/Shanghai",
+  "authority": "User explicitly selected the current production version for Unity migration; repository root web sources are historical.",
+  "files": [
+    {
+      "file": "achievements.js",
+      "url": "https://element-habitat.vercel.app/achievements.js",
+      "sha256": "b46877af394eaf3ed9395116392ee994ba02cca82ccdc25340500cd54da3731b"
+    },
+    {
+      "file": "data.js",
+      "url": "https://element-habitat.vercel.app/data.js",
+      "sha256": "c8b09eee26c1bc4d4001b6ee8c6fe583e9ec26414613a39de95dd79617260ece"
+    },
+    {
+      "file": "game.js",
+      "url": "https://element-habitat.vercel.app/game.js",
+      "sha256": "be958ad6c9e29a11e67e173e6b23b53a2e9a2982a16a10fab39e052f715392bb"
+    },
+    {
+      "file": "index.html",
+      "url": "https://element-habitat.vercel.app/index.html",
+      "sha256": "ecdbbdecf7f7125ca5d5ff5e1c7218f7404296e22c311ee247c7c104bf1f389f"
+    },
+    {
+      "file": "journey-ui.js",
+      "url": "https://element-habitat.vercel.app/journey-ui.js",
+      "sha256": "7955cc8be5e2771f09a4ea600c1d2aa9745f78f37a56b70d2992dbf88eaaad97"
+    },
+    {
+      "file": "terrain.js",
+      "url": "https://element-habitat.vercel.app/terrain.js",
+      "sha256": "6dac5345d91e804d4d65a47b5c62bb54c63907c2dadbb7daa15850d17923ceb3"
+    },
+    {
+      "file": "view.js",
+      "url": "https://element-habitat.vercel.app/view.js",
+      "sha256": "5146194679a417390fcb26c3f034b358072d3110f39bcc6c24b95a7674ff5d9a"
+    },
+    {
+      "file": "tokens.js",
+      "url": "https://element-habitat.vercel.app/tokens.js",
+      "sha256": "79dba6e94d93d4d4ae235b2125879f4ae04652539b3fda0d91894b9a9fef7e52"
+    },
+    {
+      "file": "postfx.js",
+      "url": "https://element-habitat.vercel.app/postfx.js",
+      "sha256": "163723151fa3e9e9cb3b0fcbf49af14a6a882e4b81b469ba2ef61832bcceba15"
+    },
+    {
+      "file": "music.js",
+      "url": "https://element-habitat.vercel.app/music.js",
+      "sha256": "54040af386966b0e7eff62c98b8332de12caf0b506bfa80f8e0ceb7518bf254d"
+    }
+  ]
+}

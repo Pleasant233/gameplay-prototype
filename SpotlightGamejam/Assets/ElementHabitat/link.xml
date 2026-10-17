@@ -1,0 +1,6 @@
+<linker>
+  <!-- NativeJson reads public state fields and constructors through reflection. -->
+  <assembly fullname="Assembly-CSharp">
+    <type fullname="ElementHabitat.*" preserve="all" />
+  </assembly>
+</linker>

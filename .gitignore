@@ -41,3 +41,6 @@ __pycache__/
 # Unity crash reports
 /SpotlightGamejam/sysinfo.txt
 /SpotlightGamejam/mono_crash.*
+
+# Native rules verification output is kept in ignored artifacts.
+/tools/UnityRulesCheck/obj/
