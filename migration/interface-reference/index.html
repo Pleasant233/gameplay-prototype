@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2b6fd6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="元素生境：五行地块策略小游戏">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>元素生境</title>
+<style>
+  :root {
+    --ink: #fff; --ink2: #5a4220; --muted: #8a7a62;
+    --paper: #fff7e6; --paper2: #f3e3c2; --edge: #c9a56a;
+    --blue: #3b8cf0; --blue-d: #1f5fb8; --green: #5ccf3a; --green-d: #33912a;
+    --gold: #ffcc33; --gold-d: #d48a12; --red: #ff5a4a; --red-d: #b8302a;
+    --purple: #a46cf0; --purple-d: #6a3ab8;
+    --metal: #f2c230; --wood: #5ccf3a; --water: #3fa6ff; --fire: #ff6a3a; --earth: #d09a5a;
+    --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6fb6ff; color: var(--ink2);
+    font: 600 13px/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+  #world { position: fixed; inset: 0; }
+  #world canvas { touch-action: none; }
+
+  /* 卡通描边字 */
+  .toon { color: #fff; -webkit-text-stroke: 0; paint-order: stroke fill;
+    text-shadow: 0 2px 0 rgba(0,0,0,.45), 1px 0 0 rgba(0,0,0,.35), -1px 0 0 rgba(0,0,0,.35), 0 -1px 0 rgba(0,0,0,.35); }
+
+  /* 纸面面板 */
+  .panel { background: linear-gradient(180deg, var(--paper), var(--paper2)); border: 3px solid #fff;
+    border-radius: 18px; box-shadow: 0 0 0 2px var(--edge), 0 6px 0 2px #a8844a, 0 12px 24px rgba(0,0,0,.25); }
+  .tag { position: absolute; z-index: 3; top: -13px; left: 14px; padding: 2px 12px; border-radius: 10px; font-size: 12px;
+    background: linear-gradient(180deg, #6aa8ff, var(--blue)); border: 2px solid #fff; box-shadow: 0 2px 0 var(--blue-d); }
+
+  /* 立体按钮 */
+  .btn { --c: var(--blue); --d: var(--blue-d); position: relative; font: inherit; font-weight: 800; color: #fff; cursor: pointer;
+    border: 2px solid rgba(0,0,0,.25); border-radius: 12px; padding: 8px 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.28) 0 45%, transparent 55%), var(--c);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 4px 0 var(--d), 0 6px 8px rgba(0,0,0,.25);
+    transition: transform .08s, box-shadow .08s, filter .15s; }
+  .btn:not(:disabled):hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:not(:disabled):active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 1px 0 var(--d), 0 2px 4px rgba(0,0,0,.2); }
+  .btn:disabled { --c: #a9a9a9; --d: #777; cursor: not-allowed; filter: saturate(.3); }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .btn.green { --c: var(--green); --d: var(--green-d); }
+  .btn.gold { --c: var(--gold); --d: var(--gold-d); color: #6a3a00; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+  .btn.red { --c: var(--red); --d: var(--red-d); }
+  .btn.round { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+  .btn.sm { padding: 4px 10px; font-size: 12px; border-radius: 9px; box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 var(--d); }
+  .btn.sm:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--d); }
+  .btn .t { position: relative; }
+  .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.55); transform: scale(0); pointer-events: none;
+    animation: rip .5s ease-out forwards; }
+  @keyframes rip { to { transform: scale(2.6); opacity: 0; } }
+
+  /* 顶栏 */
+  #top { position: fixed; top: calc(10px + var(--safe-t)); left: 0; right: 0; display: flex; justify-content: center; gap: 10px;
+    padding: 0 12px; z-index: 5; pointer-events: none; }
+  #top > * { pointer-events: auto; }
+  .pill { position: relative; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px;
+    background: rgba(20, 30, 50, .55); border: 2px solid rgba(255,255,255,.35); border-radius: 22px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-size: 18px; font-weight: 900; }
+  .pill .ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
+    border: 2px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+  .pill small { display: block; font-size: 10px; line-height: 1; opacity: .85; font-weight: 700; }
+  .pill b { display: block; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  #pillScore .ico { background: radial-gradient(circle at 35% 30%, #fff6b0, var(--gold) 50%, var(--gold-d)); }
+  #pillRound .ico { background: radial-gradient(circle at 35% 30%, #c8e4ff, var(--blue) 55%, var(--blue-d)); }
+  #pillLeft .ico { background: radial-gradient(circle at 35% 30%, #d8ffc8, var(--green) 55%, var(--green-d)); }
+  .bump { animation: bump .5s cubic-bezier(.3,1.8,.5,1); }
+  @keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .ap { display: flex; gap: 4px; }
+  .ap i { width: 20px; height: 26px; display: block; clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+    background: radial-gradient(circle at 40% 30%, #fff 0 8%, #9fe8ff 20%, #26a8ff 60%, #1660c8);
+    transition: transform .3s cubic-bezier(.3,1.8,.5,1), filter .3s; filter: drop-shadow(0 0 4px #4ac8ff); }
+  .ap i.used { filter: grayscale(1) brightness(.5); transform: scale(.78); }
+  #pillAp { padding-left: 12px; }
+
+  #corner { position: fixed; top: calc(10px + var(--safe-t)); right: 12px; display: flex; gap: 8px; z-index: 6; }
+  #cornerL { position: fixed; top: calc(10px + var(--safe-t)); left: 12px; display: flex; gap: 8px; z-index: 6; }
+
+  /* 底部操作区 */
+  #dock { position: fixed; left: 0; right: 0; bottom: calc(10px + var(--safe-b)); display: flex; justify-content: center;
+    align-items: flex-end; gap: 14px; padding: 0 12px; z-index: 5; pointer-events: none; }
+  #dock > * { pointer-events: auto; }
+  .tray { position: relative; padding: 18px 12px 12px; }
+  #offers { display: flex; gap: 10px; }
+  .card { position: relative; width: 96px; height: 120px; border-radius: 14px; border: 3px solid #fff; cursor: pointer; padding: 0;
+    font: inherit; color: #fff; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 5px 0 rgba(0,0,0,.25);
+    transition: transform .25s cubic-bezier(.3,1.6,.5,1), box-shadow .2s; animation: deal .5s cubic-bezier(.3,1.5,.5,1) backwards; }
+  .card:hover { transform: translateY(-6px) rotate(-1.5deg); }
+  .card:active { transform: translateY(-2px) scale(.96); }
+  .card.on { transform: translateY(-14px) scale(1.05); box-shadow: 0 0 0 3px var(--gold), 0 0 22px 4px rgba(255,204,51,.8), 0 8px 0 rgba(0,0,0,.25); }
+  .card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  @keyframes deal { from { transform: translateY(80px) rotate(12deg) scale(.6); opacity: 0; } }
+  .card .art { position: absolute; inset: 0; }
+  .card .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%, rgba(0,0,0,.35)); }
+  .card .emb { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); }
+  .card .nm { position: relative; font-size: 14px; font-weight: 900; text-align: center; padding: 2px 0; }
+  .card .gems { position: relative; display: flex; justify-content: center; gap: 2px; padding: 3px 4px 6px; background: rgba(0,0,0,.3); }
+  .gem { min-width: 15px; height: 17px; border-radius: 5px; font-size: 11px; line-height: 15px; text-align: center; font-weight: 900;
+    border: 1.5px solid rgba(255,255,255,.8); }
+  .gem.z { opacity: .3; }
+  .gem.neg { background: var(--red) !important; }
+
+  #magics { display: flex; gap: 8px; }
+  .mg { --c: var(--purple); --d: var(--purple-d); width: 58px; height: 66px; padding: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; border-radius: 16px; }
+  .mg .gl { font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.35)); transition: transform .3s cubic-bezier(.3,1.8,.5,1); }
+  .mg:not(:disabled):hover .gl { transform: scale(1.2) rotate(-8deg); }
+  .mg small { font-size: 11px; }
+  .mg.on { animation: wob 1s ease-in-out infinite; box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(255,204,51,.9), 0 4px 0 var(--d); }
+  @keyframes wob { 50% { transform: translateY(-4px) scale(1.06); } }
+  .mg.used::after { content: "✓"; position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--green); border: 2px solid #fff; font-size: 11px; line-height: 16px; }
+  .mg[data-magic=purify] { --c: #8fd8ff; --d: #3a8ab8; }
+  .mg[data-magic=mine] { --c: #ffcc33; --d: #c08010; }
+  .mg[data-magic=spring] { --c: #3fa6ff; --d: #1f5fb8; }
+  .mg[data-magic=rich] { --c: #d09a5a; --d: #8a5a2a; }
+  .mg[data-magic=burn] { --c: #ff6a3a; --d: #b8302a; }
+
+  .mg small { white-space:nowrap; }
+  .mg.locked::after { content:"🔒";position:absolute;right:-3px;top:-6px;font-size:11px; }
+  #endWrap { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  #btnEnd { padding: 12px 18px; font-size: 16px; border-radius: 16px; min-width: 112px; }
+  #btnEnd.ready { animation: nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-3deg) scale(1.05); } 90% { transform: rotate(3deg) scale(1.05); } }
+
+  /* 背包抽屉 */
+  #bag { position: fixed; right: 12px; top: calc(64px + var(--safe-t)); width: 260px; padding: 18px 12px 12px; z-index: 6;
+    transform: translateX(calc(100% + 30px)); transition: transform .35s cubic-bezier(.3,1.3,.5,1); }
+  #bag.open { transform: none; }
+  .sec { font-size: 11px; color: var(--muted); margin: 6px 0 4px; }
+  #crystals { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .cr { --c: #888; --d: #555; padding: 4px 8px 4px 6px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .cr i { width: 12px; height: 14px; display: inline-block; clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); background: #fff; }
+  .mats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .mats span { background: rgba(0,0,0,.06); border-radius: 8px; padding: 3px 6px; font-size: 12px; color: var(--ink2); }
+  .mats b { float: right; }
+  #recipes { display: flex; flex-direction: column; gap: 6px; }
+  #recipes .btn { text-align: left; display: flex; justify-content: space-between; }
+  #recipes .btn small { opacity: .85; font-weight: 700; }
+
+  /* 地块详情 */
+  #detail { position: fixed; left: 12px; top: calc(64px + var(--safe-t)); width: 280px; max-height: calc(100vh - 260px);
+    overflow: auto; padding: 0 0 10px; z-index: 6; transform: translateX(calc(-100% - 30px)) rotate(-4deg);
+    transition: transform .4s cubic-bezier(.3,1.4,.5,1); }
+  #detail.open { transform: none; }
+  .dh { padding: 12px 14px 10px; border-radius: 14px 14px 0 0; color: #fff; position: relative; }
+  .dh h3 { margin: 0; font-size: 20px; font-weight: 900; }
+  .dh .sub { font-size: 12px; opacity: .95; }
+  .dh .x { position: absolute; right: 8px; top: 8px; }
+  .bars5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 10px 14px 4px; }
+  .bar5 { text-align: center; font-size: 11px; color: var(--muted); }
+  .bar5 .tube { height: 46px; border-radius: 8px; background: rgba(0,0,0,.08); position: relative; overflow: hidden; margin-bottom: 2px;
+    box-shadow: inset 0 2px 3px rgba(0,0,0,.15); }
+  .bar5 .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; transition: height .5s cubic-bezier(.3,1.5,.5,1);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5); }
+  .bar5 b { display: block; font-size: 14px; color: var(--ink2); }
+  .bar5 .neg { background: var(--red) !important; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin: 6px 10px 0;
+    padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.6); box-shadow: 0 2px 0 rgba(0,0,0,.06);
+    animation: pop .35s cubic-bezier(.3,1.6,.5,1) backwards; }
+  .row > span:first-child { display: flex; align-items: center; gap: 6px; }
+  .row > span:last-child { display: flex; gap: 4px; flex-wrap: wrap; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+  .muted { color: var(--muted); font-size: 12px; }
+  #detail::-webkit-scrollbar { width: 6px; } #detail::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 3px; }
+
+  /* 提示条 */
+  #hint { position: fixed; left: 50%; top: calc(64px + var(--safe-t)); transform: translate(-50%, -20px) scale(.8); opacity: 0; z-index: 7;
+    padding: 8px 20px; border-radius: 20px; font-size: 14px; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 24px);
+    overflow: hidden; text-overflow: ellipsis; background: linear-gradient(180deg, #4a9cff, #2b6fd6); border: 2px solid #fff;
+    box-shadow: 0 4px 0 #1a4a9a, 0 8px 16px rgba(0,0,0,.25); transition: all .3s cubic-bezier(.3,1.6,.5,1); }
+  #hint.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  #hint.err { background: linear-gradient(180deg, #ff7a6a, #e0402f); box-shadow: 0 4px 0 #9a2a1a, 0 8px 16px rgba(0,0,0,.25); }
+  #hint.err.show { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { margin-left: -8px; } 40%, 80% { margin-left: 8px; } }
+
+  #tip { position: fixed; z-index: 8; pointer-events: none; padding: 6px 10px; font-size: 12px; display: none; border-radius: 10px;
+    white-space: nowrap; background: rgba(20,30,50,.85); color: #fff; border: 2px solid rgba(255,255,255,.4); }
+  #tip .g { display: inline-block; min-width: 14px; text-align: center; margin-right: 3px; }
+
+  /* 飘字 / 横幅 */
+  .float { position: fixed; z-index: 9; pointer-events: none; font-size: 22px; font-weight: 900; animation: rise 1.1s ease-out forwards; }
+  @keyframes rise { 0% { transform: translate(-50%, 0) scale(.4); opacity: 0; } 20% { transform: translate(-50%, -14px) scale(1.25); opacity: 1; }
+    100% { transform: translate(-50%, -70px) scale(1); opacity: 0; } }
+  #banner { position: fixed; left: 0; right: 0; top: 22%; z-index: 9; pointer-events: none; text-align: center; display: none; }
+  #banner .rib { display: inline-block; padding: 12px 64px; font-size: 30px; font-weight: 900; letter-spacing: 6px;
+    background: linear-gradient(180deg, #ffd54a, #f0a010); border: 3px solid #fff; border-radius: 8px;
+    box-shadow: 0 6px 0 #b06a00, 0 14px 30px rgba(0,0,0,.35); clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%); }
+  #banner .sub { margin: 6px auto 0; font-size: 14px; max-width: min(520px, calc(100vw - 32px)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #banner.go { display: block; animation: ban 1.6s cubic-bezier(.3,1.4,.5,1) forwards; }
+  @keyframes ban { 0% { transform: scale(.2) rotate(-8deg); opacity: 0; } 18% { transform: scale(1.1); opacity: 1; } 28% { transform: scale(1); }
+    80% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+  #flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; background: radial-gradient(circle, rgba(255,240,180,.15), transparent 65%); opacity: 0; }
+  #flash.go { animation: fl .7s ease-out; }
+  @keyframes fl { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* 帮助 / 日志 / 结算弹窗 */
+  dialog { border: 0; padding: 0; background: transparent; max-width: min(440px, calc(100vw - 32px)); overflow: visible; }
+  dialog::backdrop { background: rgba(10, 30, 60, .5); }
+  #dlgGuardian .dlg { display:flex;flex-direction:column;max-height:min(84dvh,calc(100dvh - 48px));padding:22px 16px 16px;overflow:hidden; }
+  #dlgGuardian h2 { flex:none;margin-right:28px;font-size:20px; }
+  #dlgGuardian .close { right:6px;top:6px;width:30px;height:30px; }
+  #guardianBody { min-height:0;overflow:auto;touch-action:pan-y; }
+  #guardianOptions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px 2px; }
+  .guardian-choice { display:flex;align-items:center;gap:7px;padding:9px;background:#fff7df;border:2px solid #d6c79f;border-radius:10px;cursor:pointer; }
+  .guardian-choice:has(input:checked) { border-color:#dca52b;background:#fff0b8; }
+  .guardian-choice input { width:20px;height:20px;accent-color:#dca52b;flex:none; }
+  .guardian-choice small { display:block;color:var(--muted);font-size:10px; }
+  #guardianPreview { background:#efe6c8;border-radius:10px;padding:10px;margin:6px 0;line-height:1.7; }
+  #btnMergeGuardian { flex:none;margin-top:10px; }
+  @media(max-width:360px){#guardianOptions{grid-template-columns:1fr;}}
+  dialog[open] .panel { animation: dlg .45s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes dlg { from { transform: scale(.5) translateY(40px); opacity: 0; } }
+  .dlg { position: relative; padding: 26px 22px 20px; color: var(--ink2); }
+  .dlg h2 { margin: 0 0 10px; text-align: center; font-size: 22px; }
+  .dlg .close { position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; font-size: 16px; }
+  .dlg kbd { background: #fff; border: 1px solid var(--edge); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; font: 700 11px monospace; }
+  .dlg p { margin: 6px 0; font-weight: 600; }
+  #log { max-height: 50vh; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+  #log li { padding: 4px 8px; border-radius: 6px; } #log li:nth-child(odd) { background: rgba(0,0,0,.05); }
+  .big { font-size: 64px; font-weight: 900; text-align: center; line-height: 1; margin: 8px 0; }
+  .stars { text-align: center; font-size: 40px; letter-spacing: 4px; }
+  .stars span { display: inline-block; animation: star .5s cubic-bezier(.3,1.8,.5,1) backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+  .stars span.off { filter: grayscale(1) opacity(.35); }
+  @keyframes star { from { transform: scale(0) rotate(-90deg); } }
+  .sum5 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; text-align: center; }
+  .sum5 div { background: rgba(255,255,255,.7); border-radius: 10px; padding: 6px 2px; font-size: 11px; color: var(--muted); }
+  .sum5 b { display: block; font-size: 18px; color: var(--ink2); }
+
+  #nogl { position: fixed; inset: 0; display: none; place-items: center; z-index: 20; background: #6fb6ff; padding: 24px; text-align: center; }
+
+  /* 手机竖屏 */
+  @media (max-width: 760px) {
+    #cornerL { display: none; }
+    #corner { right: 8px; gap: 6px; } #corner .btn.round { width: 38px; height: 38px; font-size: 15px; }
+    #top { justify-content: flex-start; padding: 0 92px 0 8px; gap: 4px; }
+    .pill { height: 34px; font-size: 14px; padding: 0 8px 0 4px; gap: 4px; } .pill .ico { width: 24px; height: 24px; font-size: 11px; border-width: 1.5px; }
+    #pillAp { padding: 0 8px; } .pill small { display: none; } .ap { gap: 2px; } .ap i { width: 14px; height: 19px; }
+    #btnMenuHelp { display: inline-block !important; }
+    #dock { padding: 0 8px; }
+    .card { min-width: 0; } .gem { min-width: 0; flex: 1; max-width: 16px; font-size: 10px; } .card .nm { font-size: 13px; }
+    .mg { min-width: 0; } #magicTray { min-width: 0; }
+    #btnEnd .t { font-size: 13px; } #btnEnd { width: 64px; height: 64px; padding: 0; border-radius: 16px; line-height: 1.2; }
+    #dock { flex-direction: column; align-items: stretch; gap: 10px; }
+    #dock .row2 { display: flex; gap: 10px; align-items: flex-end; justify-content: space-between; }
+    .tray { padding: 16px 8px 8px; }
+    #offers { gap: 6px; justify-content: center; }
+    .card { flex: 1; width: auto; max-width: 110px; height: 96px; } .card .emb { font-size: 26px; top: 8px; }
+    #magics { gap: 5px; } .mg { width: auto; flex: 1; height: 56px; } .mg .gl { font-size: 20px; }
+    #magicTray { flex: 1; }
+
+    #detail { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(250px + var(--safe-b)); max-height: 30vh;
+      transform: translateY(calc(100% + 280px)); }
+    #detail.open { transform: none; }
+    #bag { left: 8px; right: 8px; width: auto; }
+    #hint { top: auto; bottom: calc(256px + var(--safe-b)); }
+  }
+  @media (min-width: 761px) { #dock .row2 { display: contents; } }
+  @media (max-height: 520px) and (orientation: landscape) {
+    .card { height: 84px; width: 80px; } .card .emb { font-size: 22px; top: 6px; }
+    .mg { height: 52px; width: 50px; }
+    #detail { max-height: calc(100vh - 80px); }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
+
+  #btnReroll { position:absolute;right:8px;top:-14px;font-size:10px;padding:3px 6px; }
+  #bag { max-height:calc(100vh - 290px);overflow:auto;touch-action:pan-y; }
+  #detail, dialog, .dlg { touch-action:pan-y; }
+  dialog { max-height:85dvh; }
+  .dlg { max-height:82dvh;overflow:auto; }
+  .dlg .close { right:8px;top:8px; }
+  .dlg h2 { padding:0 24px; }
+  .progress-card { background:rgba(255,255,255,.68);border:2px solid #dbc69c;border-radius:12px;margin:8px 0;padding:10px; }
+  .progress-card.done { border-color:#8aba51;background:#eff6da; }
+  .progress-card b { display:block;color:var(--ink2);font-size:14px; }
+  .progress-card p { font-size:12px; }
+  .progress-card progress { width:100%;height:8px;accent-color:#6cad47;display:block;margin-top:6px; }
+  #stageHud { position:fixed;top:calc(57px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:12px;max-width:calc(100vw - 16px);font-size:11px;padding:4px 12px;border-radius:16px;background:rgba(28,47,64,.6);white-space:nowrap;pointer-events:none; }
+  #achievementToast { position:fixed;top:calc(92px + var(--safe-t));left:50%;transform:translate(-50%,-16px);z-index:18;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100vw - 24px); }
+  #achievementToast.show { opacity:1;transform:translate(-50%,0); }
+  #dlgAchievements,#dlgShield,#dlgGuardian { width:min(440px,calc(100vw - 32px)); }
+  #dlgShield .dlg { max-height:84dvh;overflow:hidden;padding:22px 16px 16px;display:flex;flex-direction:column; }
+  #shieldBody { overflow:auto;min-height:0;overscroll-behavior:contain; }
+  #dlgShield .close { right:6px;top:6px; }
+  #dlgShield h2 { padding-right:16px;flex-shrink:0; }
+  #dlgShield .intro { font-size:12px;color:var(--muted);text-align:center; }
+  .shield-presets { display:flex;flex-wrap:wrap;gap:5px;margin:12px 0; }
+  .shield-presets .btn { flex:1;white-space:nowrap;min-height:38px;font-size:12px;padding:5px 8px; }
+  .shield-row { display:grid;grid-template-columns:1fr 40px 38px 40px;gap:6px;align-items:center;margin:8px 0;padding:7px 9px;border:1px solid #d6c8ac;border-radius:12px;background:#fff8e9; }
+  .shield-row .element-pick { border:0;background:none;text-align:left;font:inherit;font-weight:900;padding:0;cursor:pointer; }
+  .shield-row .element-pick:disabled { opacity:.5;cursor:default; }
+  .shield-row small { display:block;font-size:10px;color:var(--muted);font-weight:600; }
+  .shield-row output { text-align:center;font-size:19px;font-weight:900; }
+  .shield-row .btn { width:40px;min-height:40px;padding:2px;font-size:20px; }
+  .shield-row input[type=range] { grid-column:1/-1;width:100%;height:18px;margin:0;cursor:pointer;accent-color:var(--el-color); }
+  .shield-row input[type=range] { appearance:none;-webkit-appearance:none;background:transparent;height:22px; }
+  .shield-row input[type=range]::-webkit-slider-runnable-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-webkit-slider-thumb { appearance:none;-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--el-color);border:3px solid #fff;box-shadow:0 1px 3px #ae9774; }
+  .shield-row input[type=range]::-moz-range-track { height:6px;border-radius:8px;background:#ded4bf; }
+  .shield-row input[type=range]::-moz-range-thumb { width:14px;height:14px;border-radius:50%;background:var(--el-color);border:3px solid #fff; }
+  .shield-row input[type=range]:disabled { opacity:.4;cursor:default; }
+  #shieldPreview { border-radius:12px;padding:10px;background:#e5f0dc;border:1px solid #c2d5b1;text-align:center; }
+  #shieldPreview b { display:block;font-size:18px; }
+  #shieldPreview small { display:block;font-size:11px;margin-top:4px; }
+  .shield-bar { display:flex;height:10px;overflow:hidden;border-radius:8px;background:#cfc7b6;margin:8px 0; }
+  #shieldPreview.incomplete { background:#fff0d9;border-color:#e4c08c; }
+  #shieldComplete { min-height:34px;margin-top:6px; }
+  #btnCraftShield { width:100%;min-height:44px;margin-top:10px;flex-shrink:0; }
+  #scenario { width:100%;padding:8px;background:var(--paper);border:2px solid var(--edge);border-radius:10px;font:inherit; }
+  .sum5 { grid-template-columns:repeat(3,1fr); }
+  @media(max-width:760px) {
+    #ap i { display:none; } #ap::after { content:attr(data-value);font-size:12px; }
+    #stageHud { font-size:10px;gap:0;padding:4px 8px;flex-direction:column;align-items:center; }
+    #bag { max-height:calc(100dvh - 330px); }
+    #detail { bottom:calc(250px + var(--safe-b)); }
+    #achievementToast { font-size:12px;top:calc(100px + var(--safe-t)); }
+  }
+
+ </style>
+<style>
+  #tokens { position:fixed; inset:0; z-index:12; pointer-events:none; overflow:hidden; }
+  .token { position:absolute; left:0; top:0; color:var(--token-color); font-size:25px; will-change:transform;
+    filter:drop-shadow(0 0 7px var(--token-color)); white-space:nowrap; }
+  .token i { font-style:normal; }
+  .token small { font-size:12px; color:#fff; margin-left:2px; }
+  #bagCount { position:absolute; right:-8px; top:-8px; min-width:21px; padding:2px 4px; border-radius:12px;
+    background:#ec5845; color:#fff; font-size:11px; border:2px solid #fff; line-height:14px; }
+  #btnBag { overflow:visible !important; }
+  #btnBag .ripple { display:none; }
+  .pill.bump, #btnBag.bump { filter:drop-shadow(0 0 8px #ffe14a); }
+
+ #journey{position:fixed;top:110px;left:18px;width:280px;z-index:12;border:1px solid #c2c49f;border-radius:16px;background:rgba(255,251,230,.95);box-shadow:0 8px 28px #243d2426;padding:14px;color:#364d39;font-size:13px;line-height:1.65}
+ .journey-title{border:0;background:none;color:#315342;font-family:inherit;font-weight:700;font-size:16px;width:100%;text-align:left;cursor:pointer}.journey-title small{float:right}.journey-controls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.journey-controls .btn{white-space:normal}#journey p{margin:6px 0}#journey>small{font-size:10px;color:#637363}
+ .terrain-info{padding:12px;background:#f3f5df;font-size:12px;line-height:1.65}.terrain-info p{margin:5px 0}.terrain-info select{max-width:100%;padding:5px}.branch-card{border-left:3px solid #91b670;padding:7px 9px;margin:7px 0;background:#fff9}.terrain-info button{margin:4px}#echoBody{line-height:1.8;padding-top:20px}#echoBody article{margin:14px 0;padding:14px;background:#f6f3e4;border-radius:12px}#echoBody h3{margin:3px 0}#echoBody p{white-space:normal}
+ body:has(#detail.open) #journey{display:none}
+ @media(max-width:650px){#journey{top:103px;left:10px;width:calc(100% - 20px);padding:9px 12px;font-size:11px;max-height:170px;overflow:auto}#journey p{max-height:48px;overflow:auto}.journey-title{font-size:13px}.journey-controls .btn{font-size:11px;padding:5px 8px}body:has(#bag.open) #journey{display:none}}
+ </style>
+</head>
+<body>
+<div id="world" aria-label="三维地图：点击地块选择，拖拽旋转，双指或滚轮缩放"></div>
+<div id="flash"></div>
+<div id="tokens" aria-hidden="true"></div>
+
+<aside id="journey" aria-live="polite"></aside>
+<dialog id="dlgEcho"><div class="panel dlg"><button class="btn round red close" id="closeEcho" aria-label="关闭回声册">✕</button><div id="echoBody"></div></div></dialog>
+<div id="cornerL">
+  <button class="btn round" id="btnHelp" title="玩法说明" aria-label="玩法说明"><span class="t">?</span></button>
+</div>
+<header id="top" class="toon">
+  <div class="pill" id="pillRound"><span class="ico">⏳</span><span><small>轮次</small><b id="round">1</b></span></div>
+  <div class="pill" id="pillAp" title="行动点"><div class="ap" id="ap"></div></div>
+  <div class="pill" id="pillScore" title="灵力值"><span class="ico">✦</span><span><small>灵力</small><b id="score">0</b></span></div>
+  <div class="pill" id="pillLeft" title="剩余空位"><span class="ico">⬢</span><span><small>空位</small><b id="left"></b></span></div>
+</header>
+<div id="corner">
+  <button class="btn round gold" id="btnBag" title="背包与制造" aria-label="背包与制造"><span class="t">🎒</span><b id="bagCount">0</b></button>
+  <button class="btn round" id="btnMenu" title="菜单" aria-label="菜单"><span class="t">☰</span></button>
+</div>
+
+<aside id="detail" class="panel" aria-live="polite"></aside>
+<aside id="bag" class="panel"><span class="tag toon">背包</span>
+  <div class="sec">元素结晶 · 不耗行动 · 每轮不限次数 · 点击后选地块使用</div><div id="crystals"></div>
+  <div class="sec">材料</div><div class="mats" id="mats"></div>
+
+  <div class="sec">元素盾</div><div id="shieldStock"></div><button class="btn sm" id="btnShield">🛡 调配元素盾</button>
+</aside>
+
+<div id="stageHud" class="toon"><span id="stageLabel"></span><span id="globalLabel"></span></div>
+<div id="achievementToast" class="panel" role="status" aria-live="polite"></div>
+<div id="hint" class="toon" role="status" aria-live="polite"></div>
+<div id="tip"></div>
+<div id="banner" class="toon"><div class="rib" id="banTxt"></div><div class="sub" id="banSub"></div></div>
+
+<footer id="dock">
+  <div class="tray panel"><span class="tag toon" id="offerTag">待选地块</span><button class="btn sm" id="btnReroll" title="消耗3颗普通结晶，按金木水火土顺序扣除">↻ 重投 · 3◆</button><div id="offers"></div></div>
+  <div class="row2">
+    <div class="tray panel" id="magicTray"><span class="tag toon" style="background:linear-gradient(180deg,#c49aff,var(--purple));box-shadow:0 2px 0 var(--purple-d)">魔法</span><div id="magics"></div></div>
+    <div id="endWrap"><button class="btn green toon" id="btnEnd"><span class="t">结束本轮 ▶</span></button></div>
+  </div>
+</footer>
+
+<dialog id="dlgHelp"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>怎么玩</h2>
+  <p>① 每轮先选一张<b>地块</b>放置，每轮仅放一块。可用 3 颗普通结晶重投。</p>
+  <p>② 魔法消耗 1 点行动；生物与其他物品交互免费，同一生物或同类物品每轮一次。使用普通或大型元素结晶不消耗行动点；普通、大型及逆结晶每轮不限次数，仍消耗库存，正向属性受连片上限约束。</p>
+  <p>③ 元素灵与元素兽保留移动和合成；动物无数量上限，自动元素化后每轮对应属性+1，不计分。植物每3轮滋养，矿物轮末自动采集。净化影响选中与四邻；其余魔法需全图对应属性≥20。</p>
+  <p>④ 同系列连片提高属性上限；灵力每达到 500 的倍数增加 2 点行动，上限 9。免费升级保留现有属性。</p>
+  <p>⑤ 每 10 轮陨石雨使约三分之一地块的某元素−3。用普通结晶调配盾，选地块部署；盾的防护总量在覆盖区共享。</p>
+  <p>⑥ 负属性孕育癌元，癌元移动会感染原地元素灵，每 3 轮吸收属性并产逆结晶。净化或焚尽可清除。</p>
+  <p>⑦ 同一地块选择 5 个任意元素兽免费合成守护灵。每轮结束时，按合成配比提升自身及已放置四邻的属性。守护灵不会自动移动；先放置本轮地块后，可耗 1 行动点移至四邻已放置地块，同轮可多次移动。</p>
+  <p>⑧ 填满 85 格结束。成就保存在本机，愿景奖励单列。刷新自动继续当前对局。</p>
+  <p class="muted" style="margin-top:12px">电脑：左键拖拽旋转 · 右键拖拽平移 · 滚轮缩放 · <kbd>WASD</kbd> 平移 <kbd>Q</kbd><kbd>E</kbd> 旋转 <kbd>Space</kbd> 复位 <kbd>Esc</kbd> 取消<br>
+  手机：单指拖动旋转 · 双指捏合缩放 / 平移 · 轻点选择</p>
+  <p class="muted" id="scoreDetail"></p>
+</div></dialog>
+
+<dialog id="dlgMenu"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭"><span class="t">✕</span></button>
+  <h2>元素生境 v1.3</h2><div class="journey-controls"><button class="btn" id="btnEcho">✦ 回声册</button><button class="btn" id="btnAtlas">地脉图鉴 · 80种</button></div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px">
+    <button class="btn gold" id="btnAchievements">🏆 成就与愿景</button>
+    <button class="btn gold" id="btnNew"><span class="t">↻ 新游戏</span></button>
+    <button class="btn" id="btnMenuHelp" style="display:none"><span class="t">? 玩法</span></button>
+    <button class="btn" id="btnSound"><span class="t">🔊 音效</span></button>
+    <button class="btn" id="btnAtmosphere" aria-pressed="true"><span class="t">✨ 氛围开</span></button>
+  </div>
+  <div class="sec">下局剧本</div><select id="scenario" aria-label="下局剧本"><option value="tutorial">初醒之旅 · 剧情教学</option><option value="standard">自由生境 · 80地块</option></select>
+  <div class="sec">日志</div><ul id="log"></ul>
+</div></dialog>
+
+<dialog id="over"><div class="panel dlg">
+  <h2 class="toon" style="font-size:28px;color:#fff;margin-top:-4px">元素生境！</h2>
+  <div class="stars" id="stars"></div>
+  <div class="big toon" id="overScore" style="color:var(--gold)"></div>
+  <div class="sum5" id="overSum"></div>
+  <p class="muted" id="overText" style="text-align:center"></p>
+  <div style="text-align:center;margin-top:10px"><button class="btn green toon" id="btnAgain" style="font-size:18px;padding:12px 28px"><span class="t">再来一局</span></button></div>
+</div></dialog>
+
+<dialog id="dlgAchievements"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭成就册">✕</button>
+  <h2>🏆 生境成就册</h2><p id="achievementSummary" class="muted"></p>
+  <div class="sec">本局愿景 · 完成后分别奖励 30 分</div><div id="visions"></div>
+  <div class="sec">旅途成就 · 本机记录</div><div id="achievementList"></div>
+</div></dialog>
+<dialog id="dlgShield"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭元素盾">✕</button>
+  <h2>🛡 调配元素盾</h2><div id="shieldBody"><p class="intro">每 5 颗覆盖 1 格 · 点元素名称可集中防御该元素</p>
+  <div class="shield-presets" id="shieldPresets"><button class="btn sm" data-shield-preset="5">一格盾</button><button class="btn sm" data-shield-preset="15">三格盾</button><button class="btn sm" data-shield-preset="max">用满库存</button><button class="btn sm" data-shield-preset="clear">清空</button></div>
+  <div id="shieldInputs"></div><div id="shieldPreview" aria-live="polite"></div>
+  <button class="btn sm" id="shieldComplete">补齐下一格</button></div>
+  <button class="btn green" id="btnCraftShield">制造元素盾</button>
+</div></dialog>
+<div id="nogl" class="toon"><div><h2>需要 WebGL</h2><p>当前浏览器不支持 3D 画面，请更新浏览器或开启硬件加速。</p></div></div>
+<dialog id="dlgGuardian"><div class="panel dlg">
+  <button class="btn round red close toon" data-close aria-label="关闭守护灵合成">✕</button>
+  <h2>✦ 唤醒守护灵</h2><div id="guardianBody">
+    <p class="muted">选择本格 5 个元素兽，合成不消耗行动点。</p>
+    <div id="guardianOptions"></div><div id="guardianPreview" aria-live="polite"></div>
+    <p class="muted" style="font-size:11px">所选元素兽会被消耗，守护灵不单独计分；每轮滋养效果受连片属性上限约束。</p>
+  </div><button class="btn gold" id="btnMergeGuardian">免费合成</button>
+</div></dialog>
+
+<script src="lib/three.min.js"></script>
+<script src="terrain.js"></script>
+<script src="data.js"></script>
+<script src="game.js"></script>
+<script src="achievements.js"></script>
+<script src="postfx.js"></script>
+<script src="view.js"></script>
+<script src="tokens.js"></script>
+<script>
+const D = GameData, G = Game;
+const EL = D.ELEMENTS;
+const guardianText = power => EL.filter(e=>power[e.key]).map(e=>`${e.name} +${power[e.key]}`).join(' · ');
+const guardianName = power => EL.filter(e=>power[e.key]).map(e=>e.name).join('')+'守护灵';
+let guardianCell=null,guardianChoice=new Set();
+let S, mode = null, selected = null, lastScore = 0, lastRound = 1, hintTimer = 0, offersKey = '';   // mode: {kind:'place'|'cast'|'crystal'|'moveSpirit'|'moveAnimal'|'shelter', ...}
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const elName = k => EL.find(e => e.key === k).name;
+const ELC = { metal: '#f2c230', wood: '#5ccf3a', water: '#3fa6ff', fire: '#ff6a3a', earth: '#d09a5a' };
+let archiveStore;try{archiveStore=localStorage;}catch(_){}
+const achievementBook=AchievementBook.create(archiveStore);
+let achievementQueue=[],achievementTimer=0,overTimer=0,gameSession=0;
+const ELD = { metal: '#b88a10', wood: '#33912a', water: '#1f5fb8', fire: '#b8302a', earth: '#8a5a2a' };
+
+// 地块卡面配色与图标（按 look）
+const CARD = {
+  ruin: ['#b0a08a', '#7a6a58', '🏚'], pollute_water: ['#5a7a5a', '#34503a', '☠'], pollute_earth: ['#a0a048', '#6a6a28', '☣'],
+  pollute_rock: ['#7a6a8a', '#4a3a5a', '⛰'], barren: ['#d8b07a', '#a07a48', '🏜'], rock: ['#a8a090', '#706a5e', '🪨'],
+  sand: ['#f2d088', '#c8a050', '🌵'], bare: ['#b8a890', '#80705a', '⛰'], grass: ['#7ad050', '#3e9a2a', '🌱'],
+  water: ['#4ab0ff', '#1f6ad0', '💧'], lava: ['#ff7a3a', '#a8301a', '🌋'], waste: ['#c8b070', '#8a7440', '🍂'],
+  peak: ['#b8c8d8', '#6a7a8a', '🏔'], forest: ['#4aa848', '#246a2a', '🌲'], wet: ['#5aa888', '#2a6a58', '🪷'],
+  mine: ['#a88860', '#6a5038', '⛏'], valley: ['#6ac868', '#2a8a4a', '🏞'], rain: ['#3a9a5a', '#1a5a34', '🌴'],
+  fertile: ['#8ac048', '#4a7a20', '🌾'], creek: ['#6ad0a0', '#2a8a6a', '🏕'],
+};
+
+// ---------- 音效（WebAudio 合成，无外部文件） ----------
+const Sfx = (() => {
+  let ctx = null, on = true;
+  try { on = localStorage.getItem('sfx') !== '0'; } catch (_) { /* 隐私模式 */ }
+  function tone(f, d, type, vol, slide) {
+    if (!on) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+      g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + d);
+    } catch (_) { /* 无音频设备 */ }
+  }
+  return {
+    tap: () => tone(660, 0.07, 'triangle', 0.08),
+    pick: () => { tone(520, 0.08, 'triangle', 0.1); setTimeout(() => tone(780, 0.1, 'triangle', 0.1), 50); },
+    place: () => { tone(180, 0.18, 'sine', 0.22, 90); setTimeout(() => tone(880, 0.12, 'triangle', 0.08), 60); },
+    magic: () => { tone(400, 0.35, 'sine', 0.12, 1200); setTimeout(() => tone(1200, 0.25, 'triangle', 0.06), 120); },
+    err: () => { tone(220, 0.12, 'square', 0.06); setTimeout(() => tone(160, 0.16, 'square', 0.06), 90); },
+    round: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.1), i * 90)),
+    win: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'triangle', 0.12), i * 130)),
+    ding: i => tone(740 * Math.pow(2, i / 12), 0.1, 'sine', 0.045),
+    link: n => [660,880,1100].slice(0,Math.min(3,n)).forEach((f,i)=>setTimeout(()=>tone(f,.18,'triangle',.055),i*65)),
+    guard: () => { tone(420,.22,'sine',.09,1000);setTimeout(()=>tone(1320,.3,'triangle',.04),120); },
+    meteor: () => tone(320,.65,'sine',.065,75),
+    impact: blocked => { tone(blocked?980:95,blocked?.18:.22,blocked?'triangle':'sine',blocked?.045:.065,blocked?1500:45); },
+    get on() { return on; },
+    toggle() { on = !on; try { localStorage.setItem('sfx', on ? '1' : '0'); } catch (_) { /* 忽略 */ } },
+  };
+})();
+const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) { /* 不支持 */ } };
+const Tokens = TokenFlights.create({project:k=>View.project(k),burstAt:k=>View.burstAt(k),ding:Sfx.ding,bump,state:()=>S,score:s=>G.score(s).total,left:s=>G.emptyKeys(s).length});
+
+function start(seed) {
+  Tokens.reset();
+  document.querySelectorAll('.float').forEach(el=>el.remove());
+  S = G.newGame(seed != null ? seed : (Date.now() & 0x7fffffff),{scenario:$('scenario').value,tutorial:$('scenario').value==='tutorial'});
+  if(seed==null&&!window.habitatSaveTried){window.habitatSaveTried=true;try{const raw=localStorage.getItem('element-habitat-save-v13');if(raw){const saved=G.restore(raw);if(saved)S=saved;}}catch(_){}}
+  gameSession++;clearTimeout(overTimer);clearTimeout(achievementTimer);achievementTimer=0;achievementQueue=[];$('achievementToast').classList.remove('show');
+  mode = null; selected = null; hint('');
+  guardianCell=null;guardianChoice.clear();$('dlgGuardian').close();
+  lastScore = G.score(S).total; lastRound = 1; offersKey = '';
+  render();
+  banner('第 1 轮', '放下地块，唤醒灵地');
+}
+
+function hint(msg, err) {
+  const h = $('hint');
+  clearTimeout(hintTimer);
+  if (!msg) { h.classList.remove('show'); return; }
+  h.textContent = msg; h.className = 'toon' + (err ? ' err' : '');
+  void h.offsetWidth; h.classList.add('show');
+  if (err) { hintTimer = setTimeout(() => h.classList.remove('show'), 2000); Sfx.err(); buzz(40); }
+}
+function setMode(m, msg) { mode = m; if (m) Sfx.pick(); hint(m ? msg : ''); render(); }
+
+function banner(txt, sub) {
+  const b = $('banner');
+  $('banTxt').textContent = txt; $('banSub').textContent = sub || '';
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+}
+function flash() { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+// 在地块或元素上方飘字
+function floatText(txt, color, x, y) {
+  const d = document.createElement('div');
+  d.className = 'float toon'; d.textContent = txt; d.style.color = color || '#fff';
+  d.style.left = x + 'px'; d.style.top = y + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1150);
+}
+function floatAtCell(k, txt, color) {
+  const p = View.project ? View.project(k) : null;
+  if (p) floatText(txt, color, p.x, p.y - 20);
+  else { const r = $('score').getBoundingClientRect(); floatText(txt, color, r.left + r.width / 2, r.bottom + 10); }
+}
+function bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+
+// 行动成功后的特效类型
+function fxOf(a) {
+  switch (a.type) {
+    case 'place': return ['place', a.cell];
+    case 'cast': return [a.magic, a.cell];
+    case 'merge': return ['merge', a.cell, a.el];
+    case 'mergeGuardian': case 'moveGuardian': return null; // Dedicated, composition-aware effects.
+    case 'useCrystal': return [a.inverse?'infection':'crystal', a.cell, a.el];
+    case 'upgrade': return ['upgrade',a.cell];
+    case 'pour': return ['spring',a.cell];
+    case 'deployShield': return null; // Region-wide deployment is shown after state sync.
+    case 'useCharm': return ['charm', a.cell];
+    case 'craft': return a.cell ? ['shelter', a.cell] : null;
+    case 'moveSpirit': case 'moveAnimal': case 'moveBeast': case 'movePlant': return ['crystal', a.to, a.el];
+    default: return a.cell ? ['place', a.cell] : null;
+  }
+}
+
+function doAct(action) {
+  const before = G.score(S).total, round = S.round;
+  const r = G.act(S, action);
+  if (!r.ok) { hint(r.msg, true); render(); return false; }
+  mode = null; hint('');
+  const f = fxOf(action);
+  if (action.type === 'place') { Sfx.place(); buzz(20); } else if (action.type === 'cast') { Sfx.magic(); buzz(25); } else Sfx.tap();
+  Tokens.enqueue(S.events);
+  render();
+  eventEffects(S.events);
+  if(action.type==='deployShield') { const sh=S.shields.find(sh=>sh.id===action.shieldId);if(sh)View.shieldDeploy(sh);Sfx.guard();buzz([15,35,20]); }
+  if (f) {
+    if(action.type==='useCrystal') { const session=S;Tokens.down(action.cell,action.el,()=>{if(S===session)View.fx(...f);}); }
+    else if(!(action.type==='cast'&&action.magic==='purify')&&action.type!=='useCharm')View.fx(f[0], f[1], f[2]);
+  }
+  const gain = (S.round === round ? G.score(S).total : before) - before;
+  const cell = action.cell || action.to;
+  if (gain && cell) floatAtCell(cell, (gain > 0 ? '+' : '') + gain, gain > 0 ? '#ffe14a' : '#ff6a5a');
+  else if (cell) floatAtCell(cell, r.msg.length > 10 ? '✓' : r.msg, '#fff');
+  if (S.over) { const session=gameSession;overTimer=setTimeout(()=>{if(gameSession===session&&S.over)showOver();},900); }
+  return true;
+}
+
+function gemRow(a) {
+  return a.map((v, i) => `<span class="gem ${v === 0 ? 'z' : ''} ${v < 0 ? 'neg' : ''}" style="background:${ELC[EL[i].key]}" title="${EL[i].name}">${v}</span>`).join('');
+}
+
+function renderOffers() {
+  $('offerTag').textContent=S.placed?'本轮已放置':'待选地块';
+  $('btnReroll').disabled=!!S.placed||S.over||Object.values(S.inv.crystal).reduce((a,b)=>a+b,0)<3;
+  const key = S.round + ':' + S.offers.join(',');
+  const fresh = key !== offersKey && S.offers.length >= D.RULES.offersPerRound;
+  offersKey = key;
+  $('offers').innerHTML = S.offers.map((id, i) => {
+    const t = G.TYPE[id], c = CARD[t.look] || CARD.grass;
+    const on = mode && mode.kind === 'place' && mode.offer === i ? 'on' : '';
+    return `<button class="card ${on}" data-offer="${i}" aria-label="${esc(t.name)}" style="${fresh ? `animation-delay:${i * 90}ms` : 'animation:none'}">
+      <span class="art" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})"></span>
+      <span class="emb">${c[2]}</span><span class="nm toon">${esc(t.name)}${t.level?` · T${t.level}`:""}</span><span class="gems toon">${gemRow(t.attrs)}</span></button>`;
+  }).join('') || '<span class="muted" style="padding:20px 8px">已放置 · 可以施法或交互</span>';
+}
+
+function renderMagics() {
+  $('magics').innerHTML = D.MAGICS.map(m => {
+    const on = mode && mode.kind === 'cast' && mode.magic === m.id ? 'on' : '';
+    const used = S.magicUsed[m.id], locked=!G.magicUnlocked(S,m.id);
+    return `<button class="btn mg toon ${on} ${used ? 'used' : locked?'locked':''}" data-magic="${m.id}" title="${esc(m.name + '：' + m.desc)}" ${used||locked||!S.placed||S.ap===0||S.over ? 'disabled' : ''}><span class="gl">${m.glyph}</span><small>${m.name}</small></button>`;
+  }).join('');
+}
+
+function renderDetail() {
+  const t = selected && S.cells[selected];
+  const box = $('detail');
+  if (!t) { box.classList.remove('open'); return; }
+  box.classList.add('open');
+  const ty = G.TYPE[t.type], c = CARD[ty.look] || CARD.grass;
+  const cap = G.spiritCap(t), attrCap=G.attrCap(S,selected);
+  let h = `<div class="dh toon" style="background:linear-gradient(160deg, ${c[0]}, ${c[1]})">
+    <button class="btn round red sm close x" data-a="close" aria-label="关闭" style="width:30px;height:30px;padding:0">✕</button>
+    <h3>${c[2]} ${esc(t.oasis?"沙漠绿洲":ty.name)}</h3><div class="sub">${t.spring ? '💧泉眼 · ' : t.pond ? '💧小湖 · ' : ''}${t.vein?"⛏矿脉 · ":""}${t.farm?"🌾耕田 · ":""}${t.shelter ? '🏠庇护所 · ' : ''}元素灵 ${t.spirits.length}/${cap}<br>同属性3灵轮末自动合兽 · 免费<br>连片 ${G.cluster(S,selected).length} 格 · 属性上限 ${attrCap}</div></div>`;
+  h += '<div class="bars5">' + t.attrs.map((v, i) => `<div class="bar5"><div class="tube"><div class="fill ${v < 0 ? 'neg' : ''}" style="height:${Math.min(100, Math.abs(v) / attrCap * 100)}%;background:${ELC[EL[i].key]}"></div></div><b>${v}</b>${EL[i].name}</div>`).join('') + '</div>';
+  let n = 0;
+  const row = (l, r) => `<div class="row" style="animation-delay:${(n++) * 40}ms"><span>${l}</span><span>${r}</span></div>`;
+  for (const e of EL) {
+    const list = t.spirits.filter(s => s.el === e.key);
+    if (!list.length) continue;
+    h += row(`<i class="dot" style="background:${ELC[e.key]}"></i>${e.name}元素灵 ×${list.length}`,
+      `<button class="btn sm" data-a="moveSpirit" data-id="${list[0].id}">移动</button>
+       <button class="btn sm gold" data-a="merge" data-el="${e.key}" ${list.length < D.RULES.mergeCount ? 'disabled' : ''}>合成兽</button>`);
+  }
+  if(typeof terrainPanel==='function')h+=terrainPanel(t,selected);
+  const availableUpgrades=G.upgrades(S,selected);
+  if(availableUpgrades.length)h+=row('⬆ 免费升级',availableUpgrades.map(ty=>`<button class="btn sm green" data-a="upgrade" data-type="${ty.id}">${ty.name}</button>`).join(''));
+  if(t.cancers.length)h+=row(`☣ 癌元 ×${t.cancers.length}`,'<span class="muted">净化 / 焚尽可消灭</span>');
+  const shield=S.shields.filter(sh=>sh.cells.includes(selected));
+  if(shield.length)h+=row('🛡 元素盾',`<span class="muted">${shield.map(sh=>EL.filter(e=>sh.defense[e.key]).map(e=>e.name+sh.defense[e.key]).join(' ')).join(' / ')} · 共享</span>`);
+  for (const b of t.beasts) h += row(`<i class="dot" style="background:${ELC[b.el]};width:16px;height:16px;border-radius:3px;transform:rotate(45deg)"></i>${elName(b.el)}元素兽`, `<button class="btn sm" data-a="moveBeast" data-id="${b.id}">移动</button><span class="muted">每 2 轮产大结晶</span>`);
+  if(t.beasts.length)h+=row(`✦ 本格元素兽 ${t.beasts.length} 个`,`<button class="btn sm gold" data-a="mergeGuardian" ${t.beasts.length<D.RULES.guardianMergeCount?'disabled':''}>选 5 兽合成守护灵</button>`);
+  for(const guardian of t.guardians||[])h+=row(`✦ ${guardianName(guardian.power)}<small class="muted" style="display:block">每轮五格 ${guardianText(guardian.power)}</small>`,`<button class="btn sm gold" data-a="moveGuardian" data-id="${guardian.id}" ${!S.placed||S.ap<1?'disabled':''} title="${!S.placed?'先放置本轮地块':'四邻已放置地块，每次消耗 1 行动点，可重复移动'}">移动 · 1行动</button>`);
+  for (const p of t.plants) h+=row(`${D.PLANTS[p.kind].icon} ${D.PLANTS[p.kind].name}`,`<span class="muted">每3轮自动滋养 · ${3-(p.age||0)%3}轮后</span>`);
+  const animalGroups=new Map();
+  for(const a of t.animals){const key=a.kind+':'+(a.el||'');const group=animalGroups.get(key)||{...a,count:0};group.count++;animalGroups.set(key,group);}
+  for (const a of animalGroups.values()) {
+    const nm = (a.el ? elName(a.el) + '元素' : '') + D.ANIMALS[a.kind].name;
+    h += row(`${D.ANIMALS[a.kind].icon} ${nm} ×${a.count}`, `<span class="muted">${a.el?'每轮 '+elName(a.el)+' +1/只':'随机吸收灵力'} · 不计分</span>`);
+  }
+  if(t.ores.length)h+=row('⛏ 矿物 ×'+t.ores.length,'<span class="muted">轮末自动采集，金属性 +1/份</span>');
+  if (S.inv.bucket || S.inv.water) h += row(`🪣 桶 空${S.inv.bucket - S.inv.bucketFull}/满${S.inv.bucketFull} / 产水${S.inv.water}`, '<button class="btn sm" data-a="scoop">舀水</button><button class="btn sm" data-a="pour">倒水</button>');
+  if (S.inv.charm) h += row(`📜 净化符 ×${S.inv.charm}`, '<button class="btn sm" data-a="useCharm" style="--c:#8fd8ff;--d:#3a8ab8">使用</button>');
+  if (!n) h += '<div class="muted" style="padding:6px 14px">这块地还很安静。结束本轮后会孕育元素灵和生灵。</div>';
+  box.innerHTML = h;
+  box.querySelectorAll('[data-a]').forEach(b=>{const a=b.dataset.a;if(a==='close'||a==='upgrade')return;const id=+b.dataset.id;let lock=false;
+    if(['moveSpirit'].includes(a))lock=S.interactionUsed['spirit:'+id];
+    if(['moveBeast'].includes(a))lock=S.interactionUsed['beast:'+id];
+    if(['movePlant','chop','compostPlant'].includes(a))lock=S.interactionUsed['plant:'+id];
+    if(['moveAnimal','feed','pair','compostAnimal'].includes(a))lock=S.interactionUsed['animal:'+id];
+    if(['scoop','pour'].includes(a))lock=S.interactionUsed.bucket;
+    if(a==='mineOre')lock=S.interactionUsed['ore:'+t.ores[+b.dataset.i]];
+    if(a==='useCharm')lock=S.interactionUsed.charm;
+    if(lock||S.over){b.disabled=true;b.title='本轮已交互';}
+  });
+}
+
+function renderInv() {
+  const inv = S.inv;
+  let h = '', total = 0;
+  for (const e of EL) for (const kind of ['normal','big','inverse']) {
+    const big=kind==='big',inverse=kind==='inverse';
+    const n = (inverse ? inv.inverseCrystal : big ? inv.bigCrystal : inv.crystal)[e.key];
+    if (!n) continue;
+    total += n;
+    const on = mode && mode.kind === 'crystal' && mode.el === e.key && mode.big === big && !!mode.inverse===inverse ? 'on' : '';
+    h += `<button class="btn sm cr toon ${on}" data-crystal="${e.key}" data-big="${big ? 1 : ''}" data-inverse="${inverse?1:''}" ${S.over?'disabled':''} style="--c:${ELC[e.key]};--d:${ELD[e.key]}${on ? ';box-shadow:0 0 0 3px var(--gold),0 3px 0 ' + ELD[e.key] : ''}" title="${inverse?'逆结晶 −1':big ? '大型结晶 +2' : '结晶 +1'}，不消耗行动点，每轮不限次数"><i${big ? ' style="width:16px;height:18px"' : ''}></i>${inverse?'逆':big ? '大' : ''}${e.name}×${n}</button>`;
+  }
+  $('crystals').innerHTML = h || '<span class="muted">暂无，元素灵每 3 轮产 1 颗</span>';
+  $('btnBag').dataset.n = total;
+  $('mats').innerHTML = `<span>🪵 木<b>${inv.wood}</b></span>` + Object.entries(D.ORES).map(([k, v]) => `<span>${v.name}<b>${inv.ore[k]}</b></span>`).join('') +
+    `<span>🪣 桶<b>${inv.bucket}</b></span><span>💧 产水<b>${inv.water}</b></span><span>📜 符<b>${inv.charm}</b></span>`;
+  $('shieldStock').innerHTML=inv.shields.map(sh=>`<button class="btn sm" data-shield="${sh.id}">部署 · ${sh.coverage} 格</button>`).join('')||'<span class="muted">暂无可部署的盾</span>';
+  $('btnShield').disabled=S.over||!!S.interactionUsed['craft:shield'];
+}
+
+function render() {
+  $('round').textContent = S.round;
+  $('ap').innerHTML = Array.from({ length: S.roundAP }, (_, i) => `<i class="${i >= S.ap ? 'used' : ''}"></i>`).join('');
+  $('ap').dataset.value=`${S.ap}/${S.roundAP}`;
+  $('stageLabel').textContent=`阶段 ${G.stage(S)} · 行动 ${S.ap}/${S.roundAP} · 星雨 ${10-(S.round-1)%10}轮`;
+  $('globalLabel').innerHTML=G.globalAttrs(S).map((v,i)=>`<span style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join(' ');
+  $('pillAp').setAttribute('aria-label', `剩余 ${S.ap} 点行动`);
+  const sc = G.score(S);
+  Tokens.numbers(S);
+  lastScore = sc.total;
+  $('scoreDetail').textContent = `灵力 = 属性 ${sc.attrs} + 元素兽 ${sc.beasts}×${D.SCORE.beast} + 植物 ${sc.plants} + 愿景 ${sc.bonus}`;
+  const be = $('btnEnd');
+  be.disabled = S.over || S.placed === 0;
+  be.classList.toggle('ready', !be.disabled && S.ap > 0);
+  renderOffers(); renderMagics(); renderDetail(); renderInv();
+  $('log').innerHTML = S.log.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join('');
+  View.sync(S, { mode, selected });
+  renderProgress();
+  if(typeof renderJourney==='function')renderJourney();
+  if (S.round !== lastRound) {
+    lastRound = S.round;
+    bump($('pillRound'));
+    Sfx.round(); flash();
+    const got = S.log.find(l => l.startsWith(`[${S.round - 1}] 获得`));
+    banner(`第 ${S.round} 轮`, got ? got.replace(/^\[\d+\] /, '') : '灵地在生长');
+  }
+}
+
+function showOver() {
+  const sc = G.score(S);
+  const stars = sc.total >= 220 ? 3 : sc.total >= 150 ? 2 : 1;
+  $('stars').innerHTML = [1, 2, 3].map(i => `<span class="${i > stars ? 'off' : ''}" style="animation-delay:${300 + i * 200}ms">⭐</span>`).join('');
+  $('overSum').innerHTML = [['属性', sc.attrs], ['元素兽×3', sc.beasts*3], ['植物',sc.plants],['愿景奖励',sc.bonus],['基础灵力',sc.base]].map(([a, b]) => `<div><b>${b}</b>${a}</div>`).join('');
+  $('overText').textContent = `${S.round} 轮铺满了整片灵地。你终于记起：你是五贤之师。五贤者没有归来，但他们的老师回来了。`;
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());$('over').showModal();
+  Sfx.win();
+  // 分数滚动
+  const el = $('overScore'), t0 = performance.now();
+  (function tick(t) { const u = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(sc.total * (1 - Math.pow(1 - u, 3))); if (u < 1) requestAnimationFrame(tick); })(t0);
+}
+
+// ---------- 事件 ----------
+function onCell(k) {
+  const t = S.cells[k];
+  if (mode) {
+    const m = mode;
+    if (m.kind === 'place') { if (!t) doAct({ type: 'place', offer: m.offer, cell: k }); return; }
+    if (!t) return;
+    if (m.kind === 'cast') doAct({ type: 'cast', magic: m.magic, cell: k });
+    else if (m.kind === 'crystal') doAct({ type: 'useCrystal', cell: k, el: m.el, big: m.big, inverse:m.inverse });
+    else if (m.kind==='deployShield') doAct({type:'deployShield',cell:k,shieldId:m.id});
+    else if (m.kind==='moveBeast') {if(doAct({type:'moveBeast',from:m.from,beastId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind==='moveGuardian') {if(doAct({type:'moveGuardian',from:m.from,guardianId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind==='movePlant') {if(doAct({type:'movePlant',from:m.from,plantId:m.id,to:k})){selected=k;render();}}
+    else if (m.kind === 'shelter') doAct({ type: 'craft', recipe: 'shelter', cell: k });
+    else if (m.kind === 'moveSpirit') { if (doAct({ type: 'moveSpirit', from: m.from, spiritId: m.id, to: k })) { selected = k; render(); } }
+    else if (m.kind === 'moveAnimal') { if (doAct({ type: 'moveAnimal', from: m.from, animalId: m.id, to: k })) { selected = k; render(); } }
+    return;
+  }
+  selected = t && selected !== k ? k : null;
+  if (selected) {Sfx.tap();if(S.journey?.step===1&&selected==='3,2')G.act(S,{type:'tutorial',cell:selected});}
+  render();
+}
+
+function onHover(k, x, y) {
+  const tip = $('tip');
+  const t = k && S.cells[k];
+  if (!k || (!t && !(mode && mode.kind === 'place'))) { tip.style.display = 'none'; return; }
+  if (t) {
+    const s = t.attrs.reduce((a, b) => a + b, 0);
+    tip.innerHTML = `<b>${esc(G.TYPE[t.type].name)}</b> · 属性和 ${s}<br>` + t.attrs.map((v, i) => `<span class="g" style="color:${ELC[EL[i].key]}">${EL[i].name}${v}</span>`).join('')+`<br>连片 ×${G.cluster(S,k).length} · 上限 ${G.attrCap(S,k)}`;
+    if(mode&&mode.kind==='deployShield'){const sh=S.inv.shields.find(sh=>sh.id===mode.id);if(sh)tip.innerHTML+=`<br>🛡 覆盖 ${G.region(S,k,sh.coverage).length} 格 · 点击部署`;}
+    if(mode&&mode.kind==='moveGuardian'){const g=(S.cells[mode.from].guardians||[]).find(g=>g.id===mode.id);tip.innerHTML+=G.neighbors(mode.from).includes(k)&&g?`<br>✦ 移动 · 1行动 · 轮末滋养 ${G.guardianArea(S,k).length} 格<br>${guardianText(g.power)}`:'<br>需选择四邻已放置地块';}
+  } else {
+    const ok = G.legalPlacements(S).includes(k);
+    if(ok){const type=S.offers[mode.offer],preview={...S,cells:{...S.cells,[k]:G.makeTile(type)}},n=G.cluster(preview,k).length;tip.innerHTML=`放置 <b>${esc(G.TYPE[type].name)}</b>${n>1?`<br>连成 ${n} 格 · 上限 ${G.attrCap(preview,k)}`:''}`;}else tip.innerHTML='需与已有地块相邻';
+  }
+  tip.style.display = 'block';
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, x + 14) + 'px';
+  tip.style.top = (y + 16) + 'px';
+}
+
+// 按钮点击水波纹
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.btn, .card');
+  if (!b || b.disabled) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height);
+  const w = document.createElement('span');
+  w.className = 'ripple';
+  w.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+  if (getComputedStyle(b).position === 'static') b.style.position = 'relative';
+  b.style.overflow = 'hidden';
+  b.appendChild(w);
+  setTimeout(() => w.remove(), 520);
+});
+
+$('offers').addEventListener('click', e => {
+  const b = e.target.closest('[data-offer]'); if (!b) return;
+  const i = +b.dataset.offer;
+  setMode(mode && mode.kind === 'place' && mode.offer === i ? null : { kind: 'place', offer: i }, `放置 ${G.TYPE[S.offers[i]].name}：点亮起的空位`);
+});
+$('magics').addEventListener('click', e => {
+  const b = e.target.closest('[data-magic]'); if (!b) return;
+  const id = b.dataset.magic, m = D.MAGICS.find(x => x.id === id);
+  if (!mode && selected) { doAct({ type: 'cast', magic: id, cell: selected }); return; }   // 已选中地块时直接施放
+  setMode(mode && mode.kind === 'cast' && mode.magic === id ? null : { kind: 'cast', magic: id }, `${m.name}：${m.desc}`);
+});
+$('bag').addEventListener('click', e => {
+  const c = e.target.closest('[data-crystal]');
+  if (c) {
+    const el = c.dataset.crystal, big = c.dataset.big === '1',inverse=c.dataset.inverse==='1';
+    if (!mode && selected) { doAct({ type: 'useCrystal', cell: selected, el, big, inverse }); return; }
+    setMode(mode && mode.kind === 'crystal' && mode.el === el && mode.big === big && !!mode.inverse===inverse ? null : { kind: 'crystal', el, big, inverse }, '使用结晶（不消耗行动点）：点击目标地块');
+    return;
+  }
+
+});
+$('detail').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const k = selected, id = +b.dataset.id;
+  switch (b.dataset.a) {
+    case 'close': selected = null; render(); break;
+    case 'moveSpirit': setMode({ kind: 'moveSpirit', from: k, id }, '移动元素灵：点击相邻地块'); break;
+    case 'upgrade':doAct({type:'upgrade',cell:k,tileType:b.dataset.type});break;
+    case 'moveBeast':setMode({kind:'moveBeast',from:k,id},'移动元素兽：点击相邻且同属性为正的地块');break;
+    case 'mergeGuardian':openGuardian(k);break;
+    case 'moveGuardian':setMode({kind:'moveGuardian',from:k,id},'移动守护灵：四邻已放置地块，消耗 1 行动点；同轮可重复移动');break;
+    case 'movePlant':setMode({kind:'movePlant',from:k,id},'移植：点击相邻地块');break;
+    case 'moveAnimal': setMode({ kind: 'moveAnimal', from: k, id }, '移动动物：点击相邻地块'); break;
+    case 'merge': doAct({ type: 'merge', cell: k, el: b.dataset.el }); break;
+    case 'chop': doAct({ type: 'chop', cell: k, plantId: id }); break;
+    case 'compostPlant': doAct({ type: 'compost', cell: k, what: 'plant', targetId: id }); break;
+    case 'compostAnimal': doAct({ type: 'compost', cell: k, what: 'animal', targetId: id }); break;
+    case 'pair': doAct({ type: 'pair', cell: k, animalId: id }); break;
+    case 'feed': doAct({ type: 'feed', cell: k, animalId: id, el: b.dataset.el }); break;
+    case 'mineOre': doAct({ type: 'mineOre', cell: k, index: +b.dataset.i }); break;
+    case 'scoop': doAct({ type: 'scoop', cell: k }); break;
+    case 'pour': doAct({ type: 'pour', cell: k }); break;
+    case 'useCharm': doAct({ type: 'useCharm', cell: k }); break;
+  }
+});
+function eventEffects(events){
+  events.filter(e=>['autoMerge','animalAwaken'].includes(e.kind)).slice(0,12).forEach(e=>View.fx('merge',e.cell,e.el));
+  events.filter(e=>['guardianMerge','guardianMove','guardian'].includes(e.kind)).forEach(e=>{View.guardianFX(e);if(e.kind==='guardianMerge')Sfx.guard();});
+  const meteors=events.filter(e=>e.kind==='meteor');
+  if(meteors.length){View.meteorRain(meteors);Sfx.meteor();banner(`${EL.find(e=>e.key===meteors[0].el).name}陨星雨`,`${meteors.length} 格落点 · ${meteors.filter(e=>e.damage<3).length} 格获护盾拦截`);}
+  events.filter(e=>['purify','infection'].includes(e.kind)||(!meteors.length&&e.kind==='shield')).forEach(e=>View.fx(e.kind,e.cell,e.el));
+}
+function guardianPreview(){
+  const beasts=S.cells[guardianCell]?.beasts||[],chosen=beasts.filter(b=>guardianChoice.has(b.id));
+  const power=Object.fromEntries(EL.map(e=>[e.key,chosen.filter(b=>b.el===e.key).length]));
+  const count=chosen.length,valid=count===D.RULES.guardianMergeCount&&!S.over;
+  $('guardianOptions').querySelectorAll('input').forEach(b=>{b.checked=guardianChoice.has(+b.dataset.beast);b.disabled=!b.checked&&count>=D.RULES.guardianMergeCount;});
+  $('guardianPreview').innerHTML=`<b>已选 ${count}/5 · ${count?guardianName(power):'选择元素兽'}</b><div>${guardianText(power)||'可混合任意属性'}</div><small>每轮结束：所在地块及已放置四邻，共 ${G.guardianArea(S,guardianCell).length} 格 · 不自动移动</small>`;
+  $('btnMergeGuardian').disabled=!valid;$('btnMergeGuardian').textContent=valid?'✦ 免费合成守护灵':`还需选择 ${D.RULES.guardianMergeCount-count} 个`;
+}
+function openGuardian(k){
+  guardianCell=k;const beasts=S.cells[k]?.beasts||[];guardianChoice=new Set(beasts.slice(0,D.RULES.guardianMergeCount).map(b=>b.id));
+  $('guardianOptions').innerHTML=beasts.map((b,i)=>`<label class="guardian-choice"><input type="checkbox" data-beast="${b.id}" aria-label="选择${elName(b.el)}元素兽 ${i+1}"><span><i class="dot" style="background:${ELC[b.el]}"></i>${elName(b.el)}元素兽<small>本格第 ${i+1} 个</small></span></label>`).join('');
+  guardianPreview();$('dlgGuardian').showModal();$('guardianBody').scrollTop=0;Sfx.pick();
+}
+$('guardianOptions').onchange=e=>{if(!e.target.dataset.beast)return;const id=+e.target.dataset.beast;e.target.checked?guardianChoice.add(id):guardianChoice.delete(id);guardianPreview();Sfx.tap();};
+$('btnMergeGuardian').onclick=()=>{if(doAct({type:'mergeGuardian',cell:guardianCell,beastIds:[...guardianChoice]})){$('dlgGuardian').close();guardianChoice.clear();}};
+function renderProgress() {
+  const values=G.metrics(S), fresh=achievementBook.observe(S,values), archive=achievementBook.snapshot();
+  for(const id of fresh)achievementQueue.push(D.ACHIEVEMENTS.find(a=>a.id===id));
+  if(fresh.length&&!achievementTimer)nextAchievement();
+  $('achievementSummary').textContent=`已解锁 ${archive.unlocked.length}/${D.ACHIEVEMENTS.length} · ${achievementBook.persistent()?'记录保存在此浏览器':'本次会话记录，浏览器存储不可用'}`;
+  $('visions').innerHTML=S.visions.map(v=>{const d=D.VISIONS.find(d=>d.id===v.id),n=Math.min(d.target,values[d.metric]||0);return `<div class="progress-card ${v.done?'done':''}"><b>${v.done?'✓':'☆'} ${d.name} · +${d.bonus}</b><p>${d.desc}</p><progress max="${d.target}" value="${v.done?d.target:n}"></progress><small>${v.done?'已完成':n+'/'+d.target}</small></div>`;}).join('');
+  $('achievementList').innerHTML=D.ACHIEVEMENTS.map(a=>{const done=archive.unlocked.includes(a.id),n=archive.progress[a.id]||0;return `<div class="progress-card ${done?'done':''}" data-achievement="${a.id}"><b>${a.icon} ${a.name} ${done?'✓':''}</b><p>${a.desc}</p><progress max="${a.target}" value="${done?a.target:n}"></progress><small>${done?'已解锁':n+'/'+a.target} · 本局 ${Math.min(a.target,values[a.metric]||0)}/${a.target}</small></div>`;}).join('');
+}
+function nextAchievement() {
+  if(!achievementQueue.length){achievementTimer=0;return;}
+  const a=achievementQueue.shift();$('achievementToast').textContent=`${a.icon} 成就解锁 · ${a.name}`;$('achievementToast').classList.add('show');
+  achievementTimer=setTimeout(()=>{$('achievementToast').classList.remove('show');achievementTimer=setTimeout(nextAchievement,350);},3000);
+}
+$('btnAchievements').onclick=()=>{$('dlgMenu').close();renderProgress();$('dlgAchievements').showModal();};
+$('btnReroll').onclick=()=>doAct({type:'reroll'});
+$('shieldStock').onclick=e=>{const b=e.target.closest('[data-shield]');if(!b)return;$('bag').classList.remove('open');setMode({kind:'deployShield',id:+b.dataset.shield},'部署元素盾：预览覆盖区，点击地块确认');};
+let shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+function shieldValues(){return {...shieldMix};}
+function shieldFill(count,primary){
+  shieldMix=Object.fromEntries(EL.map(e=>[e.key,0]));
+  let remaining=Math.min(count,Object.values(S.inv.crystal).reduce((a,b)=>a+b,0));
+  if(primary){const n=Math.min(remaining,S.inv.crystal[primary]);shieldMix[primary]=n;remaining-=n;}
+  while(remaining>0){let filled=false;for(const e of EL)if(remaining&&shieldMix[e.key]<S.inv.crystal[e.key]){shieldMix[e.key]++;remaining--;filled=true;}if(!filled)break;}
+  shieldPreview();
+}
+function shieldPreview(){
+  const values=shieldValues(),n=Object.values(values).reduce((a,b)=>a+b,0),stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;
+  const valid=n>=5&&!missing&&!S.over&&!S.interactionUsed['craft:shield'];
+  for(const e of EL){const row=$('shieldInputs').querySelector(`[data-shield-row="${e.key}"]`);if(!row)continue;row.querySelector('output').textContent=values[e.key];row.querySelector('input').value=values[e.key];row.querySelector('input').disabled=!S.inv.crystal[e.key];row.querySelector('[data-shield-focus]').disabled=!S.inv.crystal[e.key];row.querySelector('[data-delta="-1"]').disabled=!values[e.key];row.querySelector('[data-delta="1"]').disabled=values[e.key]>=S.inv.crystal[e.key];}
+  $('shieldPreview').classList.toggle('incomplete',!valid);
+  $('shieldPreview').innerHTML=`<b>🛡 ${Math.floor(n/5)} 格覆盖 · ${n} 点防护</b><div class="shield-bar">${EL.map(e=>`<span style="background:${ELC[e.key]};width:${n?values[e.key]/n*100:0}%"></span>`).join('')}</div><small>${EL.filter(e=>values[e.key]).map(e=>`${e.name} ${values[e.key]}`).join(' · ')||'选择结晶配比'}</small><small>${stock<5?'库存不足 5 颗，先积攒结晶':missing?`还差 ${missing} 颗，补齐即可制造`:n?'各元素防护在覆盖区内共享':'每 5 颗覆盖 1 格'}</small>`;
+  $('shieldComplete').hidden=!missing;$('shieldComplete').disabled=stock-n<missing;$('shieldComplete').textContent=`补齐 ${missing} 颗 → ${Math.ceil(Math.max(5,n)/5)} 格`;
+  $('btnCraftShield').disabled=!valid;$('btnCraftShield').textContent=valid?`制造 · 消耗 ${n} 颗结晶`:stock<5?'库存不足，需 5 颗结晶':'先凑齐 5 颗的倍数';
+  $('shieldPresets').querySelectorAll('[data-shield-preset]').forEach(b=>{const p=b.dataset.shieldPreset;b.disabled=p!=='clear'&&stock<(p==='max'?5:Number(p));});
+}
+$('btnShield').onclick=()=>{
+  $('shieldInputs').innerHTML=EL.map(e=>`<div class="shield-row" data-shield-row="${e.key}" style="--el-color:${ELC[e.key]}"><button class="element-pick" data-shield-focus="${e.key}" style="color:${ELD[e.key]}" aria-label="优先防御${e.name}">◈ ${e.name}<small>库存 ${S.inv.crystal[e.key]}</small></button><button class="btn sm" data-shield-adjust="${e.key}" data-delta="-1" aria-label="减少${e.name}结晶">−</button><output aria-label="已选${e.name}结晶">0</output><button class="btn sm" data-shield-adjust="${e.key}" data-delta="1" aria-label="增加${e.name}结晶">+</button><input type="range" min="0" max="${S.inv.crystal[e.key]}" step="1" value="0" data-element="${e.key}" aria-label="${e.name}结晶配比"></div>`).join('');
+  const stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(stock>=5?5:0);$('dlgShield').showModal();$('shieldBody').scrollTop=0;Sfx.pick();
+};
+$('shieldInputs').oninput=e=>{if(!e.target.dataset.element)return;const el=e.target.dataset.element;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],Math.round(Number(e.target.value))));shieldPreview();};
+$('shieldInputs').onclick=e=>{const adjust=e.target.closest('[data-shield-adjust]'),focus=e.target.closest('[data-shield-focus]');if(adjust){const el=adjust.dataset.shieldAdjust;shieldMix[el]=Math.max(0,Math.min(S.inv.crystal[el],shieldMix[el]+Number(adjust.dataset.delta)));shieldPreview();Sfx.ding(Math.min(5,shieldMix[el]));}else if(focus){const n=Object.values(shieldMix).reduce((a,b)=>a+b,0);shieldFill(n>=5?n:5,focus.dataset.shieldFocus);Sfx.pick();}};
+$('shieldPresets').onclick=e=>{const b=e.target.closest('[data-shield-preset]');if(!b)return;const p=b.dataset.shieldPreset,stock=Object.values(S.inv.crystal).reduce((a,b)=>a+b,0);shieldFill(p==='clear'?0:p==='max'?Math.floor(stock/5)*5:Math.min(Number(p),Math.floor(stock/5)*5));Sfx.pick();};
+$('shieldComplete').onclick=()=>{let n=Object.values(shieldMix).reduce((a,b)=>a+b,0),missing=n<5?5-n:(5-n%5)%5;for(const e of EL){const add=Math.min(missing,S.inv.crystal[e.key]-shieldMix[e.key]);shieldMix[e.key]+=add;missing-=add;}shieldPreview();Sfx.pick();};
+$('btnCraftShield').onclick=()=>{if(doAct({type:'craftShield',crystals:shieldValues()})){$('dlgShield').close();hint('元素盾已放入背包，点击部署');}};
+$('btnEnd').onclick = () => { const r = G.endRound(S); mode = null; if (r.ok) { hint('');Tokens.enqueue(S.events); } else hint(r.msg, true); render();if(r.ok)eventEffects(S.events); };
+$('btnBag').onclick = () => { $('bag').classList.toggle('open'); Sfx.tap(); };
+$('btnHelp').onclick = () => { $('dlgHelp').showModal(); Sfx.tap(); };
+$('btnMenu').onclick = () => { $('dlgMenu').showModal(); Sfx.tap(); };
+$('btnMenuHelp').onclick = () => { $('dlgMenu').close(); $('dlgHelp').showModal(); };
+$('btnNew').onclick = () => { $('dlgMenu').close(); start(); };
+$('btnAgain').onclick = () => { $('over').close(); start(); };
+const soundLabel = () => { $('btnSound').querySelector('.t').textContent = Sfx.on ? '🔊 音效开' : '🔇 音效关'; };
+$('btnSound').onclick = () => { Sfx.toggle(); soundLabel(); Sfx.tap(); };
+soundLabel();
+let atmosphereOn=true;
+try{atmosphereOn=localStorage.getItem('atmosphere')!=='0';}catch(_){}
+const atmosphereLabel=()=>{
+  View.setAtmosphere(atmosphereOn);
+  $('btnAtmosphere').querySelector('.t').textContent=atmosphereOn?'✨ 氛围开':'✨ 氛围关';
+  $('btnAtmosphere').setAttribute('aria-pressed',String(atmosphereOn));
+};
+$('btnAtmosphere').onclick=()=>{atmosphereOn=!atmosphereOn;try{localStorage.setItem('atmosphere',atmosphereOn?'1':'0');}catch(_){}atmosphereLabel();Sfx.tap();};
+atmosphereLabel();
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d && d.id !== 'over') d.close(); }));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.querySelector('dialog[open]')) return;
+  if (mode) setMode(null);
+  else if (selected) { selected = null; render(); }
+});
+document.addEventListener('gesturestart', e => e.preventDefault());   // iOS 禁止页面缩放
+
+if (!View.supported || View.supported()) {
+  View.init($('world'), {
+    onCell, onHover,
+    onFlash() { flash(); },
+    onLink(count,cell) { Sfx.link(count);floatAtCell(cell,`连片 ×${count} · 上限 ${G.attrCap(S,cell)}`,'#e9ffaf');buzz(15); },
+    onImpact(blocked) { Sfx.impact(blocked); },
+    onMiss() { if (!mode && selected) { selected = null; render(); } },
+  });
+  start();
+} else {
+  $('nogl').style.display = 'grid';
+}
+</script>
+<script src="journey-ui.js"></script>
+</body>
+</html>

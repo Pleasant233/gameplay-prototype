@@ -65,7 +65,7 @@ namespace ElementHabitat.Editor
         static string trackedCell;
         static double scoreBefore;
         static int bagBefore, roundBefore, apBefore, attrsBefore;
-        static string ArtifactDirectory => Path.GetFullPath(Path.Combine(Application.dataPath, "../../artifacts/unity-motion"));
+        static string ArtifactDirectory => Path.Combine(HabitatValidationPaths.Artifacts, "unity-motion");
 
         // Unity -batchmode -projectPath SpotlightGamejam -executeMethod
         // ElementHabitat.Editor.HabitatMotionValidation.Validate -logFile ...

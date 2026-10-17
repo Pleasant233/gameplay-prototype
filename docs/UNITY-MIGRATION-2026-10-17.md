@@ -52,3 +52,11 @@ Windows x64 构建成功，并以独立程序运行了 12 秒启动检查：Unit
 画面采用 Unity 原生程序模型重建；相机、材质和后处理没有逐像素复刻 Three.js。桌面/窄屏截图检查不能代替作者的美术验收；Android、iOS、WebGL 打包与真机性能未验证。
 
 Noto Sans SC 字体以 SIL OFL 授权，许可证随 `Resources/NotoSansSC-LICENSE.txt` 保存。字体生成工具仅用于开发，运行时无需 Python、Node、网络或额外服务。
+
+## 2026-10-18 编辑器序列化修复
+
+`HabitatApp.pending` 是仅供选择目标的临时指令，现显式标记 `[NonSerialized]`。Unity 热重载也会序列化未标记的私有字段，原实现会沿 `GameAction.upgrades` 的递归类型布局触发深度 10 警告，即使字段为 null 也可能发生。规则层、批量升级参数和 NativeJson 存档保持原样。
+
+修复后全量 C# 源码通过 Unity 所带 Roslyn 编译，并确认程序集中的 pending 字段带 NonSerialized 标记；`npm test` 和 1,572 例原生规则对照通过。检查时作者的 Unity 编辑器正在打开本项目，保留该实例；未在同一项目另开批处理或触发其 Play/热重载。回到 Unity 完成脚本重新编译后，再清除旧 Console 记录并进入 Play 检查。
+
+同日后续[镜头与界面验收](UNITY-INTERFACE-2026-10-18.md)已在独立工程副本中实际开启默认域重载，确认 `pending` 不进入 SerializedObject；最终 120 项输入检查中未再出现序列化深度警告。

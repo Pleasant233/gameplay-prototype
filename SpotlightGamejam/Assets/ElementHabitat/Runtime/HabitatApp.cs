@@ -19,7 +19,9 @@ namespace ElementHabitat
         public string SelectedCell { get; private set; }
         public string Message { get; private set; } = "选择一张地块，再点击相邻空位；中央守护塔将庇护土地。";
         public int SelectedOffer { get; private set; } = -1;
-        GameAction pending;
+        // Transient input intent, not scene data. Hot reload also serializes private fields;
+        // exclude this root so Unity never unfolds GameAction.upgrades recursively.
+        [NonSerialized] GameAction pending;
         bool atmosphere, reducedMotion, sound;
         HabitatAudio audioFeedback;
         HabitatMusic musicFeedback;
@@ -46,6 +48,24 @@ namespace ElementHabitat
             UI.transform.SetParent(transform, false);
             UI.Initialize(Dispatch, NewGame, ContinueGame, SelectCell);
             UI.RangePreviewChanged = (keys, element) => Board.SetRangePreview(keys, element);
+            Board.OnMiss = () => { if (pending == null && SelectedOffer < 0) ClearSelection(); };
+            Board.OnHover = (cell, position) =>
+            {
+                UI.ShowHover(cell, position);
+                if (pending != null && pending.type == "cast")
+                {
+                    if (!string.IsNullOrEmpty(cell) && Current.cells.ContainsKey(cell))
+                        Board.SetRangePreview(Game.MagicArea(Current, cell, pending.magic), Catalog.Magics.First(m => m.id == pending.magic).element);
+                    else Board.ClearRangePreview();
+                }
+                else if (pending != null && pending.type == "deployShield")
+                {
+                    var shield = Current.inv.shields.FirstOrDefault(s => s.id == pending.shieldId);
+                    if (shield != null && !string.IsNullOrEmpty(cell) && Current.cells.ContainsKey(cell))
+                        Board.SetRangePreview(Game.Region(Current, cell, shield.coverage), "water");
+                    else Board.ClearRangePreview();
+                }
+            };
             UI.SetSessionActive(false);
             audioFeedback = gameObject.AddComponent<HabitatAudio>();
             audioFeedback.Enabled = sound;
@@ -64,7 +84,7 @@ namespace ElementHabitat
         void StartGame(bool tutorial, string mode)
         {
             ResetFeedback();
-            photoMode = false; UI.SetPhotoMode(false);
+            photoMode = false; UI.SetPhotoMode(false); Board.SetPhotoMode(false);
             hasStarted = true; UI.SetSessionActive(true);
             Current = Game.NewGame(unchecked((uint)DateTime.UtcNow.Ticks), tutorial, mode);
             musicFeedback.ResetTheme(Game.Score(Current).total);
@@ -111,7 +131,7 @@ namespace ElementHabitat
         bool hasStarted;
         public void SelectCell(string cell)
         {
-            if (Current == null || string.IsNullOrEmpty(cell) || UI.IsMenuOpen) return;
+            if (Current == null || string.IsNullOrEmpty(cell) || UI.IsMenuOpen || UI.HasBlockingModal) return;
             if (photoMode)
             {
                 SelectedCell = cell;
@@ -121,17 +141,20 @@ namespace ElementHabitat
             }
             if (SelectedOffer >= 0)
             {
+                if (Current.cells.ContainsKey(cell) || cell == Game.TOWER_CELL) return;
                 Execute(new GameAction { type = "place", cell = cell, offer = SelectedOffer });
                 return;
             }
             if (pending != null)
             {
+                if (!Current.cells.ContainsKey(cell)) return;
                 var action = pending;
                 if (IsMovement(action.type)) action.to = cell;
                 else action.cell = cell;
                 Execute(action);
                 return;
             }
+            if (SelectedCell == cell || cell != Game.TOWER_CELL && !Current.cells.ContainsKey(cell)) { ClearSelection(); return; }
             SelectedCell = cell;
             if (cell == "3,3") { Board.SetFocus(cell); UI.ShowTower(); Refresh(); return; }
             if (Current.cells.ContainsKey(cell))
@@ -148,6 +171,13 @@ namespace ElementHabitat
         static bool IsMovement(string type) => type == "moveSpirit" || type == "moveBeast" || type == "moveGuardian";
         static bool NeedsCell(string type) => type == "cast" || type == "useCrystal" || type == "useCrystals" || type == "deployShield";
 
+        void ClearSelection()
+        {
+            SelectedCell = null;
+            Board.SetFocus(null);
+            Refresh();
+        }
+
         public void Dispatch(GameAction action)
         {
             if (action == null || Current == null) return;
@@ -155,10 +185,12 @@ namespace ElementHabitat
             {
                 case "selectOffer":
                     if (Current.over || Current.ap < 1 || action.offer < 0 || action.offer >= Current.offers.Count) return;
-                    pending = null; SelectedOffer = action.offer;
+                    pending = null; SelectedOffer = SelectedOffer == action.offer ? -1 : action.offer;
                     audioFeedback.Pick(); musicFeedback.StartMusic();
-                    Message = "正在放置「" + Catalog.Types[Current.offers[action.offer]].name + "」：点击高亮空格，消耗 1 行动。";
+                    Message = SelectedOffer < 0 ? "" : "正在放置「" + Catalog.Types[Current.offers[action.offer]].name + "」：点击高亮空格，消耗 1 行动。";
                     Refresh(); return;
+                case "clearSelection": ClearSelection(); return;
+                case "cameraReset": Board.ResetCamera(); return;
                 case "cancel":
                     pending = null; SelectedOffer = -1; UI.CloseModal(); Message = "已取消操作。"; Refresh(); return;
                 case "save":
@@ -178,9 +210,9 @@ namespace ElementHabitat
                     pending = null; SelectedOffer = -1; SelectedCell = null; photoMode = true;
                     ResetFeedback();
                     Message = "摄影模式：拖动镜头欣赏生境，点选土地可只读检视。";
-                    UI.HideMainMenu(); UI.CloseModal(); UI.SetPhotoMode(true); Board.ResetCamera(); Refresh(); return;
+                    UI.HideMainMenu(); UI.CloseModal(); UI.SetPhotoMode(true); Board.SetPhotoMode(true); Refresh(); Board.FrameMap(); return;
                 case "exitPhoto":
-                    photoMode = false; UI.SetPhotoMode(false); Refresh(); return;
+                    photoMode = false; UI.SetPhotoMode(false); Board.SetPhotoMode(false); Refresh(); return;
                 case "savePhoto":
                     StartCoroutine(SavePhoto()); return;
                 case "exportSave":
@@ -206,12 +238,19 @@ namespace ElementHabitat
             {
                 if (string.IsNullOrEmpty(action.from)) action.from = SelectedCell;
                 pending = action; SelectedOffer = -1;
+                if (action.type == "moveGuardian") SelectedCell = null;
                 Message = action.type == "moveGuardian" ? "点击四邻已放置地块移动守护灵；每步消耗 1 行动。" : "点击相邻已放置地块完成移动。";
                 Refresh(); return;
             }
             if (NeedsCell(action.type) && string.IsNullOrEmpty(action.cell))
             {
-                pending = action; SelectedOffer = -1; Message = "点击一个已放置地块作为目标。"; Refresh(); return;
+                bool same = pending != null && pending.type == action.type && pending.magic == action.magic
+                    && pending.el == action.el && pending.big == action.big && pending.inverse == action.inverse
+                    && pending.shieldId == action.shieldId;
+                pending = same ? null : action; SelectedOffer = -1;
+                Message = same ? "" : "点击一个已放置地块作为目标。";
+                if (!same) audioFeedback.Pick();
+                Refresh(); return;
             }
             Execute(action);
         }
@@ -227,8 +266,8 @@ namespace ElementHabitat
             {
                 hasStarted = true;
                 pending = null; SelectedOffer = -1;
-                if (!string.IsNullOrEmpty(action.cell)) SelectedCell = action.cell;
-                if (!string.IsNullOrEmpty(action.to)) SelectedCell = action.to;
+                if (action.type == "demolish" || action.type == "upgradeBatch") SelectedCell = null;
+                if (IsMovement(action.type) && !string.IsNullOrEmpty(action.to)) SelectedCell = action.to;
                 Save();
             }
             Refresh();
@@ -292,24 +331,54 @@ namespace ElementHabitat
 
         public void Refresh()
         {
-            ICollection<string> targets = Game.LegalPlacements(Current);
+            ICollection<string> targets = SelectedOffer >= 0 ? Game.LegalPlacements(Current) : new List<string>();
             if (pending != null && IsMovement(pending.type) && !string.IsNullOrEmpty(pending.from))
                 targets = Game.Neighbors(pending.from).Where(Current.cells.ContainsKey).ToList();
+            else if (pending != null && NeedsCell(pending.type))
+                targets = Current.cells.Keys.Where(k => pending.type != "cast" || pending.magic != "purify" || Game.CanPurify(Current, k)).ToList();
             Board.Render(Current, photoMode ? null : SelectedCell, photoMode ? new List<string>() : targets);
             Board.SetPlacementPreview(!photoMode && SelectedOffer >= 0 && SelectedOffer < Current.offers.Count ? Current.offers[SelectedOffer] : null);
             if (pending != null && pending.type == "cast" && !string.IsNullOrEmpty(SelectedCell) && Current.cells.ContainsKey(SelectedCell))
                 Board.SetRangePreview(Game.MagicArea(Current, SelectedCell, pending.magic), Catalog.Magics.First(m => m.id == pending.magic).element);
             else Board.ClearRangePreview();
             UI.SetSelectedOffer(SelectedOffer);
+            UI.SetPendingAction(pending);
             UI.Render(Current, SelectedCell, storageWarning ?? Message, File.Exists(SavePath));
             if (musicFeedback != null) musicFeedback.SetScore(Game.Score(Current).total);
         }
 
         void Update()
         {
-            if (Board != null && UI != null) Board.InputEnabled = !UI.IsMenuOpen;
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-                Dispatch(new GameAction { type = photoMode ? "exitPhoto" : "cancel" });
+            if (Board == null || UI == null) return;
+            Board.InputEnabled = !UI.IsMenuOpen && !UI.HasBlockingModal;
+            Board.KeyboardInputEnabled = Board.InputEnabled && !UI.WantsKeyboardInput;
+            var keyboard = Keyboard.current;
+            if (keyboard == null) return;
+            if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                if (photoMode) Dispatch(new GameAction { type = "exitPhoto" });
+                else if (!UI.TryHandleEscape())
+                {
+                    if (pending != null || SelectedOffer >= 0) Dispatch(new GameAction { type = "cancel" });
+                    else ClearSelection();
+                }
+                return;
+            }
+            if (UI.IsMenuOpen || UI.HasBlockingModal || UI.WantsKeyboardInput || !hasStarted) return;
+            if ((keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed) && keyboard.sKey.wasPressedThisFrame && Current.completedMap)
+            { Dispatch(new GameAction { type = "exportSave" }); return; }
+            if (photoMode) return;
+            if (keyboard.digit1Key.wasPressedThisFrame) Dispatch(new GameAction { type = "selectOffer", offer = 0 });
+            if (keyboard.digit2Key.wasPressedThisFrame) Dispatch(new GameAction { type = "selectOffer", offer = 1 });
+            if (keyboard.digit3Key.wasPressedThisFrame) Dispatch(new GameAction { type = "selectOffer", offer = 2 });
+            if (keyboard.bKey.wasPressedThisFrame) UI.ToggleInventory();
+            // EventSystem submits the focused button itself. Let it own Enter there;
+            // dispatching the map shortcut too would end two rounds after a mouse click.
+            var focused = EventSystem.current == null ? null : EventSystem.current.currentSelectedGameObject;
+            bool buttonHasFocus = focused != null && focused.activeInHierarchy && focused.GetComponentInParent<UnityEngine.UI.Button>() != null;
+            if (!buttonHasFocus && (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame))
+                Dispatch(new GameAction { type = "endRound" });
+            if (keyboard.pKey.wasPressedThisFrame && Current.completedMap) Dispatch(new GameAction { type = "photoMode" });
         }
 
         IEnumerator SavePhoto()

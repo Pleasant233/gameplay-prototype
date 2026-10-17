@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace ElementHabitat
 {
     /// <summary>Native, responsive UGUI presentation. Only the controller mutates game state.</summary>
-    public sealed class HabitatUI : MonoBehaviour
+    public sealed partial class HabitatUI : MonoBehaviour
     {
         public int SelectedOffer { get; private set; } = -1;
         public bool IsMenuOpen { get; private set; }
@@ -53,15 +53,15 @@ namespace ElementHabitat
         string guardianCell;
         string activeModal;
         Vector2 lastSize;
-        static readonly Color Cream = Hex("FFF8E7");
-        static readonly Color Ink = Hex("35483C");
-        static readonly Color Muted = Hex("71806D");
-        static readonly Color Green = Hex("548B64");
-        static readonly Color Gold = Hex("DDBA64");
-        static readonly Color Line = Hex("DFE7D3");
+        static readonly Color Cream = Hex("FFF7E6");
+        static readonly Color Ink = Hex("5A4220");
+        static readonly Color Muted = Hex("8A7A62");
+        static readonly Color Green = Hex("5CCF3A");
+        static readonly Color Gold = Hex("FFCC33");
+        static readonly Color Line = Hex("F3E3C2");
         static readonly string[] ElementKeys = { "metal", "wood", "water", "fire", "earth" };
         static readonly string[] ElementNames = { "金", "木", "水", "火", "土" };
-        static readonly string[] ElementColors = { "BB9429", "438956", "3985B7", "C86942", "94713F" };
+        static readonly string[] ElementColors = { "F2C230", "5CCF3A", "3FA6FF", "FF6A3A", "D09A5A" };
         static readonly string[] LessonTitles = { "五格初醒", "看懂土地", "让地脉相连", "第一次净化", "等待新的生命", "土地长成新的样子", "结晶可以连续使用", "继续接上地脉", "旅程由你决定" };
         static readonly string[] LessonCopy = {
             "你不记得名字，只记得金、木、水、火、土。去荒芜之地，把环接上。",
@@ -104,7 +104,7 @@ namespace ElementHabitat
             Build();
             feedbackHUD = root.gameObject.AddComponent<HabitatFeedbackHUD>();
             feedbackHUD.Initialize(root, font, roundSprite, scoreText.rectTransform,
-                bagButton.GetComponent<RectTransform>(), roundText.rectTransform,
+                bagButton.GetComponent<RectTransform>(), leftText.rectTransform,
                 () => ReducedMotion || IsMenuOpen || photoMode, RefreshFeedbackNumbers);
             feedbackHUD.ReceiptArrived = index => TokenArrived?.Invoke(index);
             Layout();
@@ -122,14 +122,13 @@ namespace ElementHabitat
             if (SelectedOffer >= state.offers.Count) SelectedOffer = -1;
             var score = Game.Score(state);
             RefreshFeedbackNumbers();
-            formulaText.text = "属性×0.5 + 塔" + score.tower + " + 生态" + score.ecology;
-            attrsText.text = ColoredAttrs(GlobalAttrs()) + (compact ? "" : "   " + ChallengeHint());
-            weatherText.text = ChallengeHint() + " · " + WeatherHint();
+            UpdateWebNumbers();
             statusText.text = !string.IsNullOrWhiteSpace(message) ? message : (state.over ? state.endReason : SelectedOffer >= 0 ? "点击高亮空格铺地 · 每次 1 行动，可连续铺地" : state.ap == 0 ? "行动用尽 · 仍可使用结晶和升级，准备好后结束本轮" : "自由分配行动：铺地、施法、刷新或铲除 · 每次 1 行动");
             endButton.interactable = !state.over;
-            endButton.GetComponentInChildren<Text>().text = state.over ? "挑战已结束" : "结束本轮";
-            dockTitle.text = "地块供给 T" + Game.SupplyLevel(state) + " · 铺地 1 行动";
+            endButton.GetComponentInChildren<Text>().text = state.over ? "挑战已结束" : "结束本轮 ▶";
+            dockTitle.text = "待选地块";
             BuildOffers();
+            BuildMagics();
             BuildDetail();
             BuildTutorial();
             ArchiveAchievements();
@@ -158,6 +157,7 @@ namespace ElementHabitat
 
         public void SetSelectedOffer(int index)
         {
+            if (SelectedOffer != index && index >= 0) detailOpen = true;
             SelectedOffer = index;
             for (int i = 0; i < offerButtons.Count; i++)
                 if (offerButtons[i] != null) offerButtons[i].GetComponent<HabitatButtonMotion>()?.SetSelected(i == index);
@@ -195,282 +195,59 @@ namespace ElementHabitat
             canvas.sortingOrder = 30;
             canvas.pixelPerfect = true;
             scaler = root.gameObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1600, 1000);
-            scaler.matchWidthOrHeight = 0.5f;
+            // Browser measurements are CSS pixels. A 390 px view uses the same 390 px dock.
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.scaleFactor = 1;
             root.gameObject.AddComponent<GraphicRaycaster>();
-
-            hud = Panel("HUD", root, Cream);
-            Label(hud, "元素生境", 27, Ink, "Game Title");
-            roundText = Label(hud, "", 19, Ink, "Round and AP");
-            scoreText = Label(hud, "", 28, Green, "Score");
-            formulaText = Label(hud, "", 14, Muted, "Score Formula");
-            attrsText = Label(hud, "", 18, Muted, "Elements");
-            weatherText = Label(hud, "", 16, Green, "Weather Forecast");
-            toolbar = Rect("Toolbar", root);
-            Horizontal(toolbar, 8);
-            bagButton = Button(toolbar, "背包 0", OpenInventory, Green, 75);
-            Button(toolbar, "图鉴", OpenAtlas, Green, 75);
-            Button(toolbar, "成就", OpenAchievements, Green, 75);
-            Button(toolbar, "守护塔", ShowTower, Green, 85);
-            Button(toolbar, "菜单", () => Emit(new GameAction { type = "mainMenu" }), Green, 75);
-
-            detail = Panel("Selected Terrain", root, Cream);
-            detailBody = ScrollBody(detail, "Detail Scroll");
-            tutorial = Panel("Journey", root, Cream);
-            tutorialBody = VerticalBody(tutorial, 16);
-            dock = Panel("Placement Cards", root, Cream);
-            dockTitle = Label(dock, "本轮铺地", 18, Ink, "Offer Title");
-            cards = Rect("Three Offers", dock);
-            Horizontal(cards, 10);
-            endButton = Button(dock, "结束本轮", () => { SelectedOffer = -1; Emit(new GameAction { type = "endRound" }); }, Green);
-            status = Panel("Status", root, new Color(.99f, .99f, .94f, .96f));
-            statusText = Label(status, "", 18, Ink, "Status Text");
-            statusText.alignment = TextAnchor.MiddleCenter;
-
-            photoBar = Panel("Photography Controls", root, Cream);
+            BuildWebChrome();
+            detail = Paper("Selected Terrain", root, Cream);
+            detail.gameObject.AddComponent<HabitatDrawerMotion>().Initialize(() => ReducedMotion, false, () => compact);
+            detailBody = ScrollBody(detail, "Detail Scroll", 4);
+            tutorial = Paper("Journey", root, Cream);
+            tutorialBody = VerticalBody(tutorial, 14);
+            bagDrawer = Paper("Crystal Bag Drawer", root, Cream);
+            bagDrawer.gameObject.AddComponent<HabitatDrawerMotion>().Initialize(() => ReducedMotion, true);
+            bagBody = ScrollBody(bagDrawer, "Bag Scroll", 23);
+            var bagTag = Tag(bagDrawer, "背包", Hex("3B8CF0"));
+            Place(bagTag, 13, -11, 55, 23);
+            bagDrawer.gameObject.SetActive(false);
+            photoBar = Paper("Photography Controls", root, Hex("292539"));
             var photoButtons = Rect("Photo Buttons", photoBar);
-            Horizontal(photoButtons, 9);
+            Horizontal(photoButtons, 8);
             Button(photoButtons, "保存照片", () => Emit(new GameAction { type = "savePhoto" }), Green);
             Button(photoButtons, "导出地图", () => Emit(new GameAction { type = "exportSave" }), Gold);
-            Button(photoButtons, "返回经营", () => Emit(new GameAction { type = "exitPhoto" }), Line);
-            var photoHint = Label(photoBar, "拖动旋转 · 双指/滚轮缩放 · 自由欣赏你的生境", 15, Muted, "Photo Hint");
+            Button(photoButtons, "返回经营", () => Emit(new GameAction { type = "exitPhoto" }), Hex("3B8CF0"));
+            var photoHint = Label(photoBar, "拖动旋转 · 右键平移 · 双指 / 滚轮缩放", 11, Color.white, "Photo Hint");
             photoHint.alignment = TextAnchor.MiddleCenter;
             photoBar.gameObject.SetActive(false);
-
             menu = Overlay("Main Menu", root);
-            var menuPanel = Panel("Menu Card", menu, Cream);
-            menuBody = VerticalBody(menuPanel, 30);
+            var menuPanel = Paper("Menu Card", menu, Cream);
+            menuPanel.gameObject.AddComponent<HabitatDrawerMotion>().Initialize(() => ReducedMotion, false, null, true);
+            menuBody = ScrollBody(menuPanel, "Menu Scroll", 18);
             menu.gameObject.SetActive(false);
             modal = Overlay("Dialog", root);
-            var modalPanel = Panel("Dialog Card", modal, Cream);
-            modalBody = ScrollBody(modalPanel, "Dialog Scroll", 72);
+            var modalPanel = Paper("Dialog Card", modal, Cream);
+            modalPanel.gameObject.AddComponent<HabitatDrawerMotion>().Initialize(() => ReducedMotion, false, null, true);
+            modalBody = ScrollBody(modalPanel, "Dialog Scroll", 62);
             modal.gameObject.SetActive(false);
+            tooltip = Panel("Terrain Tooltip", root, new Color(.08f,.12f,.2f,.9f));
+            tooltip.GetComponent<Image>().raycastTarget = false;
+            tooltipText = Label(tooltip, "", 12, Color.white);
+            Inset(tooltipText.rectTransform, 10, 6, 10, 6);
+            tooltip.gameObject.SetActive(false);
         }
 
-        void Layout()
-        {
-            if (root == null) return;
-            bool portrait = canvas.pixelRect.width < canvas.pixelRect.height * 1.25f;
-            // Keep Chinese text readable on narrow displays; using a desktop reference
-            // width in portrait would shrink ordinary 17-point labels to eight pixels.
-            scaler.referenceResolution = portrait ? new Vector2(480, 1000) : new Vector2(1600, 1000);
-            scaler.matchWidthOrHeight = portrait ? 0 : .5f;
-            canvas.scaleFactor = Mathf.Max(.1f, portrait ? canvas.pixelRect.width / 480f : Mathf.Sqrt(canvas.pixelRect.width / 1600f * canvas.pixelRect.height / 1000f));
-            Canvas.ForceUpdateCanvases();
-            var size = root.rect.size;
-            if (size.x <= 0 || size.y <= 0) size = new Vector2(1600, 1000);
-            compact = size.x / size.y < 1.25f;
-            if (state != null)
-            {
-                attrsText.text = ColoredAttrs(GlobalAttrs()) + (compact ? "" : "   " + ChallengeHint());
-                weatherText.text = ChallengeHint() + " · " + WeatherHint();
-            }
-            var w = size.x;
-            var h = size.y;
-            hud.gameObject.SetActive(!IsMenuOpen && !photoMode);
-            toolbar.gameObject.SetActive(!IsMenuOpen && !photoMode);
-            dock.gameObject.SetActive(!IsMenuOpen && !photoMode);
-            status.gameObject.SetActive(!IsMenuOpen);
-            tutorial.gameObject.SetActive(!IsMenuOpen && !photoMode && state != null && state.journey != null && !state.journey.skipped && !state.over);
-            photoBar.gameObject.SetActive(photoMode);
-            float photoWidth = Mathf.Min(640, w - 24);
-            Place(photoBar, (w - photoWidth) * .5f, h - 96, photoWidth, 80);
-            Place((RectTransform)photoBar.GetChild(0), 12, 9, photoWidth - 24, 42);
-            Place((RectTransform)photoBar.GetChild(1), 12, 54, photoWidth - 24, 20);
-            float margin = compact ? 12 : 24;
-            Place(hud, margin, margin, w - 2 * margin, compact ? 175 : 100);
-            var texts = hud.GetComponentsInChildren<Text>();
-            Place(texts[0].rectTransform, 18, 12, compact ? 170 : 180, 36);
-            Place(roundText.rectTransform, compact ? 18 : 220, compact ? 70 : 13, compact ? w - 65 : 525, compact ? 26 : 30);
-            Place(scoreText.rectTransform, compact ? 180 : 750, 12, compact ? 230 : 345, 36);
-            Place(formulaText.rectTransform, compact ? 180 : 750, compact ? 43 : 53, compact ? 230 : 345, 24);
-            Place(attrsText.rectTransform, 18, compact ? 108 : 57, compact ? w - 68 : 700, compact ? 24 : 28);
-            weatherText.gameObject.SetActive(compact);
-            Place(weatherText.rectTransform, 18, 139, w - 68, 26);
-            Place(toolbar, compact ? margin : w - 468, compact ? 196 : 38, compact ? w - 2 * margin : 420, 42);
-            float dockHeight = compact ? 202 : 176;
-            float dockWidth = compact ? w - 2 * margin : Mathf.Min(800, w - 2 * margin - 375);
-            Place(dock, compact ? margin : (w - dockWidth) * .5f, h - dockHeight - margin, dockWidth, dockHeight);
-            Place(dockTitle.rectTransform, 16, 12, dockWidth - 160, 27);
-            Place(cards, 14, 47, dockWidth - 28, compact ? 94 : 93);
-            Place(endButton.GetComponent<RectTransform>(), dockWidth - 166, compact ? 150 : 130, 150, 39);
-            var cancel = dock.Find("Cancel Operation");
-            if (cancel == null)
-            {
-                var cancelButton = Button(dock, "取消选择", () => { SelectedOffer = -1; Emit(new GameAction { type = "cancel" }); }, Hex("E7EAD9"));
-                cancelButton.name = "Cancel Operation";
-                cancel = cancelButton.transform;
-            }
-            Place((RectTransform)cancel, 16, compact ? 150 : 130, 130, 39);
-            var refresh = dock.Find("Refresh Offers");
-            if (refresh == null)
-            {
-                var refreshButton = Button(dock, "刷新 · 1 行动", () => { SelectedOffer = -1; Emit(new GameAction { type = "reroll" }); }, Gold);
-                refreshButton.name = "Refresh Offers";
-                refresh = refreshButton.transform;
-            }
-            refresh.GetComponent<Button>().interactable = state != null && !state.over && state.ap > 0;
-            Place((RectTransform)refresh, dockWidth * .5f - 62, compact ? 150 : 130, 124, 39);
-            float statusWidth = compact ? w - 2 * margin : Mathf.Min(760, w - 440);
-            Place(status, compact ? margin : (w - statusWidth) * .5f, photoMode ? margin : h - dockHeight - margin - 54, statusWidth, 43);
-            Inset(statusText.rectTransform, 13, 5, 13, 5);
-            float detailWidth = compact ? Mathf.Min(340, w - 24) : 330;
-            float detailY = compact ? 250 : 124;
-            float detailHeight = Mathf.Max(180, h - detailY - dockHeight - margin - 68);
-            Place(detail, margin, detailY, detailWidth, Mathf.Min(detailHeight, compact ? 485 : 640));
-            detail.gameObject.SetActive(state != null && !string.IsNullOrEmpty(selected) && state.cells.ContainsKey(selected) && detailOpen && !IsMenuOpen && (!photoMode || photoInspection));
-            float journeyWidth = compact ? Mathf.Min(340, w - 24) : 300;
-            Place(tutorial, w - journeyWidth - margin, compact ? 250 : 125, journeyWidth, compact ? 170 : 185);
-            if (compact && detail.gameObject.activeSelf) tutorial.gameObject.SetActive(false);
-            var menuPanel = (RectTransform)menu.GetChild(0);
-            float menuWidth = Mathf.Min(620, w - 36), menuHeight = Mathf.Min(805, h - 32);
-            Place(menuPanel, (w - menuWidth) * .5f, (h - menuHeight) * .5f, menuWidth, menuHeight);
-            var modalPanel = (RectTransform)modal.GetChild(0);
-            float modalWidth = Mathf.Min(880, w - 32), modalHeight = Mathf.Min(800, h - 36);
-            Place(modalPanel, (w - modalWidth) * .5f, (h - modalHeight) * .5f, modalWidth, modalHeight);
-            var close = modalPanel.Find("Close Dialog");
-            if (close != null) Place((RectTransform)close, modalWidth - 106, 17, 88, 38);
-            var title = modalPanel.Find("Dialog Title");
-            if (title != null) Place((RectTransform)title, 22, 14, modalWidth - 140, 44);
-            lastSize = size;
-        }
+        void Layout() { LayoutWeb(); }
 
         void Update()
         {
             if (root != null && root.rect.size != lastSize) Layout();
+            if (status != null && status.gameObject.activeSelf && Time.unscaledTime >= hintUntil) status.gameObject.SetActive(false);
         }
 
-        void BuildOffers()
-        {
-            string key = state.round + ":" + string.Join(",", state.offers);
-            bool fresh = key != offersKey && state.offers.Count >= 3;
-            offersKey = key;
-            Clear(cards);
-            offerButtons.Clear();
-            if (state.offers.Count == 0)
-            {
-                var done = Label(cards, "土地已落下，新的生命正在酝酿。", 18, Muted);
-                done.alignment = TextAnchor.MiddleCenter;
-                done.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-                return;
-            }
-            for (int i = 0; i < state.offers.Count; i++)
-            {
-                int offerIndex = i;
-                var type = Catalog.Types[state.offers[i]];
-                var tint = TerrainTint(type.family, type.look);
-                var card = Button(cards, "", () => { SelectedOffer = offerIndex; Emit(new GameAction { type = "selectOffer", offer = offerIndex }); BuildOffers(); }, i == SelectedOffer ? Gold : tint);
-                card.interactable = !state.over && state.ap > 0;
-                card.GetComponent<LayoutElement>().flexibleWidth = 1;
-                card.GetComponent<HabitatButtonMotion>().SetCard(i == SelectedOffer, fresh, i * .09f);
-                var label = card.GetComponentInChildren<Text>();
-                label.text = type.name + "  T" + type.level + "\n" + ColoredAttrs(type.attrs);
-                label.fontSize = compact ? 16 : 18;
-                label.lineSpacing = 1.35f;
-                label.supportRichText = true;
-                offerButtons.Add(card);
-            }
-        }
+        void BuildOffers() { BuildWebOffers(); }
 
-        void BuildDetail()
-        {
-            Clear(detailBody);
-            if (string.IsNullOrEmpty(selected) || !state.cells.TryGetValue(selected, out var tile)) return;
-            var type = Catalog.Types[tile.type];
-            var title = Row(detailBody);
-            Label(title, type.name + "  T" + type.level, 24, Ink, null, 1);
-            Button(title, "收起", () => { detailOpen = false; Layout(); }, Line, 65);
-            Small(detailBody, "坐标 " + selected + "  ·  " + type.familyName + " / " + type.branch);
-            Body(detailBody, ColoredAttrs(tile.attrs), 21);
-            Small(detailBody, "连片 " + Game.Cluster(state, selected).Count + " 格  ·  属性上限 " + Game.AttrCap(state, selected));
-            Body(detailBody, type.effect, 15, Muted);
-            if (!string.IsNullOrEmpty(type.trigger)) Small(detailBody, type.trigger + " · " + type.cost);
-            if (Game.Relations.TryGetValue(type.family, out var rule))
-            {
-                var relations = Game.TileRelations(state, selected);
-                string partners = string.Join(" / ", rule.targets.Select(f => Catalog.Tiles.First(t => t.family == f).familyName));
-                Section(detailBody, "四邻互作 · " + rule.name);
-                Small(detailBody, "每个相邻" + partners + "，轮末使本格" + ElementName(rule.el) + " +" + Mathf.Max(1, type.level - 2));
-                Small(detailBody, "当前匹配 " + relations.Count + " 格" + (relations.Count > 0 ? " · " + string.Join(" / ", relations.Select(r => r.neighbor)) : ""));
-            }
-
-            Section(detailBody, "土地成长 · 自动补齐结晶缺口");
-            foreach (var child in Catalog.Tiles.Where(t => t.parent == tile.type))
-            {
-                var reasons = Game.UpgradeReasons(state, selected, child);
-                Body(detailBody, child.name + "  T" + child.level, 17);
-                Small(detailBody, child.effect);
-                var payment = Game.UpgradeCost(state, selected, child);
-                Small(detailBody, "消耗普通：" + (BagText(payment.normal) == "" ? "无" : BagText(payment.normal)) + "；大型：" + (BagText(payment.big) == "" ? "无" : BagText(payment.big)));
-                var destination = child.id;
-                Button(detailBody, reasons.Count == 0 ? "升级为「" + child.name + "」" : string.Join(" · ", reasons), () => Emit(new GameAction { type = "upgrade", cell = selected, tileType = destination }), reasons.Count == 0 ? Green : Line).interactable = reasons.Count == 0 && !state.over;
-            }
-            if (!Catalog.Tiles.Any(t => t.parent == tile.type)) Small(detailBody, type.level >= 5 ? "这片土地已长成最高阶段。" : "通过结晶与连片培养地块。");
-
-            Section(detailBody, "施放魔法  ·  每次 1 行动");
-            foreach (var magic in Catalog.Magics)
-            {
-                var id = magic.id;
-                bool unlocked = Game.MagicUnlocked(state, id);
-                bool used = Used(state.magicUsed, id);
-                var castButton = Button(detailBody, magic.name + " · " + state.magicRange[id] + " 格" + (used ? " · 本轮已用" : !unlocked ? " · 尚未解锁" : ""), () => Emit(new GameAction { type = "cast", magic = id, cell = selected }), unlocked ? Green : Line);
-                castButton.interactable = unlocked && !used && state.ap > 0 && !state.over;
-                Preview(castButton, () => Game.MagicArea(state, selected, id), magic.element);
-                Small(detailBody, magic.desc);
-                if (Count(state.inv.pureCrystal, magic.element) > 0) Button(detailBody, "至纯" + ElementName(magic.element) + "晶 · 范围 +4", () => Emit(new GameAction { type = "usePureCrystal", magic = id }), Gold).interactable = !state.over;
-            }
-            Button(detailBody, "结晶背包 · 免费连续使用", OpenInventory, Gold);
-            Button(detailBody, "批量结晶 · 预览属性与统一使用", OpenCrystalBatch, Line);
-            Button(detailBody, "批量地块升级", OpenUpgradeBatch, Line);
-
-            Section(detailBody, "灵与生灵");
-            Small(detailBody, "元素灵 " + tile.spirits.Count + " / " + Game.SpiritCap(tile) + " · 同属性 3 灵轮末自动合兽");
-            foreach (var el in ElementKeys)
-            {
-                var list = tile.spirits.Where(s => s.el == el).ToList();
-                if (list.Count == 0) continue;
-                Body(detailBody, ElementName(el) + "元素灵 × " + list.Count, 16);
-                var spirit = list[0];
-                var row = Row(detailBody);
-                Button(row, "移动灵", () => Emit(new GameAction { type = "moveSpirit", from = selected, spiritId = spirit.id }), Line).interactable = !state.over && !Used(state.interactionUsed, "spirit:" + spirit.id);
-                Button(row, "免费合兽", () => Emit(new GameAction { type = "merge", cell = selected, el = el }), Gold).interactable = !state.over && list.Count >= 3;
-            }
-            foreach (var beast in tile.beasts)
-            {
-                int id = beast.id;
-                var row = Row(detailBody);
-                Label(row, ElementName(beast.el) + "元素兽", 16, Ink, null, 1);
-                Button(row, "移动", () => Emit(new GameAction { type = "moveBeast", from = selected, beastId = id }), Line, 70).interactable = !state.over && !Used(state.interactionUsed, "beast:" + id);
-            }
-            if (tile.beasts.Count > 0)
-            {
-                Small(detailBody, "元素兽每 2 轮产出 1 颗大结晶。");
-                Button(detailBody, "选择 5 兽 · 唤醒守护灵", () => OpenGuardian(selected), Gold).interactable = !state.over && tile.beasts.Count >= 5;
-            }
-            foreach (var guardian in tile.guardians)
-            {
-                int id = guardian.id;
-                Body(detailBody, "守护灵  ·  " + BagText(guardian.power), 17);
-                Small(detailBody, "每轮滋养本格和已放置四邻，不自动移动。");
-                Button(detailBody, "移动守护灵 · 1 行动", () => Emit(new GameAction { type = "moveGuardian", from = selected, guardianId = id }), Gold).interactable = !state.over && state.ap > 0;
-            }
-            foreach (var group in tile.plants.GroupBy(p => p.kind)) Small(detailBody, UnitName(group.Key) + " × " + group.Count() + " · 每 3 轮自动滋养");
-            foreach (var group in tile.animals.GroupBy(a => new { a.kind, a.el })) Small(detailBody, ElementName(group.Key.el) + (string.IsNullOrEmpty(group.Key.el) ? "" : "元素") + UnitName(group.Key.kind) + " × " + group.Count() + " · 自动吸收与滋养");
-            if (tile.cancers.Count > 0) Body(detailBody, "癌元 × " + tile.cancers.Count + " · 使用净化或焚尽清除", 16, Hex("B86155"));
-
-            var shields = state.shields.Where(s => s.cells.Contains(selected)).ToList();
-            foreach (var shield in shields)
-            {
-                Body(detailBody, "元素盾 " + BagText(shield.defense), 16);
-                Small(detailBody, "覆盖区内共享防护，抵御预告的元素星雨。");
-            }
-            Section(detailBody, "地块交互");
-            Small(detailBody, "生态分 " + (tile.plants.Count + tile.animals.Count) + " · 植物与动物各 +1，属性每点 +0.5");
-            Button(detailBody, "铲除地块 · 1 行动", ConfirmDemolish, Hex("ECD5C2")).interactable = !state.over && state.ap > 0;
-            Button(detailBody, "查看回声与操作记录", OpenEchoes, Line);
-            if (photoMode) foreach (var button in detailBody.GetComponentsInChildren<Button>()) button.interactable = button.name == "Button 收起";
-        }
+        void BuildDetail() { BuildWebDetail(); }
 
         public void RevealSelection()
         {
@@ -486,9 +263,22 @@ namespace ElementHabitat
             tutorial.gameObject.SetActive(visible && !IsMenuOpen);
             if (!visible) return;
             int step = Mathf.Clamp(state.journey.step, 0, 8);
-            Body(tutorialBody, LessonTitles[step], 21, Green);
-            Body(tutorialBody, step >= 8 ? ChallengeHint() + "。升级中央塔、搭配土地，保护生境的成长。" : LessonCopy[step], 15);
-            var controls = Row(tutorialBody);
+            var lesson = Button(tutorialBody, LessonTitles[step] + (tutorialCollapsed ? "  +" : "  −"), () => { tutorialCollapsed = !tutorialCollapsed; BuildTutorial(); Layout(); }, Cream, 0, 29);
+            var lessonTitle = lesson.GetComponentInChildren<Text>();
+            lessonTitle.color = Hex("315342");
+            lessonTitle.fontSize = 13;
+            lessonTitle.fontStyle = FontStyle.Bold;
+            lessonTitle.alignment = TextAnchor.MiddleLeft;
+            lessonTitle.resizeTextForBestFit = false;
+            lessonTitle.verticalOverflow = VerticalWrapMode.Overflow;
+            Inset(lessonTitle.rectTransform, 0, 0, 0, 0);
+            lesson.GetComponent<Image>().color = Color.clear;
+            foreach (var edge in lesson.GetComponents<Outline>()) edge.enabled = false;
+            foreach (var shadow in lesson.GetComponents<Shadow>()) shadow.enabled = false;
+            var lessonGloss = lesson.transform.Find("Button Gloss"); if (lessonGloss != null) lessonGloss.gameObject.SetActive(false);
+            if (tutorialCollapsed) return;
+            Body(tutorialBody, step >= 8 ? ChallengeHint() + "。升级中央塔、搭配土地，保护生境的成长。" : LessonCopy[step], compact ? 11 : 13);
+            var controls = Row(tutorialBody, 32);
             Button(controls, step == 0 ? "开始旅程" : step >= 8 ? "回声册" : "指引目标", () =>
             {
                 if (step == 0) Emit(new GameAction { type = "tutorial" });
@@ -500,45 +290,11 @@ namespace ElementHabitat
                     selectCell?.Invoke(target);
                     detailOpen = true;
                 }
-            }, Green);
-            if (step < 8) Button(controls, "跳过", () => Emit(new GameAction { type = "tutorial", skip = true }), Line, 65);
+            }, Green, 0, 30);
+            if (step < 8) Button(controls, "跳过教学", () => Emit(new GameAction { type = "tutorial", skip = true }), Hex("3B8CF0"), 86, 30);
         }
 
-        void BuildMenu()
-        {
-            Clear(menuBody);
-            Body(menuBody, "元素生境", 48, Green, TextAnchor.MiddleCenter);
-            Body(menuBody, "守护元素之塔，完成四十轮复苏。", 19, Muted, TextAnchor.MiddleCenter);
-            var elements = Body(menuBody, ColoredAttrs(new[] { 1, 1, 1, 1, 1 }, false), 26, Ink, TextAnchor.MiddleCenter);
-            elements.GetComponent<LayoutElement>().preferredHeight = 48;
-            if (state != null)
-            {
-                bool saveError = !string.IsNullOrEmpty(message) && (message.StartsWith("未能读取存档", StringComparison.Ordinal) || message.StartsWith("存档失败", StringComparison.Ordinal));
-                string subtitle = saveError ? message : "第 " + state.round + " 轮  ·  " + (state.mode == "endless" ? "无尽生境" : "40 轮挑战") + "  ·  灵力 " + ScoreNumber(Game.Score(state).total);
-                menuSubtitle = Body(menuBody, subtitle, 17, saveError ? Hex("AD6049") : Muted, TextAnchor.MiddleCenter);
-            }
-            Button(menuBody, hasPlayed ? "回到生境" : "继续上次旅程", () => { HideMainMenu(); detailOpen = true; continueGame?.Invoke(); Layout(); }, Green, 0, 54).interactable = hasPlayed || hasSave;
-            Button(menuBody, "初醒之旅  ·  教学与四十轮挑战", () => RequestNewGame(true), Gold, 0, 54);
-            Button(menuBody, "复苏挑战  ·  10/20/30/40 轮达标", () => RequestNewGame(false), Line, 0, 54);
-            Button(menuBody, hasPlayed && state != null && state.completedMap && state.mode != "endless" && state.result != "failed" ? "转入无尽生境 · 初始地图已完成" : "无尽生境  ·  自由扩建", () =>
-            {
-                if (hasPlayed && state != null && state.completedMap && state.mode != "endless" && state.result != "failed") { HideMainMenu(); Emit(new GameAction { type = "enterEndless" }); }
-                else RequestNewGame(false, true);
-            }, Line, 0, 48);
-            var row = Row(menuBody, 45);
-            Button(row, "地脉图鉴", OpenAtlas, Line);
-            Button(row, "成就愿景", OpenAchievements, Line);
-            Button(row, "设置", OpenSettings, Line);
-            var tools = Row(menuBody, 43);
-            Button(tools, "玩法说明", OpenHelp, Line);
-            Button(tools, "回声册", OpenEchoes, Line);
-            Button(tools, "保存进度", () => { Emit(new GameAction { type = "save" }); BuildMenu(); }, Line).interactable = hasPlayed;
-            var keepsakes = Row(menuBody, 41);
-            Button(keepsakes, "摄影", () => { HideMainMenu(); Emit(new GameAction { type = "photoMode" }); }, Line).interactable = hasPlayed && state != null && state.completedMap;
-            Button(keepsakes, "保存地图", () => Emit(new GameAction { type = "exportSave" }), Line).interactable = hasPlayed && state != null && state.completedMap;
-            Button(keepsakes, "检视生境", () => { HideMainMenu(); Emit(new GameAction { type = "inspect" }); }, Line).interactable = hasPlayed && state != null && state.completedMap;
-            Small(menuBody, "单人离线 · 本机自动存档\n行动可自由分配 · 每轮可多次铺地\n挑战目标：500 / 1500 / 3000 / 6000", TextAnchor.MiddleCenter);
-        }
+        void BuildMenu() { BuildWebMenu(); }
 
         void RequestNewGame(bool tutorialMode, bool endless = false)
         {
@@ -562,49 +318,18 @@ namespace ElementHabitat
             else newGame?.Invoke(tutorialMode);
         }
 
-        void OpenInventory() { OpenModal("结晶与背包", "inventory"); BuildInventory(); }
-        void BuildInventory()
+        void OpenInventory()
         {
-            Clear(modalBody);
-            if (!RequireGame()) return;
-            Body(modalBody, "选择结晶后点击地图目标。批量结晶使用当前选中地块。", 18, Green);
-            if (!string.IsNullOrEmpty(selected) && state.cells.TryGetValue(selected, out var target)) Small(modalBody, "当前选中：" + Catalog.Types[target.type].name + " · " + selected);
-            if (!string.IsNullOrWhiteSpace(message)) Small(modalBody, message);
-            Small(modalBody, "普通 +1 / 大型 +2 / 逆结晶 −1。结晶不耗行动点，每轮不限次数；正向属性仍受连片上限限制。");
-            foreach (var el in ElementKeys)
-            {
-                var key = el;
-                var row = Row(modalBody, 51);
-                Label(row, ElementName(el), 23, ElementColor(el), null, 0, 38);
-                InventoryButton(row, "普通", "crystal", key, state.inv.crystal, () => Crystal(key, false, false));
-                InventoryButton(row, "大型", "bigCrystal", key, state.inv.bigCrystal, () => Crystal(key, true, false));
-                InventoryButton(row, "逆晶", "inverseCrystal", key, state.inv.inverseCrystal, () => Crystal(key, false, true));
-            }
-            Button(modalBody, "批量结晶 · 选择数量并预览", OpenCrystalBatch, Gold).interactable = !state.over && !string.IsNullOrEmpty(selected) && state.cells.ContainsKey(selected);
-            Button(modalBody, "批量地块升级 · 自动计算结晶缺口", OpenUpgradeBatch, Line).interactable = !state.over;
-            Section(modalBody, "至纯结晶 · 魔法范围每颗 +4 格");
-            foreach (var magic in Catalog.Magics)
-            {
-                var id = magic.id;
-                string prefix = ElementName(magic.element) + "至纯晶";
-                string suffix = " → " + magic.name + " " + state.magicRange[id] + " → " + (state.magicRange[id] + 4) + " 格";
-                int count = Count(state.inv.pureCrystal, magic.element);
-                var pure = Button(modalBody, prefix + " ×" + (feedbackHUD == null ? count : feedbackHUD.DisplayInventory("pureCrystal", magic.element, count)) + suffix,
-                    () => Emit(new GameAction { type = "usePureCrystal", magic = id }), Line);
-                pure.interactable = !state.over && count > 0;
-                inventoryLabels[pure.GetComponentInChildren<Text>()] = "pureCrystal:" + magic.element + ":" + prefix + ":" + suffix;
-            }
-            Small(modalBody, "每次元素星雨后，获得同属性至纯结晶。范围升级不消耗行动点。");
-            Section(modalBody, "元素盾 · 普通 1 点 / 大型 2 点");
-            Button(modalBody, "选择五行配比 · 制造元素盾", OpenShield, Gold).interactable = !state.over && !Used(state.interactionUsed, "craft:shield");
-            if (state.inv.shields.Count == 0) Small(modalBody, "暂无待部署的元素盾。每 4 轮触发自然事件，提前为预告的元素星雨准备庇护。");
-            foreach (var shield in state.inv.shields)
-            {
-                var id = shield.id;
-                Button(modalBody, "部署 " + shield.coverage + " 格盾 · " + BagText(shield.defense), () => { CloseModal(); Emit(new GameAction { type = "deployShield", shieldId = id }); }, Green).interactable = !state.over;
-            }
-            Button(modalBody, "刷新候选地块 · 1 行动", () => Emit(new GameAction { type = "reroll" }), Line).interactable = !state.over && state.ap > 0;
+            if (photoMode) return;
+            activeModal = "inventory";
+            modal.gameObject.SetActive(false);
+            bagDrawer.gameObject.SetActive(true);
+            bagDrawer.SetAsLastSibling();
+            if (feedbackHUD != null) feedbackHUD.BringToFront();
+            BuildInventory();
+            Layout();
         }
+        void BuildInventory() { BuildWebInventory(); }
 
         void Crystal(string element, bool big, bool inverse)
         {
@@ -1048,7 +773,7 @@ namespace ElementHabitat
             Section(modalBody, "四十轮挑战与无尽模式");
             Body(modalBody, "挑战须在第 10 / 20 / 30 / 40 轮分别达到 500 / 1500 / 3000 / 6000 灵力。未达目标即挑战失败。守护塔周围初始地图有 84 块可建设土地，铺满后可转入无尽模式，继续向外扩建。也可以从主菜单直接开启无尽生境。", 18);
             Section(modalBody, "操作");
-            Body(modalBody, "鼠标点选地块，拖动旋转，滚轮缩放。触屏点选，双指缩放与平移。选择卡片或移动操作后，按取消选择可返回浏览。", 18);
+            Body(modalBody, "鼠标点选地块，左键拖动旋转，右键或中键拖动平移，滚轮缩放。触屏点选，单指旋转，双指缩放与平移。W/A/S/D 或方向键平移，Q/E 旋转，R/F 拉近或拉远，空格复位。1/2/3 选卡，B 背包，Enter 结束本轮，Esc 取消或关闭。完成初始地图后，可按 P 摄影、Ctrl+S 导出地图。", 18);
         }
 
         public void ShowCompletion()
@@ -1076,6 +801,7 @@ namespace ElementHabitat
         void OpenModal(string title, string kind)
         {
             activeModal = kind;
+            bagDrawer.gameObject.SetActive(false);
             modal.gameObject.SetActive(true);
             modal.SetAsLastSibling();
             // Resource receipts and the pure-crystal reveal stay visible when a bag is reopened.
@@ -1085,7 +811,7 @@ namespace ElementHabitat
             var heading = panel.Find("Dialog Title");
             if (heading == null) heading = Label(panel, title, 27, Ink, "Dialog Title").transform;
             heading.GetComponent<Text>().text = title;
-            if (panel.Find("Close Dialog") == null) Button(panel, "关闭", CloseModal, Line).name = "Close Dialog";
+            if (panel.Find("Close Dialog") == null) Button(panel, "×", CloseModal, Hex("FF5A4A")).name = "Close Dialog";
             Clear(modalBody);
             Layout();
         }
@@ -1105,6 +831,7 @@ namespace ElementHabitat
                 case "echoes": BuildEchoes(); break;
                 case "settings": BuildSettings(); break;
                 case "completion": BuildCompletion(); break;
+                case "score": BuildScoreDetail(); break;
             }
         }
 
@@ -1112,6 +839,7 @@ namespace ElementHabitat
         {
             activeModal = null;
             if (modal != null) modal.gameObject.SetActive(false);
+            if (bagDrawer != null) bagDrawer.gameObject.SetActive(false);
             RangePreviewChanged?.Invoke(Array.Empty<string>(), "water");
         }
 
@@ -1159,9 +887,10 @@ namespace ElementHabitat
             if (state == null || roundText == null || scoreText == null) return;
             int cellCount = feedbackHUD == null ? state.cells.Count : feedbackHUD.DisplayCells;
             double score = feedbackHUD == null ? Game.Score(state).total : feedbackHUD.DisplayScore;
-            roundText.text = "第 " + state.round + (state.mode == "endless" ? " 轮 · 无尽" : "/40 轮") + "   行动 " + state.ap + "/" + state.roundAP + "   地块 " + cellCount + (state.mode == "endless" ? "" : "/84");
-            scoreText.text = "灵力  " + ScoreNumber(score);
-            if (bagButton != null) bagButton.GetComponentInChildren<Text>().text = "背包 " + (feedbackHUD == null ? Game.BagCount(state) : feedbackHUD.DisplayBag);
+            roundText.text = state.mode == "endless" ? state.round + " ∞" : state.round + "/40";
+            scoreText.text = ScoreNumber(score);
+            if (leftText != null) leftText.text = (feedbackHUD == null ? Game.EmptyKeys(state).Count : feedbackHUD.DisplayedLeft).ToString();
+            if (bagBadge != null) bagBadge.text = (feedbackHUD == null ? Game.BagCount(state) : feedbackHUD.DisplayBag).ToString();
             foreach (var item in inventoryLabels.ToArray())
             {
                 if (item.Key == null) { inventoryLabels.Remove(item.Key); continue; }
@@ -1288,7 +1017,7 @@ namespace ElementHabitat
             var rect = Rect(name, parent);
             Inset(rect, 0, 0, 0, 0);
             var image = rect.gameObject.AddComponent<Image>();
-            image.color = new Color(.13f, .22f, .18f, .56f);
+            image.color = new Color(.039f, .118f, .235f, .5f);
             return rect;
         }
 
@@ -1356,6 +1085,7 @@ namespace ElementHabitat
             var layout = row.gameObject.AddComponent<LayoutElement>();
             layout.preferredHeight = height;
             layout.minHeight = height;
+            layout.flexibleHeight = 0;
             return row;
         }
 
@@ -1392,7 +1122,7 @@ namespace ElementHabitat
             return text;
         }
 
-        Text Body(RectTransform parent, string copy, int size = 18, Color? color = null, TextAnchor alignment = TextAnchor.MiddleLeft)
+        Text Body(RectTransform parent, string copy, int size = 14, Color? color = null, TextAnchor alignment = TextAnchor.MiddleLeft)
         {
             var text = Label(parent, copy, size, color ?? Ink);
             text.alignment = alignment;
@@ -1401,17 +1131,18 @@ namespace ElementHabitat
             return text;
         }
 
-        void Small(RectTransform parent, string copy, TextAnchor alignment = TextAnchor.MiddleLeft) { Body(parent, copy, 15, Muted, alignment); }
+        void Small(RectTransform parent, string copy, TextAnchor alignment = TextAnchor.MiddleLeft) { Body(parent, copy, 12, Muted, alignment); }
 
         void Section(RectTransform parent, string title)
         {
-            var text = Body(parent, title, 21, Green);
-            text.gameObject.GetComponent<LayoutElement>().minHeight = 42;
+            var text = Body(parent, title, 15, Ink);
+            text.gameObject.GetComponent<LayoutElement>().minHeight = 30;
         }
 
         Button Button(Transform parent, string copy, Action clicked, Color color, float width = 0, float height = 42)
         {
             var rect = Panel("Button " + copy, parent, color);
+            AddButtonEdge(rect, color);
             var button = rect.gameObject.AddComponent<Button>();
             var colors = button.colors;
             colors.normalColor = Color.white;
@@ -1427,11 +1158,11 @@ namespace ElementHabitat
             layout.minHeight = Mathf.Min(height, 42);
             if (width > 0) { layout.preferredWidth = width; layout.flexibleWidth = 0; }
             else layout.flexibleWidth = 1;
-            var text = Label(rect, copy, 17, color == Green ? Color.white : Ink);
+            var text = Label(rect, copy, 13, color == Gold || color == Line ? Ink : Color.white);
             text.alignment = TextAnchor.MiddleCenter;
             text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 12;
-            text.resizeTextMaxSize = 18;
+            text.resizeTextMinSize = 10;
+            text.resizeTextMaxSize = 13;
             text.verticalOverflow = VerticalWrapMode.Truncate;
             Inset(text.rectTransform, 9, 4, 9, 4);
             return button;
@@ -1523,6 +1254,9 @@ namespace ElementHabitat
         {
             ResetFeedback();
             if (roundSprite != null) { Destroy(roundSprite.texture); Destroy(roundSprite); }
+            if (capsuleSprite != null) { Destroy(capsuleSprite.texture); Destroy(capsuleSprite); }
+            if (circleSprite != null) { Destroy(circleSprite.texture); Destroy(circleSprite); }
+            if (paperSprite != null) { Destroy(paperSprite.texture); Destroy(paperSprite); }
         }
     }
 }

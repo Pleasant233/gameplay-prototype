@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -20,7 +18,6 @@ namespace ElementHabitat
         readonly Dictionary<string,Look> looks=new Dictionary<string,Look>();
         readonly Dictionary<string,Mesh> primitives=new Dictionary<string,Mesh>();
         readonly List<Mesh> permanentMeshes=new List<Mesh>();
-        readonly List<RaycastResult> uiHits=new List<RaycastResult>();
         readonly HashSet<string> legal=new HashSet<string>();
         readonly HashSet<string> shape=new HashSet<string>();
         readonly Dictionary<string,Vector2Int> footprintCoordinates=new Dictionary<string,Vector2Int>();
@@ -40,22 +37,18 @@ namespace ElementHabitat
         Volume atmosphere;
         VolumeProfile atmosphereProfile;
         DepthOfField depthOfField;
-        bool initialized,reducedMotion,atmosphereEnabled=true,pressed,pointerBlocked,dragging,hadPinch;
+        bool initialized,reducedMotion,atmosphereEnabled=true;
         string selected,hover;
         bool hasRendered;
         Color rangeColor;
         Vector2Int windowCenter=new Vector2Int(int.MinValue,int.MinValue);
         int windowRadius;
         float minWorldX=-8,maxWorldX=8,minWorldZ=-8,maxWorldZ=8;
-        Vector2 pointerStart,pointerPrevious;
-        Vector3 cameraTarget,focusTarget;
-        float yaw=36,pitch=48,distance=19.5f,pinchDistance;
 
         sealed class CellView { public string key,signature,surfaceSignature; public Vector2Int coordinate; public MeshFilter terrain,scenery; public MeshCollider collider; public Mesh terrainMesh,sceneryMesh; public double landingBorn=-1,popBorn=-1,impactBorn=-1; }
         struct Look { public Color color; public float height; public Look(uint c,float h=.12f) { color=Hex(c);height=h; } }
 
         public Camera Camera => boardCamera;
-        public bool InputEnabled { get; set; } = true;
         public int ActiveEffectCount => feedbackObjects.Count;
         public int QueuedEffectCount => feedbackQueue.Count;
 
@@ -103,7 +96,7 @@ namespace ElementHabitat
         public void Render(State next,string selectedCell,ICollection<string> legalCells)
         {
             if(!initialized)Initialize(onCellSelected);
-            if(state!=null&&!ReferenceEquals(state,next)){ClearFeedback();hasRendered=false;ResetCamera();rangePreview.Clear();}
+            if(state!=null&&!ReferenceEquals(state,next)){ClearFeedback();hasRendered=false;StartCameraIntro(.6f);rangePreview.Clear();}
             state=next;selected=selectedCell;legal.Clear();
             if(legalCells!=null)foreach(var key in legalCells)legal.Add(key);
             var keys=Game.BoardKeys(state);bool footprintChanged=!shape.SetEquals(keys);
@@ -494,7 +487,7 @@ namespace ElementHabitat
         void BuildCamera()
         {
             var go=Child("Habitat camera");go.tag="MainCamera";boardCamera=go.AddComponent<Camera>();boardCamera.clearFlags=CameraClearFlags.SolidColor;
-            boardCamera.backgroundColor=Hex(0xc8dce7);boardCamera.fieldOfView=42;boardCamera.nearClipPlane=.1f;boardCamera.farClipPlane=160;boardCamera.allowHDR=true;
+            boardCamera.backgroundColor=Hex(0xc8dce7);boardCamera.fieldOfView=40;boardCamera.nearClipPlane=.1f;boardCamera.farClipPlane=400;boardCamera.allowHDR=true;
             go.AddComponent<AudioListener>();var data=go.AddComponent<UniversalAdditionalCameraData>();data.renderPostProcessing=true;data.requiresDepthTexture=true;data.antialiasing=AntialiasingMode.FastApproximateAntialiasing;
             var sunObject=Child("Warm miniature sunlight");var light=sunObject.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1;light.color=Hex(0xffefd8);light.shadows=LightShadows.Soft;light.shadowStrength=.60f;light.shadowBias=.035f;light.shadowNormalBias=.2f;sunObject.transform.rotation=Quaternion.Euler(47,-35,0);
             RenderSettings.ambientMode=AmbientMode.Trilight;RenderSettings.ambientSkyColor=Hex(0xb7d6e4);RenderSettings.ambientEquatorColor=Hex(0xb9d1c4);RenderSettings.ambientGroundColor=Hex(0x9d947f);RenderSettings.ambientIntensity=.8f;RenderSettings.sun=light;RenderSettings.fog=true;RenderSettings.fogMode=FogMode.Linear;RenderSettings.fogColor=boardCamera.backgroundColor;RenderSettings.fogStartDistance=32;RenderSettings.fogEndDistance=86;RenderSettings.skybox=null;
@@ -504,95 +497,19 @@ namespace ElementHabitat
             var vignette=atmosphereProfile.Add<Vignette>(true);vignette.color.Override(Hex(0x5b7378));vignette.intensity.Override(.12f);vignette.smoothness.Override(.6f);
             depthOfField=atmosphereProfile.Add<DepthOfField>(true);depthOfField.mode.Override(DepthOfFieldMode.Bokeh);depthOfField.focalLength.Override(42);depthOfField.aperture.Override(7.5f);depthOfField.focusDistance.Override(distance);
             if(Application.isMobilePlatform){depthOfField.active=false;light.shadowResolution=LightShadowResolution.Medium;}
-            UpdateCamera(true);
-        }
-
-        public void SetFocus(string cell)
-        {
-            focusTarget=string.IsNullOrEmpty(cell)||!shape.Contains(cell)?Vector3.zero:World(cell)+Vector3.up*.3f;
-            if(Vector3.Distance(focusTarget,cameraTarget)>windowRadius*Spacing)focusTarget=cameraTarget+Vector3.up*.3f;
-        }
-        public void CenterOnCell(string cell)
-        {
-            if(!string.IsNullOrEmpty(cell)&&shape.Contains(cell)) {
-                cameraTarget=World(cell);if(SyncVisibleCells()){RenderVisibleCells();BuildBase();RefreshCloudBanks();RebuildFrames();shieldSignature=null;RebuildShields();}
-                SetFocus(cell);
-            }
+            InitializeCamera();
         }
         public void SetAtmosphere(bool enabled) { atmosphereEnabled=enabled;if(atmosphere!=null)atmosphere.enabled=enabled; }
         public void SetReducedMotion(bool enabled) {reducedMotion=enabled;if(enabled){ClearFeedback();foreach(var ambient in ambientViews.Values)if(ambient.filter!=null){ambient.filter.transform.localPosition=Vector3.zero;ambient.filter.transform.localRotation=Quaternion.identity;}}shieldSignature=null;RebuildShields();}
-        public void ResetCamera() {yaw=36;pitch=48;distance=19.5f;cameraTarget=Vector3.zero;focusTarget=Vector3.zero;UpdateCamera(true);}
-        public void FitCameraToViewport() {UpdateCamera(true);}
 
         void Update()
         {
             if(!initialized)return;
-            if(InputEnabled)HandleInput();else {pressed=false;dragging=false;hadPinch=false;}
+            if(InputEnabled)HandleInput();else CancelPointer();
             UpdateCamera(false);
             if(state!=null&&SyncVisibleCells()){RenderVisibleCells();BuildBase();RefreshCloudBanks();RebuildFrames();shieldSignature=null;RebuildShields();}
             UpdateFeedback();
         }
-        void UpdateCamera(bool immediate)
-        {
-            if(boardCamera==null)return;
-            float aspect=Mathf.Max(.1f,boardCamera.aspect);
-            float fit=aspect<1.1f?Mathf.Lerp(1.15f,1.8f,Mathf.Clamp01((1.1f-aspect)/.6f)):1;
-            Quaternion rotation=Quaternion.Euler(pitch,yaw,0);Vector3 wanted=cameraTarget+rotation*new Vector3(0,0,-distance*fit);
-            float lerp=immediate?1:1-Mathf.Exp(-Time.unscaledDeltaTime*10);
-            boardCamera.transform.position=Vector3.Lerp(boardCamera.transform.position,wanted,lerp);boardCamera.transform.rotation=Quaternion.Slerp(boardCamera.transform.rotation,rotation,lerp);
-            if(depthOfField!=null)depthOfField.focusDistance.value=Mathf.Lerp(depthOfField.focusDistance.value,Vector3.Dot(focusTarget-boardCamera.transform.position,boardCamera.transform.forward),immediate?1:1-Mathf.Exp(-Time.unscaledDeltaTime*5));
-        }
-
-        bool OverUI(Vector2 p)
-        {
-            if(EventSystem.current==null)return false;
-            var pointer=new PointerEventData(EventSystem.current){position=p};uiHits.Clear();EventSystem.current.RaycastAll(pointer,uiHits);return uiHits.Count>0;
-        }
-        void HandleInput()
-        {
-            var screen=Touchscreen.current;
-            if(screen!=null && screen.primaryTouch.press.isPressed) {
-                int count=0;Vector2 a=Vector2.zero,b=Vector2.zero;
-                foreach(var touch in screen.touches)if(touch.press.isPressed){if(count==0)a=touch.position.ReadValue();else if(count==1)b=touch.position.ReadValue();count++;}
-                if(count>=2) {
-                    Vector2 center=(a+b)*.5f;float next=Vector2.Distance(a,b);
-                    if(!hadPinch){pointerBlocked=OverUI(a)||OverUI(b);pinchDistance=next;pointerPrevious=center;hadPinch=true;}
-                    if(!pointerBlocked){distance=Mathf.Clamp(distance+(pinchDistance-next)*.025f,8,32);Pan(center-pointerPrevious);}
-                    pinchDistance=next;pointerPrevious=center;dragging=true;pressed=false;return;
-                }
-                if(hadPinch)return;
-                if(!pressed)BeginPointer(a);else MovePointer(a,false);
-                return;
-            }
-            if(hadPinch){hadPinch=false;pressed=false;dragging=false;return;}
-            if(screen!=null && pressed && screen.primaryTouch.press.wasReleasedThisFrame){EndPointer(screen.primaryTouch.position.ReadValue());return;}
-            var mouse=Mouse.current;if(mouse==null)return;
-            Vector2 p=mouse.position.ReadValue();
-            if(mouse.leftButton.wasPressedThisFrame||mouse.rightButton.wasPressedThisFrame||mouse.middleButton.wasPressedThisFrame)BeginPointer(p);
-            if(pressed&&(mouse.leftButton.isPressed||mouse.rightButton.isPressed||mouse.middleButton.isPressed))MovePointer(p,mouse.rightButton.isPressed||mouse.middleButton.isPressed);
-            if(pressed&&(mouse.leftButton.wasReleasedThisFrame||mouse.rightButton.wasReleasedThisFrame||mouse.middleButton.wasReleasedThisFrame))EndPointer(p);
-            float scroll=mouse.scroll.ReadValue().y;if(Mathf.Abs(scroll)>.1f&&!OverUI(p))distance=Mathf.Clamp(distance-scroll*.005f,8,32);
-            if(!pressed&&!OverUI(p)) {string next=Pick(p);if(next!=hover){hover=next;RebuildFrames();}}
-            else if(hover!=null){hover=null;RebuildFrames();}
-        }
-        void BeginPointer(Vector2 position){pressed=true;dragging=false;pointerStart=position;pointerPrevious=position;pointerBlocked=OverUI(position);}
-        void MovePointer(Vector2 position,bool pan)
-        {
-            Vector2 delta=position-pointerPrevious;pointerPrevious=position;if(pointerBlocked)return;
-            if(Vector2.Distance(position,pointerStart)>7)dragging=true;
-            if(!dragging)return;if(pan)Pan(delta);else{yaw+=delta.x*.23f;pitch=Mathf.Clamp(pitch-delta.y*.17f,25,72);}
-        }
-        void Pan(Vector2 delta)
-        {
-            Vector3 right=Quaternion.Euler(0,yaw,0)*Vector3.right,forward=Quaternion.Euler(0,yaw,0)*Vector3.forward;
-            cameraTarget+=(-right*delta.x-forward*delta.y)*distance*.0013f;cameraTarget.x=Mathf.Clamp(cameraTarget.x,minWorldX-6,maxWorldX+6);cameraTarget.z=Mathf.Clamp(cameraTarget.z,minWorldZ-6,maxWorldZ+6);
-        }
-        void EndPointer(Vector2 position){if(!pointerBlocked&&!dragging&&!OverUI(position)){string key=Pick(position);if(key!=null)onCellSelected?.Invoke(key);}pressed=false;dragging=false;}
-        string Pick(Vector2 position)
-        {
-            if(boardCamera!=null&&Physics.Raycast(boardCamera.ScreenPointToRay(position),out RaycastHit hit,180)&&pickCells.TryGetValue(hit.collider,out string key))return key;return null;
-        }
-
         // Compatibility for isolated previews. Normal actions use PlayAction so receipts share a timeline.
         public void PlayFeedback(string cell,string element="wood",int count=10)
         {

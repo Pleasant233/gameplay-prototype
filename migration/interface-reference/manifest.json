@@ -1,0 +1,19 @@
+{
+  "source": "https://element-habitat.vercel.app/",
+  "capturedDate": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "authority": "Owner selected the currently accessible page for UI and camera. Keep the previously confirmed 40-round, tower and endless rules from migration/web-reference.",
+  "scope": "Visual and input reference only; these HTML/JS snapshots are not a second playable build or the Unity rule source.",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://element-habitat.vercel.app/",
+      "sha256": "5c836398353be610a99fdc435603655edd0e5221fec14ce6b4b60c5f14cf83d6"
+    },
+    {
+      "file": "view.js",
+      "url": "https://element-habitat.vercel.app/view.js",
+      "sha256": "a2599aeb78faacba20a20d2d03defd467ab8d612178e13c3ef21b1d4afc66049"
+    }
+  ]
+}

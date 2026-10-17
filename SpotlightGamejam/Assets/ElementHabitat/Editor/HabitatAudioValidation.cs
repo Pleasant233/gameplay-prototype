@@ -44,7 +44,7 @@ namespace ElementHabitat.Editor
         static bool failed,finishing,settingsCaptured,listenerCaptured,oldPlayEnabled,oldListenerPause;
         static float oldListenerVolume;static EnterPlayModeOptions oldPlayOptions;
         static int phase,theme;static double started,waitUntil,themeStarted,dspStarted;
-        static string ArtifactDirectory=>Path.GetFullPath(Path.Combine(Application.dataPath,"../../artifacts/unity-audio"));
+        static string ArtifactDirectory=>Path.Combine(HabitatValidationPaths.Artifacts,"unity-audio");
 
         // -executeMethod ElementHabitat.Editor.HabitatAudioValidation.Validate, without -quit.
         [MenuItem("元素生境/验证合成音效与五阶段配乐")]

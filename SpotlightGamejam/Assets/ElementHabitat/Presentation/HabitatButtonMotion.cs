@@ -44,7 +44,7 @@ namespace ElementHabitat
             bool enabled = button != null && button.interactable;
             bool noMotion = reduced != null && reduced();
             float target = enabled ? (selected ? 1.05f : hover ? (card ? 1.03f : 1.02f) : 1) * (pressed ? .96f : 1) : 1;
-            float targetLift = enabled && card ? selected ? 14 : hover ? 4 : 0 : 0;
+            float targetLift = enabled && card ? selected ? 14 : hover ? 6 : 0 : 0;
             if (noMotion) { scale = 1; lift = 0; velocity = liftVelocity = 0; entrance = -1; }
             else
             {
@@ -55,18 +55,20 @@ namespace ElementHabitat
                 liftVelocity += ((targetLift - lift) * 160 - liftVelocity * 20) * dt;
                 lift += liftVelocity * dt;
             }
-            float slide = 0, fade = 1;
+            float slide = 0, fade = 1, rotation = enabled && card && hover ? -1.5f : 0;
             if (entrance >= 0)
             {
                 float age = Time.unscaledTime - entrance - entranceDelay;
-                float t = Mathf.Clamp01(age / .35f);
-                slide = -18 * (1 - t) * (1 - t); fade = Mathf.Clamp01(age / .16f);
+                float t = Mathf.Clamp01(age / .5f);
+                float q = t - 1, ease = 1 + 2.3f * q * q * q + 1.3f * q * q;
+                slide = -80 * (1 - ease); rotation += 12 * (1 - ease); fade = Mathf.Clamp01(age / .15f);
                 if (t >= 1) entrance = -1;
             }
             var group = GetComponent<CanvasGroup>();
             if (group == null && entrance >= 0) group = gameObject.AddComponent<CanvasGroup>();
             if (group != null) group.alpha = fade;
             rect.localScale = Vector3.one * scale;
+            rect.localRotation = Quaternion.Euler(0, 0, noMotion ? 0 : rotation);
             lastPosition = rest + new Vector2(0, lift + slide);
             rect.anchoredPosition = lastPosition;
         }
@@ -77,7 +79,7 @@ namespace ElementHabitat
         void OnDisable()
         {
             hover = pressed = false;
-            if (rect != null) { rect.localScale = Vector3.one; if (resting) rect.anchoredPosition = rest; }
+            if (rect != null) { rect.localScale = Vector3.one; rect.localRotation = Quaternion.identity; if (resting) rect.anchoredPosition = rest; }
             resting = false;
         }
     }

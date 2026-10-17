@@ -21,7 +21,7 @@ namespace ElementHabitat.Editor
         public static void BuildWindows()
         {
             ValidateShaders();
-            string target = Path.GetFullPath(Path.Combine(Application.dataPath, "../../artifacts/unity-player/ElementHabitat.exe"));
+            string target = Path.Combine(HabitatValidationPaths.Artifacts, "unity-player/ElementHabitat.exe");
             Directory.CreateDirectory(Path.GetDirectoryName(target));
             var result = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { Scene }, locationPathName = target, target = BuildTarget.StandaloneWindows64, options = BuildOptions.None });
             if (result.summary.result != BuildResult.Succeeded) throw new Exception("Unity build failed: " + result.summary.result);
@@ -51,7 +51,7 @@ namespace ElementHabitat.Editor
             }
             catch (Exception e) { Fail(e); }
         }
-        static string ArtifactDirectory => Path.GetFullPath(Path.Combine(Application.dataPath, "../../artifacts/unity"));
+        static string ArtifactDirectory => Path.Combine(HabitatValidationPaths.Artifacts, "unity");
         static double started, next;
         static int step;
         static bool failed;
@@ -185,8 +185,15 @@ namespace ElementHabitat.Editor
                     Capture(app, 390, 844, "phone-tower.png");
                     app.UI.CloseModal();
                     var atlas = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                        .FirstOrDefault(b => b.GetComponentsInChildren<Text>().Any(t => t.text == "图鉴"));
-                    Check(atlas != null, "native atlas toolbar button exists"); atlas.onClick.Invoke();
+                        .FirstOrDefault(b => b.GetComponentsInChildren<Text>().Any(t => t.text.Contains("图鉴")));
+                    if (atlas == null)
+                    {
+                        var menuButton = app.UI.GetComponentsInChildren<Button>().FirstOrDefault(b => b.name == "Menu Button");
+                        Check(menuButton != null, "web-style corner menu button exists"); menuButton.onClick.Invoke();
+                        atlas = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                            .FirstOrDefault(b => b.GetComponentsInChildren<Text>().Any(t => t.text.Contains("图鉴")));
+                    }
+                    Check(atlas != null, "native atlas is reachable through the menu"); atlas.onClick.Invoke();
                     Capture(app, 390, 844, "phone-atlas.png");
                     app.UI.CloseModal();
                     app.Current.completedMap = true;
